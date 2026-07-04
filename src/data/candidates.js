@@ -13,6 +13,7 @@ export const candidates = [
     trainingStatus: "Completed",
     examResult: "Passed",
     adviserStatus: "Activated",
+    advisorCode: "ABH-T-1042",
     followUp: {
       type: "Phone Call",
       priority: "High",
@@ -55,6 +56,7 @@ export const candidates = [
     trainingStatus: "Completed",
     examResult: "Passed",
     adviserStatus: "Activated",
+    advisorCode: "ABH-T-1156",
     followUp: {
       type: "Phone Call",
       priority: "Low",

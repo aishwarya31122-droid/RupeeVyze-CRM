@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard/index.jsx";
@@ -7,8 +8,13 @@ import FollowUpTracker from "./pages/FollowUpTracker.jsx";
 import Reports from "./pages/Reports.jsx";
 import Details from "./pages/Details.jsx";
 import TeamMembers from "./pages/TeamMembers.jsx";
+import PerformanceTracker from "./pages/PerformanceTracker.jsx";
+import OverridePayoutTracker from "./pages/OverridePayoutTracker.jsx";
+import { initialPerformanceRecords } from "./data/performanceRecords.js";
 
 function App() {
+  const [performanceRecords, setPerformanceRecords] = useState(initialPerformanceRecords);
+
   return (
     <BrowserRouter>
       <Layout>
@@ -20,6 +26,8 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/details" element={<Details />} />
           <Route path="/team" element={<TeamMembers />} />
+          <Route path="/performance" element={<PerformanceTracker performanceRecords={performanceRecords} onPerformanceRecordsChange={setPerformanceRecords} />} />
+          <Route path="/override-payout" element={<OverridePayoutTracker performanceRecords={performanceRecords} />} />
         </Routes>
       </Layout>
     </BrowserRouter>

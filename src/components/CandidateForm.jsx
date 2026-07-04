@@ -13,6 +13,10 @@ import { sources } from "../config";
 const trainingStatuses = ["Pending", "In Progress", "Completed"];
 const examResults = ["Pending", "Passed", "Failed"];
 
+const shouldShowFollowUpDate = (stage) => ["Contacted", "Documents Submitted"].includes(stage);
+const shouldShowTrainingStatus = (stage) => ["Training"].includes(stage);
+const shouldShowExamResult = (stage) => ["Exam Result"].includes(stage);
+
 const createEmptyForm = (stage = "Sourced") => ({
   name: "",
   phone: "",
@@ -182,48 +186,54 @@ export default function CandidateForm({ open, onClose, onAdd }) {
           ))}
         </TextField>
 
-        <TextField
-          fullWidth
-          margin="dense"
-          label="Follow-up Date"
-          name="followUpDate"
-          type="date"
-          value={form.followUpDate}
-          onChange={handle}
-          InputLabelProps={{ shrink: true }}
-        />
+        {shouldShowFollowUpDate(form.stage) && (
+          <TextField
+            fullWidth
+            margin="dense"
+            label="Follow-up Date"
+            name="followUpDate"
+            type="date"
+            value={form.followUpDate}
+            onChange={handle}
+            InputLabelProps={{ shrink: true }}
+          />
+        )}
 
-        <TextField
-          select
-          fullWidth
-          margin="dense"
-          label="Training Status"
-          name="trainingStatus"
-          value={form.trainingStatus}
-          onChange={handle}
-        >
-          {trainingStatuses.map((option) => (
-            <MenuItem key={option} value={option}>
-              {option}
-            </MenuItem>
-          ))}
-        </TextField>
+        {shouldShowTrainingStatus(form.stage) && (
+          <TextField
+            select
+            fullWidth
+            margin="dense"
+            label="Training Status"
+            name="trainingStatus"
+            value={form.trainingStatus}
+            onChange={handle}
+          >
+            {trainingStatuses.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
 
-        <TextField
-          select
-          fullWidth
-          margin="dense"
-          label="Exam Result"
-          name="examResult"
-          value={form.examResult}
-          onChange={handle}
-        >
-          {examResults.map((option) => (
-            <MenuItem key={option} value={option}>
-              {option}
-            </MenuItem>
-          ))}
-        </TextField>
+        {shouldShowExamResult(form.stage) && (
+          <TextField
+            select
+            fullWidth
+            margin="dense"
+            label="Exam Result"
+            name="examResult"
+            value={form.examResult}
+            onChange={handle}
+          >
+            {examResults.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
 
         <TextField
           fullWidth

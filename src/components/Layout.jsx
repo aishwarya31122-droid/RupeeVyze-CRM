@@ -4,7 +4,7 @@ function Layout({ children }) {
   return (
     <div className="app">
       <aside className="sidebar">
-        <h2>Recruitment CRM</h2>
+        <h2>RupeeVyze Adviser Recruitment CRM</h2>
 
         <nav>
           <Link to="/">Dashboard</Link>
@@ -12,6 +12,8 @@ function Layout({ children }) {
           <Link to="/followups">Follow-up Tracker</Link>
           <Link to="/reports">Reports & Analytics</Link>
           <Link to="/team">Team Members</Link>
+          <Link to="/performance">Performance Tracker</Link>
+          <Link to="/override-payout">Override & Payout Tracker</Link>
           <Link to="/details">Details</Link>
         </nav>
       </aside>
