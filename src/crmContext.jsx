@@ -54,6 +54,22 @@ export function CrmProvider({ children }) {
     ]);
   };
 
+  const updateCandidate = (candidateId, updates) => {
+    setCandidates((list) =>
+      list.map((candidate) => {
+        if (candidate.id !== candidateId) return candidate;
+        return {
+          ...candidate,
+          ...updates,
+          followUp: {
+            ...candidate.followUp,
+            ...(updates.followUp || {})
+          }
+        };
+      })
+    );
+  };
+
   const markFollowUpDone = (candidateId) => {
     setCandidates((list) =>
       list.map((candidate) =>
@@ -80,6 +96,7 @@ export function CrmProvider({ children }) {
     setSelectedConfigId,
     setSettings,
     updateCandidateStage,
+    updateCandidate,
     addCandidate,
     markFollowUpDone,
     updateCandidateNote,

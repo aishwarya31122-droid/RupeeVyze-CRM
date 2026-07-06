@@ -2,21 +2,30 @@ import { useMemo, useState, useCallback } from "react";
 import { useCrm } from "../crmContext.jsx";
 import { formatDate, getTodayFollowUps, getOverdueFollowUps, sortByPriority } from "../utils.js";
 
-const tabs = ["Today", "Overdue", "Completed"];
+const tabs = ["Today", "Overdue", "Upcoming", "Completed"];
 
 function FollowUpTracker() {
   const { candidates, markFollowUpDone } = useCrm();
   const [activeTab, setActiveTab] = useState("Today");
   const [markedDone, setMarkedDone] = useState(new Set());
+  const [priorityFilter, setPriorityFilter] = useState("All");
 
   const todayList = useMemo(() => sortByPriority(getTodayFollowUps(candidates)), [candidates]);
   const overdueList = useMemo(() => sortByPriority(getOverdueFollowUps(candidates)), [candidates]);
+  const upcomingList = useMemo(
+    () => sortByPriority(candidates.filter((candidate) => candidate.followUpDate && !getOverdueFollowUps([candidate]).length && !getTodayFollowUps([candidate]).length)),
+    [candidates]
+  );
   const completedList = useMemo(
     () => sortByPriority(candidates.filter((candidate) => candidate.followUp?.status === "Done")),
     [candidates]
   );
 
-  const currentList = activeTab === "Today" ? todayList : activeTab === "Overdue" ? overdueList : completedList;
+  const currentList = useMemo(() => {
+    const source = activeTab === "Today" ? todayList : activeTab === "Overdue" ? overdueList : activeTab === "Upcoming" ? upcomingList : completedList;
+    if (priorityFilter === "All") return source;
+    return source.filter((candidate) => candidate.followUp.priority === priorityFilter);
+  }, [activeTab, todayList, overdueList, upcomingList, completedList, priorityFilter]);
 
   const handleMarkDone = useCallback((candidateId) => {
     markFollowUpDone(candidateId);
@@ -39,16 +48,24 @@ function FollowUpTracker() {
         </div>
       </div>
 
-      <div className="tab-row">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={activeTab === tab ? "tab active" : "tab"}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="followup-toolbar">
+        <div className="tab-row">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              className={activeTab === tab ? "tab active" : "tab"}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        <select className="filter" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+          <option value="All">All Priorities</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
       </div>
 
       <div className="followup-table">
@@ -59,8 +76,10 @@ function FollowUpTracker() {
                 <h3>{candidate.name}</h3>
                 <p>{candidate.phone} · {candidate.stage}</p>
                 <p>{candidate.followUp.type} · {candidate.followUp.priority}</p>
+                <p className="muted-text">Due: {formatDate(candidate.followUpDate)}</p>
               </div>
               <div className="followup-actions">
+                <span className={`status-pill compact ${candidate.followUp.priority.toLowerCase()}`}>{candidate.followUp.priority}</span>
                 <button className="secondary">Call</button>
                 <button className="secondary">WhatsApp</button>
                 {activeTab !== "Completed" && (
@@ -79,7 +98,7 @@ function FollowUpTracker() {
             </div>
           ))
         ) : (
-          <div style={{ padding: "2rem", textAlign: "center", color: "#999" }}>
+          <div className="empty-state">
             No follow-ups in this category
           </div>
         )}

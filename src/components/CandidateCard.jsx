@@ -22,11 +22,21 @@ export default function CandidateCard({ candidate, onOpen, stageColor }) {
       <div className="card-actions">
         <Link
           className="button secondary"
-          to={`/candidate/${candidate.id}`}
+          to={`/adviser/candidate/${candidate.id}`}
           onClick={(event) => event.stopPropagation()}
         >
           View Details
         </Link>
+        <button
+          type="button"
+          className="button primary"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen(candidate);
+          }}
+        >
+          Edit
+        </button>
       </div>
     </div>
   );
