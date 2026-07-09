@@ -11,7 +11,7 @@ import TeamMembers from "./pages/TeamMembers.jsx";
 import PerformanceTracker from "./pages/PerformanceTracker.jsx";
 import OverridePayoutTracker from "./pages/OverridePayoutTracker.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
-import ClientCRMPlaceholder from "./pages/ClientCRMPlaceholder.jsx";
+import ClientCRMModule from "./pages/client-crm/ClientCRMModule.jsx";
 import { initialPerformanceRecords } from "./data/performanceRecords.js";
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/client-crm" element={<ClientCRMPlaceholder />} />
+        <Route path="/client-crm/*" element={<ClientCRMModule />} />
         <Route
           path="/adviser/*"
           element={
