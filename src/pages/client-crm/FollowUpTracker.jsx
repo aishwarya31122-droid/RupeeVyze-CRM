@@ -23,8 +23,23 @@ function FollowUpTracker({ leads = initialClientLeads, onUpdateLead }) {
   }, [activeTab, leads]);
 
   const handleStatus = (lead, status) => {
-    const updated = { ...lead, followUpStatus: status, finalStatus: status === "Completed" ? "Follow-up Completed" : lead.finalStatus };
+    const updated = {
+      ...lead,
+      followUpStatus: status,
+      finalStatus: status === "Completed" ? "Follow-up Completed" : status === "Pending" ? "Follow-up Rescheduled" : lead.finalStatus,
+      nextFollowUpDate: status === "Pending" ? getNextFollowUpDate(lead.nextFollowUpDate) : lead.nextFollowUpDate
+    };
     onUpdateLead?.(updated);
+  };
+
+  const getNextFollowUpDate = (dateString) => {
+    if (!dateString) return "2026-07-10";
+
+    const parsedDate = new Date(`${dateString}T00:00:00`);
+    if (Number.isNaN(parsedDate.getTime())) return "2026-07-10";
+
+    parsedDate.setDate(parsedDate.getDate() + 1);
+    return parsedDate.toISOString().split("T")[0];
   };
 
   return (

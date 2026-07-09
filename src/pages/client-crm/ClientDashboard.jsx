@@ -43,7 +43,6 @@ function ClientDashboard({ leads = initialClientLeads }) {
           <p>Monitor insurance leads, approvals, policy progress, and internal follow-up health.</p>
         </div>
         <div className="header-summary">
-          <span className="badge" style={{ background: "#2563eb" }}>Internal Team Access</span>
           <Link className="button primary" to="/client-crm/add">+ Add Lead</Link>
         </div>
       </div>
@@ -62,21 +61,6 @@ function ClientDashboard({ leads = initialClientLeads }) {
       </div>
 
       <div className="card-grid card-grid-2">
-        <div className="card">
-          <div className="card-header">
-            <h3>Lead Conversion Funnel</h3>
-            <span className="badge" style={{ background: "#2563eb" }}>Stage Journey</span>
-          </div>
-          <div className="funnel-chart">
-            {funnel.map((stage, index) => (
-              <div key={stage} className="funnel-row">
-                <span className="funnel-step">{stage}</span>
-                <div className="funnel-bar" style={{ opacity: 1 - index * 0.08 }} />
-              </div>
-            ))}
-          </div>
-        </div>
-
         <div className="card">
           <div className="card-header">
             <h3>Quick Actions</h3>
