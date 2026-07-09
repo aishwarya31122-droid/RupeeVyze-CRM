@@ -10,21 +10,22 @@ const navItems = [
   { label: "Reports & Analytics", to: "/client-crm/reports" }
 ];
 
-function ClientCRMLayout({ children }) {
+function ClientCRMLayout({ children, leads = initialClientLeads }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
   const notifications = useMemo(() => {
-    return initialClientLeads.filter((lead) => lead.followUpStatus === "Overdue" || lead.followUpStatus === "Pending").slice(0, 4);
-  }, []);
+    return leads.filter((lead) => lead.followUpStatus === "Overdue" || lead.followUpStatus === "Pending").slice(0, 4);
+  }, [leads]);
 
   const handleSearch = (event) => {
     const value = event.target.value;
     setSearch(value);
 
     if (value.trim().length > 2) {
-      const match = initialClientLeads.find((lead) => [lead.id, lead.name, lead.mobile, lead.city, lead.advisorAssigned].some((field) => field?.toLowerCase().includes(value.toLowerCase())));
+      const query = value.toLowerCase();
+      const match = leads.find((lead) => [lead.id, lead.name, lead.mobile, lead.city, lead.advisorAssigned].some((field) => field?.toLowerCase().includes(query)));
       if (match) {
         navigate(`/client-crm/client/${match.id}`);
       }
@@ -50,7 +51,7 @@ function ClientCRMLayout({ children }) {
 
       <main className="content client-content">
         <div className="topbar">
-          <input className="topbar-search" type="text" value={search} onChange={handleSearch} placeholder="Search lead ID, client, mobile, city, advisor" />
+          <input className="topbar-search" type="text" value={search} onChange={handleSearch} placeholder="Search lead ID, name, mobile, city, advisor" />
           <div className="topbar-actions">
             <div className="notification-chip">🔔 {notifications.length}</div>
             <div className="topbar-user">Internal Team Workspace</div>

@@ -29,7 +29,7 @@ function ClientCRMModule() {
   };
 
   return (
-    <ClientCRMLayout>
+    <ClientCRMLayout leads={leads}>
       <Routes>
         <Route path="" element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<ClientDashboard leads={leads} />} />
