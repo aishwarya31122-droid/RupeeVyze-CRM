@@ -32,6 +32,23 @@ function ClientDashboard({ leads = initialClientLeads }) {
   const lostLeads = leads.filter((lead) => lead.finalStatus === "Lost").length;
   const todaysFollowUps = leads.filter((lead) => lead.nextFollowUpDate === "2026-07-09").length;
   const overdueFollowUps = leads.filter((lead) => lead.followUpStatus === "Overdue").length;
+  const proposalStats = leads.reduce((accumulator, lead) => {
+    const proposals = lead.proposals || [];
+    const total = proposals.length;
+    const draft = proposals.filter((proposal) => proposal.status === "Draft").length;
+    const pending = proposals.filter((proposal) => proposal.clientDecision === "Pending" || proposal.status === "Discussion" || proposal.status === "Draft").length;
+    const accepted = proposals.filter((proposal) => proposal.status === "Accepted" || proposal.clientDecision === "Accepted").length;
+    const rejected = proposals.filter((proposal) => proposal.status === "Rejected" || proposal.clientDecision === "Rejected").length;
+    const acceptanceRate = total ? Math.round((accepted / total) * 100) : 0;
+    return {
+      total: accumulator.total + total,
+      draft: accumulator.draft + draft,
+      pending: accumulator.pending + pending,
+      accepted: accumulator.accepted + accepted,
+      rejected: accumulator.rejected + rejected,
+      acceptanceRate: accumulator.total + total ? Math.round(((accumulator.accepted + accepted) / (accumulator.total + total)) * 100) : 0
+    };
+  }, { total: 0, draft: 0, pending: 0, accepted: 0, rejected: 0, acceptanceRate: 0 });
 
   const funnel = ["Lead Received", "Qualified", "First Call", "Needs Analysis", "Proposal Sent", "KYC Started", "Policy Issued", "Converted"];
 
@@ -58,6 +75,21 @@ function ClientDashboard({ leads = initialClientLeads }) {
         <SummaryCard label="Lost Leads" value={lostLeads} accent="#dc2626" />
         <SummaryCard label="Today's Follow-ups" value={todaysFollowUps} accent="#0f766e" />
         <SummaryCard label="Overdue Follow-ups" value={overdueFollowUps} accent="#ea580c" />
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h3>Proposal Analytics</h3>
+          <span className="badge" style={{ background: "#7c3aed" }}>Client CRM</span>
+        </div>
+        <div className="dashboard-grid">
+          <SummaryCard label="Total Proposals" value={proposalStats.total} accent="#2563eb" />
+          <SummaryCard label="Draft" value={proposalStats.draft} accent="#64748b" />
+          <SummaryCard label="Pending" value={proposalStats.pending} accent="#d97706" />
+          <SummaryCard label="Accepted" value={proposalStats.accepted} accent="#166534" />
+          <SummaryCard label="Rejected" value={proposalStats.rejected} accent="#dc2626" />
+          <SummaryCard label="Acceptance Rate" value={`${proposalStats.acceptanceRate}%`} accent="#0f766e" />
+        </div>
       </div>
 
       <div className="card-grid card-grid-2">

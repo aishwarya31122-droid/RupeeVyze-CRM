@@ -33,6 +33,103 @@ export const initialClientLeads = [
       { text: "Lead added", time: "2h ago" },
       { text: "Proposal sent", time: "6h ago" },
       { text: "Follow-up scheduled", time: "Yesterday" }
+    ],
+    proposals: [
+      {
+        proposalId: "PROP-0001",
+        proposalDate: "2026-06-20",
+        createdBy: "Riya Shah",
+        versionNumber: 1,
+        versionName: "Discovery Draft",
+        status: "Shared with Client",
+        purpose: "Initial Investment",
+        shortSummary: "Shared the first investment mix with a focus on long-term equity exposure and family protection.",
+        recommendations: [
+          { investmentName: "Axis Bluechip Fund", investmentCategory: "Equity", investmentType: "SIP", amount: "50000", frequency: "Monthly SIP", remarks: "Long-term wealth creation" },
+          { investmentName: "Nippon Small Cap", investmentCategory: "Equity", investmentType: "Lumpsum", amount: "150000", frequency: "One-time", remarks: "Growth tilt" }
+        ],
+        clientDecision: "Pending",
+        decisionReason: "Needs Family Approval",
+        actualInvestment: [
+          { investmentName: "Axis Bluechip Fund", investmentCategory: "Equity", investmentType: "SIP", amount: "25000", frequency: "Monthly SIP", remarks: "Partial allocation" },
+          { investmentName: "Nippon Small Cap", investmentCategory: "Equity", investmentType: "Lumpsum", amount: "50000", frequency: "One-time", remarks: "Deferred" }
+        ],
+        attachments: ["Proposal PDF", "Presentation"],
+        internalNotes: "Client is reviewing family budget before committing.",
+        timeline: [
+          { event: "Proposal Created", date: "2026-06-20", time: "09:00", user: "Riya Shah" },
+          { event: "Shared with Client", date: "2026-06-22", time: "10:30", user: "Riya Shah" }
+        ]
+      },
+      {
+        proposalId: "PROP-0002",
+        proposalDate: "2026-07-01",
+        createdBy: "Riya Shah",
+        versionNumber: 2,
+        versionName: "Review Update",
+        status: "Discussion",
+        purpose: "Quarterly Review",
+        shortSummary: "Adjusted the allocation after a discussion on market uncertainty and revised the SIP approach.",
+        recommendations: [
+          { investmentName: "Axis Bluechip Fund", investmentCategory: "Equity", investmentType: "SIP", amount: "70000", frequency: "Monthly SIP", remarks: "Increase after bonus" }
+        ],
+        clientDecision: "Pending",
+        decisionReason: "Market Uncertainty",
+        actualInvestment: [],
+        attachments: ["Research Notes"],
+        internalNotes: "Revisit after the next market correction.",
+        timeline: [
+          { event: "Proposal Created", date: "2026-07-01", time: "16:00", user: "Riya Shah" },
+          { event: "Discussion Held", date: "2026-07-04", time: "14:15", user: "Riya Shah" }
+        ]
+      },
+      {
+        proposalId: "PROP-0003",
+        proposalDate: "2026-07-05",
+        createdBy: "Aman Verma",
+        versionNumber: 3,
+        versionName: "Approved Plan",
+        status: "Accepted",
+        purpose: "Annual Review",
+        shortSummary: "Converted the review into an accepted plan with a balanced hybrid investment recommendation.",
+        recommendations: [
+          { investmentName: "HDFC Balanced Advantage Fund", investmentCategory: "Hybrid", investmentType: "Lumpsum", amount: "200000", frequency: "One-time", remarks: "Risk-balanced option" }
+        ],
+        clientDecision: "Accepted",
+        decisionReason: "",
+        actualInvestment: [
+          { investmentName: "HDFC Balanced Advantage Fund", investmentCategory: "Hybrid", investmentType: "Lumpsum", amount: "200000", frequency: "One-time", remarks: "Executed" }
+        ],
+        attachments: ["Proposal PDF", "Excel Working"],
+        internalNotes: "Client approved the annual review proposal after a follow-up call.",
+        timeline: [
+          { event: "Proposal Created", date: "2026-07-05", time: "11:30", user: "Aman Verma" },
+          { event: "Accepted", date: "2026-07-06", time: "17:00", user: "Aman Verma" },
+          { event: "Investment Executed", date: "2026-07-07", time: "09:15", user: "Aman Verma" }
+        ]
+      },
+      {
+        proposalId: "PROP-0004",
+        proposalDate: "2026-07-08",
+        createdBy: "Neha Joshi",
+        versionNumber: 4,
+        versionName: "Declined Strategy",
+        status: "Rejected",
+        purpose: "Portfolio Rebalancing",
+        shortSummary: "Captured the final rejection after the client chose to keep existing investments in place.",
+        recommendations: [
+          { investmentName: "Motilal Midcap Fund", investmentCategory: "Equity", investmentType: "SIP", amount: "50000", frequency: "Monthly SIP", remarks: "Aggressive growth tilt" }
+        ],
+        clientDecision: "Rejected",
+        decisionReason: "Already Invested Elsewhere",
+        actualInvestment: [],
+        attachments: ["Presentation"],
+        internalNotes: "Client rejected due to already holding similar funds elsewhere.",
+        timeline: [
+          { event: "Proposal Created", date: "2026-07-08", time: "12:00", user: "Neha Joshi" },
+          { event: "Rejected", date: "2026-07-09", time: "15:30", user: "Neha Joshi" }
+        ]
+      }
     ]
   },
   {
