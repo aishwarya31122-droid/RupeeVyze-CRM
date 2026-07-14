@@ -7,8 +7,8 @@ const navItems = [
   { label: "Lead Management", to: "/adviser/lead-management" },
   { label: "Advisor Operations", to: "/adviser/advisor-operations" },
   { label: "Client Operations", to: "/adviser/client-operations" },
-  { label: "Business Intelligence", to: "/adviser/reports" },
-  { label: "Administration", to: "/adviser/settings" }
+  { label: "Business Intelligence", to: "/adviser/business-intelligence" },
+  { label: "Administration", to: "/adviser/administration" }
 ];
 
 function Layout({ children }) {

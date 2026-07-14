@@ -15,6 +15,8 @@ import Settings from "./pages/Settings.jsx";
 import LeadManagementModule from "./pages/lead-management/LeadManagementModule.jsx";
 import AdvisorOperationsModule from "./pages/advisor-operations/AdvisorOperationsModule.jsx";
 import ClientOperationsModule from "./pages/client-operations/ClientOperationsModule.jsx";
+import BusinessIntModule from "./pages/business-intelligence/BusinessIntModule.jsx";
+import AdminModule from "./pages/administration/AdminModule.jsx";
 import ClientCRMModule from "./pages/client-crm/ClientCRMModule.jsx";
 import { initialPerformanceRecords } from "./data/performanceRecords.js";
 
@@ -36,6 +38,8 @@ function App() {
                 <Route path="lead-management/*" element={<LeadManagementModule />} />
                 <Route path="advisor-operations/*" element={<AdvisorOperationsModule performanceRecords={performanceRecords} onPerformanceRecordsChange={setPerformanceRecords} />} />
                 <Route path="client-operations/*" element={<ClientOperationsModule />} />
+                <Route path="business-intelligence/*" element={<BusinessIntModule />} />
+                <Route path="administration/*" element={<AdminModule />} />
                 <Route path="pipeline" element={<Pipeline />} />
                 <Route path="candidate/:id" element={<CandidateDetails />} />
                 <Route path="followups" element={<FollowUpTracker />} />
