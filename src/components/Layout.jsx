@@ -6,7 +6,7 @@ const navItems = [
   { label: "Dashboard", to: "/adviser/dashboard" },
   { label: "Lead Management", to: "/adviser/lead-management" },
   { label: "Advisor Operations", to: "/adviser/advisor-operations" },
-  { label: "Client Operations", to: "/client-crm/dashboard" },
+  { label: "Client Operations", to: "/adviser/client-operations" },
   { label: "Business Intelligence", to: "/adviser/reports" },
   { label: "Administration", to: "/adviser/settings" }
 ];
