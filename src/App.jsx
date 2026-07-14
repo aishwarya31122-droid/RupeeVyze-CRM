@@ -13,6 +13,7 @@ import OverridePayoutTracker from "./pages/OverridePayoutTracker.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import Settings from "./pages/Settings.jsx";
 import LeadManagementModule from "./pages/lead-management/LeadManagementModule.jsx";
+import AdvisorOperationsModule from "./pages/advisor-operations/AdvisorOperationsModule.jsx";
 import ClientCRMModule from "./pages/client-crm/ClientCRMModule.jsx";
 import { initialPerformanceRecords } from "./data/performanceRecords.js";
 
@@ -32,6 +33,7 @@ function App() {
                 <Route path="" element={<Navigate to="/adviser/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="lead-management/*" element={<LeadManagementModule />} />
+                <Route path="advisor-operations/*" element={<AdvisorOperationsModule performanceRecords={performanceRecords} onPerformanceRecordsChange={setPerformanceRecords} />} />
                 <Route path="pipeline" element={<Pipeline />} />
                 <Route path="candidate/:id" element={<CandidateDetails />} />
                 <Route path="followups" element={<FollowUpTracker />} />
