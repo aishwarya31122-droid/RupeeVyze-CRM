@@ -9,7 +9,7 @@ const statusColors = {
   "KYC Started": "#eab308",
   "Policy Issued": "#16a34a",
   Converted: "#166534",
-  Lost: "#dc2626"
+  Lost: "#dc2626",
 };
 
 function SummaryCard({ label, value, accent }) {
@@ -23,86 +23,161 @@ function SummaryCard({ label, value, accent }) {
 
 function ClientDashboard({ leads = initialClientLeads }) {
   const totalLeads = leads.length;
-  const hotLeads = leads.filter((lead) => lead.leadQuality === "Hot").length;
-  const warmLeads = leads.filter((lead) => lead.leadQuality === "Warm").length;
-  const coldLeads = leads.filter((lead) => lead.leadQuality === "Cold").length;
-  const proposalSent = leads.filter((lead) => lead.proposalSent).length;
-  const policyIssued = leads.filter((lead) => lead.policyIssued).length;
-  const convertedClients = leads.filter((lead) => lead.finalStatus === "Converted").length;
-  const lostLeads = leads.filter((lead) => lead.finalStatus === "Lost").length;
-  const todaysFollowUps = leads.filter((lead) => lead.nextFollowUpDate === "2026-07-09").length;
-  const overdueFollowUps = leads.filter((lead) => lead.followUpStatus === "Overdue").length;
-  const proposalStats = leads.reduce((accumulator, lead) => {
-    const proposals = lead.proposals || [];
-    const total = proposals.length;
-    const draft = proposals.filter((proposal) => proposal.status === "Draft").length;
-    const pending = proposals.filter((proposal) => proposal.clientDecision === "Pending" || proposal.status === "Discussion" || proposal.status === "Draft").length;
-    const accepted = proposals.filter((proposal) => proposal.status === "Accepted" || proposal.clientDecision === "Accepted").length;
-    const rejected = proposals.filter((proposal) => proposal.status === "Rejected" || proposal.clientDecision === "Rejected").length;
-    const acceptanceRate = total ? Math.round((accepted / total) * 100) : 0;
-    return {
-      total: accumulator.total + total,
-      draft: accumulator.draft + draft,
-      pending: accumulator.pending + pending,
-      accepted: accumulator.accepted + accepted,
-      rejected: accumulator.rejected + rejected,
-      acceptanceRate: accumulator.total + total ? Math.round(((accumulator.accepted + accepted) / (accumulator.total + total)) * 100) : 0
-    };
-  }, { total: 0, draft: 0, pending: 0, accepted: 0, rejected: 0, acceptanceRate: 0 });
 
-  const funnel = ["Lead Received", "Qualified", "First Call", "Needs Analysis", "Proposal Sent", "KYC Started", "Policy Issued", "Converted"];
+  const hotLeads = leads.filter(
+    (lead) => lead.leadQuality === "Hot"
+  ).length;
+
+  const warmLeads = leads.filter(
+    (lead) => lead.leadQuality === "Warm"
+  ).length;
+
+  const coldLeads = leads.filter(
+    (lead) => lead.leadQuality === "Cold"
+  ).length;
+
+  const proposalSent = leads.filter(
+    (lead) => lead.proposalSent
+  ).length;
+
+  const policyIssued = leads.filter(
+    (lead) => lead.policyIssued
+  ).length;
+
+  const convertedClients = leads.filter(
+    (lead) => lead.finalStatus === "Converted"
+  ).length;
+
+  const lostLeads = leads.filter(
+    (lead) => lead.finalStatus === "Lost"
+  ).length;
+
+  const todaysFollowUps = leads.filter(
+    (lead) => lead.nextFollowUpDate === "2026-07-09"
+  ).length;
+
+  const overdueFollowUps = leads.filter(
+    (lead) => lead.followUpStatus === "Overdue"
+  ).length;
 
   return (
     <div className="client-dashboard">
       <div className="page-header">
         <div>
           <h1>Client CRM Dashboard</h1>
-          <p>Monitor insurance leads, approvals, policy progress, and internal follow-up health.</p>
+          <p>
+            Monitor insurance leads, policy progress, and internal
+            follow-up health.
+          </p>
         </div>
+
         <div className="header-summary">
-          <Link className="button primary" to="/client-crm/add">+ Add Lead</Link>
+          <Link className="button primary" to="/client-crm/add">
+            + Add Lead
+          </Link>
         </div>
       </div>
 
       <div className="dashboard-grid">
-        <SummaryCard label="Total Leads" value={totalLeads} accent="#2563eb" />
-        <SummaryCard label="Hot Leads" value={hotLeads} accent="#dc2626" />
-        <SummaryCard label="Warm Leads" value={warmLeads} accent="#f59e0b" />
-        <SummaryCard label="Cold Leads" value={coldLeads} accent="#2563eb" />
-        <SummaryCard label="Proposal Sent" value={proposalSent} accent="#7c3aed" />
-        <SummaryCard label="Policy Issued" value={policyIssued} accent="#16a34a" />
-        <SummaryCard label="Converted Clients" value={convertedClients} accent="#166534" />
-        <SummaryCard label="Lost Leads" value={lostLeads} accent="#dc2626" />
-        <SummaryCard label="Today's Follow-ups" value={todaysFollowUps} accent="#0f766e" />
-        <SummaryCard label="Overdue Follow-ups" value={overdueFollowUps} accent="#ea580c" />
-      </div>
+        <SummaryCard
+          label="Total Leads"
+          value={totalLeads}
+          accent="#2563eb"
+        />
 
-      <div className="card">
-        <div className="card-header">
-          <h3>Proposal Analytics</h3>
-          <span className="badge" style={{ background: "#7c3aed" }}>Client CRM</span>
-        </div>
-        <div className="dashboard-grid">
-          <SummaryCard label="Total Proposals" value={proposalStats.total} accent="#2563eb" />
-          <SummaryCard label="Draft" value={proposalStats.draft} accent="#64748b" />
-          <SummaryCard label="Pending" value={proposalStats.pending} accent="#d97706" />
-          <SummaryCard label="Accepted" value={proposalStats.accepted} accent="#166534" />
-          <SummaryCard label="Rejected" value={proposalStats.rejected} accent="#dc2626" />
-          <SummaryCard label="Acceptance Rate" value={`${proposalStats.acceptanceRate}%`} accent="#0f766e" />
-        </div>
+        <SummaryCard
+          label="Hot Leads"
+          value={hotLeads}
+          accent="#dc2626"
+        />
+
+        <SummaryCard
+          label="Warm Leads"
+          value={warmLeads}
+          accent="#f59e0b"
+        />
+
+        <SummaryCard
+          label="Cold Leads"
+          value={coldLeads}
+          accent="#2563eb"
+        />
+
+        <SummaryCard
+          label="Proposal Sent"
+          value={proposalSent}
+          accent="#7c3aed"
+        />
+
+        <SummaryCard
+          label="Policy Issued"
+          value={policyIssued}
+          accent="#16a34a"
+        />
+
+        <SummaryCard
+          label="Converted Clients"
+          value={convertedClients}
+          accent="#166534"
+        />
+
+        <SummaryCard
+          label="Lost Leads"
+          value={lostLeads}
+          accent="#dc2626"
+        />
+
+        <SummaryCard
+          label="Today's Follow-ups"
+          value={todaysFollowUps}
+          accent="#0f766e"
+        />
+
+        <SummaryCard
+          label="Overdue Follow-ups"
+          value={overdueFollowUps}
+          accent="#ea580c"
+        />
       </div>
 
       <div className="card-grid card-grid-2">
         <div className="card">
           <div className="card-header">
             <h3>Quick Actions</h3>
-            <span className="badge" style={{ background: "#16a34a" }}>Fast Access</span>
+
+            <span
+              className="badge"
+              style={{ background: "#16a34a" }}
+            >
+              Fast Access
+            </span>
           </div>
+
           <div className="quick-actions">
-            <Link className="action-pill" to="/client-crm/add">+ Add Lead</Link>
-            <Link className="action-pill" to="/client-crm/pipeline">View Pipeline</Link>
-            <Link className="action-pill" to="/client-crm/followups">Today's Follow-ups</Link>
-            <Link className="action-pill" to="/client-crm/reports">Generate Report</Link>
+            <Link className="action-pill" to="/client-crm/add">
+              + Add Lead
+            </Link>
+
+            <Link
+              className="action-pill"
+              to="/client-crm/pipeline"
+            >
+              View Pipeline
+            </Link>
+
+            <Link
+              className="action-pill"
+              to="/client-crm/followups"
+            >
+              Today's Follow-ups
+            </Link>
+
+            <Link
+              className="action-pill"
+              to="/client-crm/reports"
+            >
+              Generate Report
+            </Link>
           </div>
         </div>
       </div>
@@ -111,17 +186,37 @@ function ClientDashboard({ leads = initialClientLeads }) {
         <div className="card">
           <div className="card-header">
             <h3>Recent Activity</h3>
-            <span className="badge" style={{ background: "#7c3aed" }}>Live Updates</span>
+
+            <span
+              className="badge"
+              style={{ background: "#7c3aed" }}
+            >
+              Live Updates
+            </span>
           </div>
+
           <div className="activity-list">
             {leads.slice(0, 5).map((lead) => (
               <div key={lead.id} className="activity-item">
-                <div className="activity-dot" style={{ background: statusColors[lead.finalStatus] || "#64748b" }} />
+                <div
+                  className="activity-dot"
+                  style={{
+                    background:
+                      statusColors[lead.finalStatus] || "#64748b",
+                  }}
+                />
+
                 <div>
                   <strong>{lead.name}</strong>
-                  <p>{lead.activity[0]?.text || "Activity logged"}</p>
+                  <p>
+                    {lead.activity?.[0]?.text ||
+                      "Activity logged"}
+                  </p>
                 </div>
-                <span>{lead.activity[0]?.time || "Today"}</span>
+
+                <span>
+                  {lead.activity?.[0]?.time || "Today"}
+                </span>
               </div>
             ))}
           </div>
@@ -130,19 +225,36 @@ function ClientDashboard({ leads = initialClientLeads }) {
         <div className="card">
           <div className="card-header">
             <h3>Priority Leads</h3>
-            <span className="badge" style={{ background: "#dc2626" }}>Hot Queue</span>
+
+            <span
+              className="badge"
+              style={{ background: "#dc2626" }}
+            >
+              Hot Queue
+            </span>
           </div>
+
           <div className="activity-list">
-            {leads.filter((lead) => lead.leadQuality === "Hot").slice(0, 4).map((lead) => (
-              <div key={lead.id} className="activity-item">
-                <div className="activity-dot" style={{ background: "#dc2626" }} />
-                <div>
-                  <strong>{lead.name}</strong>
-                  <p>{lead.policyTypeInterest} • {lead.city}</p>
+            {leads
+              .filter((lead) => lead.leadQuality === "Hot")
+              .slice(0, 4)
+              .map((lead) => (
+                <div key={lead.id} className="activity-item">
+                  <div
+                    className="activity-dot"
+                    style={{ background: "#dc2626" }}
+                  />
+
+                  <div>
+                    <strong>{lead.name}</strong>
+                    <p>
+                      {lead.policyTypeInterest} • {lead.city}
+                    </p>
+                  </div>
+
+                  <span>{lead.nextFollowUpDate}</span>
                 </div>
-                <span>{lead.nextFollowUpDate}</span>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </div>
