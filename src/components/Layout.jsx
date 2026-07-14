@@ -39,7 +39,20 @@ function Layout({ children }) {
     const value = event.target.value;
     setSearch(value);
     if (value.trim().length > 2) {
-      const match = candidates.find((candidate) => [candidate.name, candidate.phone, candidate.email, candidate.city].some((field) => field?.toLowerCase().includes(value.toLowerCase())));
+      const q = value.toLowerCase();
+
+      const match = candidates.find((candidate) => {
+        const fields = [
+          String(candidate.id),
+          candidate.name,
+          candidate.phone,
+          candidate.email,
+          candidate.city,
+          candidate.advisorCode,
+        ];
+        return fields.some((field) => field?.toLowerCase().includes(q));
+      });
+
       if (match) navigate(`/adviser/candidate/${match.id}`);
     }
   };
@@ -66,7 +79,7 @@ function Layout({ children }) {
 
       <main className="content">
         <div className="topbar">
-          <input className="topbar-search" type="text" value={search} onChange={handleSearch} placeholder="Global search candidates" />
+          <input className="topbar-search" type="text" value={search} onChange={handleSearch} placeholder="Search Lead/Advisor ID, Name, Mobile, Advisor Code" />
           <div className="topbar-actions">
             <div className="notification-chip">🔔 {notifications.length}</div>
             <div className="topbar-user">Recruiter Workspace</div>

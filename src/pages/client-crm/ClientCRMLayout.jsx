@@ -24,8 +24,21 @@ function ClientCRMLayout({ children, leads = initialClientLeads }) {
     setSearch(value);
 
     if (value.trim().length > 2) {
-      const query = value.toLowerCase();
-      const match = leads.find((lead) => [lead.id, lead.name, lead.mobile, lead.city, lead.advisorAssigned].some((field) => field?.toLowerCase().includes(query)));
+      const q = value.toLowerCase();
+
+      const match = leads.find((lead) => {
+        const fields = [
+          String(lead.id),
+          lead.clientId,
+          lead.name,
+          lead.mobile,
+          lead.city,
+          lead.advisorAssigned,
+          lead.policyNumber,
+        ];
+        return fields.some((field) => field?.toLowerCase().includes(q));
+      });
+
       if (match) {
         navigate(`/client-crm/client/${match.id}`);
       }
@@ -51,7 +64,7 @@ function ClientCRMLayout({ children, leads = initialClientLeads }) {
 
       <main className="content client-content">
         <div className="topbar">
-          <input className="topbar-search" type="text" value={search} onChange={handleSearch} placeholder="Search lead ID, name, mobile, city, advisor" />
+          <input className="topbar-search" type="text" value={search} onChange={handleSearch} placeholder="Search Lead ID, Client ID, Advisor ID, Name, Mobile, Policy Number, Advisor Code" />
           <div className="topbar-actions">
             <div className="notification-chip">🔔 {notifications.length}</div>
             <div className="topbar-user">Internal Team Workspace</div>
