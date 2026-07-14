@@ -11,6 +11,8 @@ import TeamMembers from "./pages/TeamMembers.jsx";
 import PerformanceTracker from "./pages/PerformanceTracker.jsx";
 import OverridePayoutTracker from "./pages/OverridePayoutTracker.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
+import Settings from "./pages/Settings.jsx";
+import LeadManagementModule from "./pages/lead-management/LeadManagementModule.jsx";
 import ClientCRMModule from "./pages/client-crm/ClientCRMModule.jsx";
 import { initialPerformanceRecords } from "./data/performanceRecords.js";
 
@@ -29,6 +31,7 @@ function App() {
               <Routes>
                 <Route path="" element={<Navigate to="/adviser/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="lead-management/*" element={<LeadManagementModule />} />
                 <Route path="pipeline" element={<Pipeline />} />
                 <Route path="candidate/:id" element={<CandidateDetails />} />
                 <Route path="followups" element={<FollowUpTracker />} />
@@ -37,6 +40,7 @@ function App() {
                 <Route path="team" element={<TeamMembers />} />
                 <Route path="performance" element={<PerformanceTracker performanceRecords={performanceRecords} onPerformanceRecordsChange={setPerformanceRecords} />} />
                 <Route path="override-payout" element={<OverridePayoutTracker performanceRecords={performanceRecords} />} />
+                <Route path="settings" element={<Settings />} />
               </Routes>
             </Layout>
           }

@@ -4,13 +4,11 @@ import { useCrm } from "../crmContext.jsx";
 
 const navItems = [
   { label: "Dashboard", to: "/adviser/dashboard" },
-  { label: "Recruitment Pipeline", to: "/adviser/pipeline" },
-  { label: "Follow-up Tracker", to: "/adviser/followups" },
-  { label: "Reports & Analytics", to: "/adviser/reports" },
-  { label: "Team Members", to: "/adviser/team" },
-  { label: "Performance Tracker", to: "/adviser/performance" },
-  { label: "Override & Payout Tracker", to: "/adviser/override-payout" },
-  { label: "Details", to: "/adviser/details" }
+  { label: "Lead Management", to: "/adviser/lead-management" },
+  { label: "Advisor Operations", to: "/adviser/performance" },
+  { label: "Client Operations", to: "/client-crm/dashboard" },
+  { label: "Business Intelligence", to: "/adviser/reports" },
+  { label: "Administration", to: "/adviser/settings" }
 ];
 
 function Layout({ children }) {
@@ -61,7 +59,7 @@ function Layout({ children }) {
     <div className="app">
       <aside className="sidebar">
         <div>
-          <h2>RupeeVyze Adviser Recruitment CRM</h2>
+          <h2>RupeeVyze Insurance CRM</h2>
         </div>
 
         <nav>
