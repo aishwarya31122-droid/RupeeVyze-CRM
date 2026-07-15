@@ -4,14 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:backend": "cd server && node server.js",
+    "seed": "cd server && node seed.js",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "5.14.11",
-    "@mui/material": "5.14.11",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.0",
+    "@mui/icons-material": "5.16.2",
+    "@mui/material": "5.16.2",
+    "@mui/system": "5.16.2",
+    "@popperjs/core": "^2.11.8",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-router-dom": "^6.30.4",

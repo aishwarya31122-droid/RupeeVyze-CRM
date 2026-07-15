@@ -1,5 +1,47 @@
 import { useMemo, useState } from "react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography
+} from "@mui/material";
+import {
+  BarChart,
+  Bar,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
+import InboxIcon from "@mui/icons-material/Inbox";
 import { useCrm } from "../crmContext.jsx";
+import { getActiveAdvisorRows, getPerformanceSummary } from "./advisor-operations/advisorOperationsData.js";
 
 const defaultForm = (adviser) => ({
   advisorName: adviser?.name || "",
@@ -29,8 +71,15 @@ const formatMonth = (value) => {
   }).format(date);
 };
 
-function PerformanceTracker({ performanceRecords, onPerformanceRecordsChange }) {
-  const { candidates } = useCrm();
+function getAchievement(record) {
+  const premium = Number(record?.premiumCollected || 0);
+  const target = Number(record?.monthlyTarget || 0);
+  if (!target) return 0;
+  return (premium / target) * 100;
+}
+
+function PerformanceTracker() {
+  const { candidates, performanceRecords, addPerformanceRecord } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [sortKey, setSortKey] = useState("premium");
@@ -39,62 +88,16 @@ function PerformanceTracker({ performanceRecords, onPerformanceRecordsChange }) 
   const [activeAdviser, setActiveAdviser] = useState(null);
   const [formData, setFormData] = useState(defaultForm(null));
 
-  const pageSize = 10;
+  const pageSize = 8;
 
-  const activeAdvisers = useMemo(() => {
-    return candidates
-      .filter((candidate) => {
-        const status = (candidate.adviserStatus || "").toLowerCase();
-        const stage = (candidate.stage || "").toLowerCase();
-        return status === "active" || status === "activated" || stage === "active" || stage === "activated";
-      })
-      .map((candidate) => ({
-        id: candidate.id,
-        name: candidate.name,
-        advisorCode: candidate.advisorCode || `ADV-${String(candidate.id).padStart(3, "0")}`,
-        stage: candidate.stage,
-        adviserStatus: candidate.adviserStatus
-      }));
-  }, [candidates]);
+  const adviserRows = useMemo(() => getActiveAdvisorRows(candidates, performanceRecords), [candidates, performanceRecords]);
 
-  const adviserRows = useMemo(() => {
-    return activeAdvisers.map((adviser) => {
-      const record = performanceRecords.find((item) => item.advisorCode === adviser.advisorCode);
-      return {
-        ...adviser,
-        recordId: record?.id || "",
-        performance: record || null
-      };
-    });
-  }, [activeAdvisers, performanceRecords]);
-
-  const summary = useMemo(() => {
-    const entries = performanceRecords;
-    const totalPolicies = entries.reduce((sum, record) => sum + Number(record?.policiesSold || 0), 0);
-    const totalPremium = entries.reduce((sum, record) => sum + Number(record?.premiumCollected || 0), 0);
-    const averagePersistency = entries.length
-      ? entries.reduce((sum, record) => sum + Number(record?.persistency || 0), 0) / entries.length
-      : 0;
-    const averageAchievement = entries.length
-      ? entries.reduce((sum, record) => sum + getAchievement(record || {}), 0) / entries.length
-      : 0;
-
-    return {
-      activeAdvisers: adviserRows.length,
-      totalPolicies,
-      totalPremium,
-      averagePersistency,
-      averageAchievement
-    };
-  }, [adviserRows, performanceRecords]);
+  const summary = useMemo(() => getPerformanceSummary(adviserRows), [adviserRows]);
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     let result = adviserRows.filter((row) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        row.name.toLowerCase().includes(normalizedSearch) ||
-        row.advisorCode.toLowerCase().includes(normalizedSearch);
+      const matchesSearch = !normalizedSearch || row.name.toLowerCase().includes(normalizedSearch) || row.advisorCode.toLowerCase().includes(normalizedSearch);
       const matchesMonth = selectedMonth === "All" || (row.performance?.month || "") === selectedMonth;
       return matchesSearch && matchesMonth;
     });
@@ -102,11 +105,9 @@ function PerformanceTracker({ performanceRecords, onPerformanceRecordsChange }) 
     if (sortKey === "premium") {
       result = [...result].sort((a, b) => Number(b.performance?.premiumCollected || 0) - Number(a.performance?.premiumCollected || 0));
     }
-
     if (sortKey === "policies") {
       result = [...result].sort((a, b) => Number(b.performance?.policiesSold || 0) - Number(a.performance?.policiesSold || 0));
     }
-
     if (sortKey === "achievement") {
       result = [...result].sort((a, b) => getAchievement(b.performance || {}) - getAchievement(a.performance || {}));
     }
@@ -116,10 +117,33 @@ function PerformanceTracker({ performanceRecords, onPerformanceRecordsChange }) 
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const pageRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
-  const monthOptions = ["All", ...Array.from(new Set(performanceRecords.map((record) => record.month).filter(Boolean)))];
+  const monthOptions = ["All", ...Array.from(new Set(adviserRows.map((row) => row.performance?.month).filter(Boolean)))];
+
+  const premiumTrend = useMemo(() => {
+    const relevantRecords = performanceRecords.filter((record) => adviserRows.some((row) => row.advisorCode === record.advisorCode || row.name === record.advisorName));
+    const grouped = new Map();
+    relevantRecords.forEach((record) => {
+      const existing = grouped.get(record.month) || { month: record.month, premium: 0, policies: 0 };
+      existing.premium += Number(record.premiumCollected || 0);
+      existing.policies += Number(record.policiesSold || 0);
+      grouped.set(record.month, existing);
+    });
+    return Array.from(grouped.values()).sort((a, b) => a.month.localeCompare(b.month));
+  }, [adviserRows, performanceRecords]);
+
+  const rankingData = useMemo(() => {
+    return adviserRows
+      .map((row) => ({
+        name: row.name,
+        premium: Number(row.performance?.premiumCollected || 0),
+        policies: Number(row.performance?.policiesSold || 0)
+      }))
+      .sort((a, b) => b.premium - a.premium)
+      .slice(0, 8);
+  }, [adviserRows]);
 
   const openUpdateModal = (adviser) => {
-    const currentRecord = performanceRecords.find((record) => record.advisorCode === adviser.advisorCode);
+    const currentRecord = performanceRecords.find((record) => record.advisorCode === adviser.advisorCode || record.advisorName === adviser.name);
     setActiveAdviser(adviser);
     setFormData(
       currentRecord
@@ -149,12 +173,11 @@ function PerformanceTracker({ performanceRecords, onPerformanceRecordsChange }) 
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!activeAdviser) return;
 
     const payload = {
-      id: performanceRecords.find((record) => record.advisorCode === activeAdviser.advisorCode)?.id || `PERF-${String(performanceRecords.length + 1).padStart(3, "0")}`,
       adviserId: activeAdviser.id,
       advisorName: activeAdviser.name,
       advisorCode: activeAdviser.advisorCode,
@@ -166,333 +189,241 @@ function PerformanceTracker({ performanceRecords, onPerformanceRecordsChange }) 
       remarks: formData.remarks
     };
 
-    onPerformanceRecordsChange((current) => {
-      const existingIndex = current.findIndex((record) => record.advisorCode === activeAdviser.advisorCode);
-      if (existingIndex >= 0) {
-        return current.map((record, index) => (index === existingIndex ? payload : record));
-      }
-      return [...current, payload];
-    });
+    await addPerformanceRecord(payload);
     closeModal();
     setPage(1);
   };
 
-  const handleDelete = (adviserCode) => {
-    onPerformanceRecordsChange((current) => current.filter((record) => record.advisorCode !== adviserCode));
-  };
-
   return (
-    <div>
-      <style>{`
-        .performance-table-wrap {
-          background: #fff;
-          border-radius: 18px;
-          border: 1px solid rgba(226,232,240,0.9);
-          box-shadow: 0 12px 36px rgba(15,23,42,0.04);
-          overflow: hidden;
-        }
-        .performance-table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 1120px;
-        }
-        .performance-table th,
-        .performance-table td {
-          text-align: left;
-          padding: 14px 16px;
-          border-bottom: 1px solid #e2e8f0;
-          white-space: nowrap;
-        }
-        .performance-table thead th {
-          position: sticky;
-          top: 0;
-          background: #fff;
-          z-index: 1;
-        }
-        .performance-table tbody tr:hover {
-          background: #f8fafc;
-        }
-        .performance-table-actions button {
-          margin-right: 8px;
-        }
-        .performance-summary-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 16px;
-          margin-bottom: 20px;
-        }
-        .performance-summary-card {
-          background: #fff;
-          border-radius: 16px;
-          border: 1px solid rgba(226,232,240,0.9);
-          box-shadow: 0 12px 36px rgba(15,23,42,0.04);
-          padding: 18px;
-        }
-        .performance-summary-card h3 {
-          margin: 0 0 8px;
-          font-size: 0.95rem;
-          color: var(--muted, #475569);
-        }
-        .performance-summary-card strong {
-          font-size: 1.25rem;
-          color: #111827;
-        }
-        .performance-toolbar {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          margin-bottom: 16px;
-          align-items: center;
-          justify-content: space-between;
-        }
-        .performance-toolbar .controls {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          flex: 1;
-        }
-        .performance-toolbar .controls input,
-        .performance-toolbar .controls select {
-          max-width: 220px;
-        }
-        .performance-modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.55);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          z-index: 50;
-        }
-        .performance-modal {
-          width: min(720px, 100%);
-          background: #fff;
-          border-radius: 18px;
-          padding: 24px;
-          box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
-        }
-        .performance-modal-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
-        }
-        .performance-modal-grid .full {
-          grid-column: 1 / -1;
-        }
-        .performance-achievement {
-          padding: 12px 14px;
-          border-radius: 12px;
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          color: #1d4ed8;
-          font-weight: 600;
-        }
-        @media (max-width: 768px) {
-          .performance-modal-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>Performance Tracker</Typography>
+        <Typography variant="body1" sx={{ color: "#475569" }}>
+          Live production metrics for all active advisors, calculated from the advisor directory and performance history.
+        </Typography>
+      </Box>
 
-      <div className="page-header">
-        <div>
-          <h1>Performance Tracker</h1>
-          <p>Track monthly production and business performance of activated advisers.</p>
-        </div>
-      </div>
+      <Grid container spacing={2}>
+        {[
+          { label: "Total Active Advisors", value: summary.activeAdvisors },
+          { label: "Policies Sold", value: summary.totalPolicies },
+          { label: "Premium Collected", value: formatCurrency(summary.totalPremium) },
+          { label: "Average Persistency", value: `${summary.averagePersistency.toFixed(1)}%` },
+          { label: "Average Achievement", value: `${summary.averageAchievement.toFixed(1)}%` },
+          { label: "Best Performer", value: summary.bestPerformer?.name || "—" },
+          { label: "Monthly Target Achievement", value: `${summary.monthlyTargetAchievement.toFixed(1)}%` }
+        ].map((card) => (
+          <Grid item xs={12} sm={6} md={3} key={card.label}>
+            <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", transition: "box-shadow 0.2s", "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.08)" } }}>
+              <CardContent>
+                <Typography variant="body2" color="text.secondary">{card.label}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{card.value}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
-      <div className="performance-summary-grid">
-        <div className="performance-summary-card">
-          <h3>Total Activated Advisers</h3>
-          <strong>{summary.activeAdvisers}</strong>
-        </div>
-        <div className="performance-summary-card">
-          <h3>Total Policies Sold</h3>
-          <strong>{summary.totalPolicies}</strong>
-        </div>
-        <div className="performance-summary-card">
-          <h3>Total Premium Collected</h3>
-          <strong>{formatCurrency(summary.totalPremium)}</strong>
-        </div>
-        <div className="performance-summary-card">
-          <h3>Average Persistency %</h3>
-          <strong>{summary.averagePersistency.toFixed(1)}%</strong>
-        </div>
-        <div className="performance-summary-card">
-          <h3>Average Achievement %</h3>
-          <strong>{summary.averageAchievement.toFixed(1)}%</strong>
-        </div>
-      </div>
+      <Grid container spacing={3}>
+        <Grid item xs={12} lg={7}>
+          <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Monthly Premium Trend</Typography>
+            {premiumTrend.length === 0 ? (
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 6 }}>
+                <InboxIcon sx={{ fontSize: 48, color: "#cbd5e1", mb: 1 }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#64748b" }}>No trend data</Typography>
+                <Typography variant="body2" color="text.secondary">Add performance records to see trends.</Typography>
+              </Box>
+            ) : (
+              <Box sx={{ height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={premiumTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tickFormatter={(value) => formatMonth(value)} />
+                    <YAxis />
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <Legend />
+                    <Line type="monotone" dataKey="premium" stroke="#2563eb" strokeWidth={2} name="Premium" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+        <Grid item xs={12} lg={5}>
+          <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Policies Sold Trend</Typography>
+            {premiumTrend.length === 0 ? (
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 6 }}>
+                <InboxIcon sx={{ fontSize: 48, color: "#cbd5e1", mb: 1 }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#64748b" }}>No trend data</Typography>
+                <Typography variant="body2" color="text.secondary">Add performance records to see trends.</Typography>
+              </Box>
+            ) : (
+              <Box sx={{ height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={premiumTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tickFormatter={(value) => formatMonth(value)} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="policies" fill="#0f766e" name="Policies" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
 
-      <div className="performance-toolbar">
-        <div className="controls">
-          <input
-            type="text"
-            placeholder="Search advisor name or code"
-            value={searchTerm}
-            onChange={(event) => {
-              setSearchTerm(event.target.value);
-              setPage(1);
-            }}
-          />
-          <select value={selectedMonth} onChange={(event) => { setSelectedMonth(event.target.value); setPage(1); }}>
-            {monthOptions.map((option) => (
-              <option key={option} value={option}>
-                {option === "All" ? "All months" : formatMonth(option)}
-              </option>
-            ))}
-          </select>
-          <select value={sortKey} onChange={(event) => setSortKey(event.target.value)}>
-            <option value="premium">Sort by Premium Collected</option>
-            <option value="policies">Sort by Policies Sold</option>
-            <option value="achievement">Sort by Achievement %</option>
-          </select>
-        </div>
-      </div>
+      <Grid container spacing={3}>
+        <Grid item xs={12} lg={6}>
+          <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Advisor Ranking</Typography>
+            {rankingData.length === 0 ? (
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 4 }}>
+                <InboxIcon sx={{ fontSize: 48, color: "#cbd5e1", mb: 1 }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#64748b" }}>No rankings yet</Typography>
+                <Typography variant="body2" color="text.secondary">Performance data will populate rankings.</Typography>
+              </Box>
+            ) : (
+              <Stack spacing={1.5}>
+                {rankingData.map((row, index) => (
+                  <Box key={row.name} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 1.2, borderRadius: 2, bgcolor: index === 0 ? "#eff6ff" : "#f8fafc" }}>
+                    <Box>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>{index + 1}. {row.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">{row.policies} policies • {formatCurrency(row.premium)}</Typography>
+                    </Box>
+                    <Chip label={index === 0 ? "Top" : "Ranked"} size="small" color={index === 0 ? "primary" : "default"} />
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </Paper>
+        </Grid>
+        <Grid item xs={12} lg={6}>
+          <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Performance Table</Typography>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Search advisor"
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setPage(1);
+                }}
+              />
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <InputLabel id="month-filter">Month</InputLabel>
+                <Select labelId="month-filter" value={selectedMonth} label="Month" onChange={(event) => { setSelectedMonth(event.target.value); setPage(1); }}>
+                  {monthOptions.map((option) => (
+                    <MenuItem key={option} value={option}>{option === "All" ? "All months" : formatMonth(option)}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 220 }}>
+                <InputLabel id="sort-filter">Sort By</InputLabel>
+                <Select labelId="sort-filter" value={sortKey} label="Sort By" onChange={(event) => setSortKey(event.target.value)}>
+                  <MenuItem value="premium">Premium Collected</MenuItem>
+                  <MenuItem value="policies">Policies Sold</MenuItem>
+                  <MenuItem value="achievement">Achievement %</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Advisor</TableCell>
+                    <TableCell>Policies</TableCell>
+                    <TableCell>Premium</TableCell>
+                    <TableCell>Achievement</TableCell>
+                    <TableCell>Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pageRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5}>
+                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 4 }}>
+                          <InboxIcon sx={{ fontSize: 36, color: "#cbd5e1", mb: 1 }} />
+                          <Typography variant="body2" color="text.secondary">No records match your filters.</Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    pageRows.map((row) => (
+                      <TableRow key={row.id} hover>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{row.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">{row.advisorCode}</Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>{row.performance?.policiesSold ?? 0}</TableCell>
+                        <TableCell>{formatCurrency(row.performance?.premiumCollected || 0)}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: getAchievement(row.performance || {}) >= 100 ? "#16a34a" : getAchievement(row.performance || {}) >= 70 ? "#2563eb" : "#d97706" }}>
+                            {getAchievement(row.performance || {}).toFixed(1)}%
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="outlined" size="small" onClick={() => openUpdateModal(row)}>
+                            Update
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                {filteredRows.length} record{filteredRows.length !== 1 ? "s" : ""}
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button size="small" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</Button>
+                <Button size="small" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Next</Button>
+              </Stack>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
 
-      <div className="performance-table-wrap">
-        <div style={{ overflowX: "auto" }}>
-          <table className="performance-table">
-            <thead>
-              <tr>
-                <th>Record ID</th>
-                <th>Advisor Name</th>
-                <th>TATA AIA Advisor Code</th>
-                <th>Month</th>
-                <th>Policies Sold</th>
-                <th>Premium Collected (₹)</th>
-                <th>Persistency %</th>
-                <th>Monthly Target (₹)</th>
-                <th>Achievement %</th>
-                <th>Remarks</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.recordId || ""}</td>
-                  <td>{row.name}</td>
-                  <td>{row.advisorCode}</td>
-                  <td>{formatMonth(row.performance?.month)}</td>
-                  <td>{row.performance?.policiesSold ?? ""}</td>
-                  <td>{row.performance ? formatCurrency(row.performance.premiumCollected) : ""}</td>
-                  <td>{row.performance ? `${row.performance.persistency}%` : ""}</td>
-                  <td>{row.performance ? formatCurrency(row.performance.monthlyTarget) : ""}</td>
-                  <td>{row.performance ? `${getAchievement(row.performance).toFixed(1)}%` : ""}</td>
-                  <td>{row.performance?.remarks || ""}</td>
-                  <td className="performance-table-actions">
-                    <button className="secondary" type="button" onClick={() => openUpdateModal(row)}>
-                      Update Performance
-                    </button>
-                    {row.performance && (
-                      <button className="danger" type="button" onClick={() => handleDelete(row.advisorCode)} style={{ background: "#fee2e2", color: "#b91c1c" }}>
-                        Delete
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {filteredRows.length > pageSize && (
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
-          <button className="secondary" type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
-            Previous
-          </button>
-          {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-            <button
-              key={pageNumber}
-              className={pageNumber === page ? "primary" : "secondary"}
-              type="button"
-              onClick={() => setPage(pageNumber)}
-            >
-              {pageNumber}
-            </button>
-          ))}
-          <button className="secondary" type="button" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
-            Next
-          </button>
-        </div>
-      )}
-
-      {isModalOpen && activeAdviser && (
-        <div className="performance-modal-overlay" onClick={closeModal}>
-          <div className="performance-modal" onClick={(event) => event.stopPropagation()}>
-            <div className="page-header" style={{ marginBottom: "16px", padding: "16px 20px" }}>
-              <div>
-                <h2 style={{ margin: 0 }}>Update Performance</h2>
-                <p style={{ margin: "6px 0 0" }}>Capture adviser performance details and auto-calculate achievement.</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="performance-modal-grid">
-                <div>
-                  <label htmlFor="advisorName">Advisor Name</label>
-                  <input id="advisorName" name="advisorName" value={formData.advisorName} readOnly required />
-                </div>
-                <div>
-                  <label htmlFor="advisorCode">Advisor Code</label>
-                  <input id="advisorCode" name="advisorCode" value={formData.advisorCode} readOnly required />
-                </div>
-                <div>
-                  <label htmlFor="month">Month</label>
-                  <input id="month" name="month" type="month" value={formData.month} onChange={handleFormChange} required />
-                </div>
-                <div>
-                  <label htmlFor="policiesSold">Policies Sold</label>
-                  <input id="policiesSold" name="policiesSold" type="number" min="0" value={formData.policiesSold} onChange={handleFormChange} required />
-                </div>
-                <div>
-                  <label htmlFor="premiumCollected">Premium Collected (₹)</label>
-                  <input id="premiumCollected" name="premiumCollected" type="number" min="0" value={formData.premiumCollected} onChange={handleFormChange} required />
-                </div>
-                <div>
-                  <label htmlFor="persistency">Persistency %</label>
-                  <input id="persistency" name="persistency" type="number" min="0" max="100" value={formData.persistency} onChange={handleFormChange} required />
-                </div>
-                <div>
-                  <label htmlFor="monthlyTarget">Monthly Target (₹)</label>
-                  <input id="monthlyTarget" name="monthlyTarget" type="number" min="0" value={formData.monthlyTarget} onChange={handleFormChange} required />
-                </div>
-                <div className="performance-achievement">
-                  <div>Achievement %</div>
-                  <div style={{ fontSize: "1.1rem", marginTop: "4px" }}>
-                    {getAchievement({ premiumCollected: Number(formData.premiumCollected || 0), monthlyTarget: Number(formData.monthlyTarget || 0) }).toFixed(1)}%
-                  </div>
-                </div>
-                <div className="full">
-                  <label htmlFor="remarks">Remarks</label>
-                  <textarea id="remarks" name="remarks" value={formData.remarks} onChange={handleFormChange} placeholder="Add notes for the month" />
-                </div>
-              </div>
-
-              <div className="modal-actions" style={{ justifyContent: "flex-end", marginTop: "20px" }}>
-                <button className="secondary" type="button" onClick={closeModal}>
-                  Cancel
-                </button>
-                <button className="primary" type="submit">
-                  Save Record
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+      <Dialog open={isModalOpen} onClose={closeModal} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Update Performance Record</DialogTitle>
+        <DialogContent dividers>
+          {activeAdviser && (
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Advisor Name" name="advisorName" value={formData.advisorName} InputProps={{ readOnly: true }} fullWidth />
+                <TextField label="Advisor Code" name="advisorCode" value={formData.advisorCode} InputProps={{ readOnly: true }} fullWidth />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Month" name="month" type="month" value={formData.month} onChange={handleFormChange} fullWidth required />
+                <TextField label="Policies Sold" name="policiesSold" type="number" value={formData.policiesSold} onChange={handleFormChange} fullWidth required />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Premium Collected" name="premiumCollected" type="number" value={formData.premiumCollected} onChange={handleFormChange} fullWidth required />
+                <TextField label="Persistency %" name="persistency" type="number" value={formData.persistency} onChange={handleFormChange} fullWidth required />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Monthly Target" name="monthlyTarget" type="number" value={formData.monthlyTarget} onChange={handleFormChange} fullWidth required />
+                <TextField label="Achievement %" value={getAchievement({ premiumCollected: Number(formData.premiumCollected || 0), monthlyTarget: Number(formData.monthlyTarget || 0) }).toFixed(1)} InputProps={{ readOnly: true }} fullWidth />
+              </Stack>
+              <TextField label="Remarks" name="remarks" multiline minRows={3} value={formData.remarks} onChange={handleFormChange} fullWidth />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeModal}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
-}
-
-function getAchievement(record) {
-  const premium = Number(record?.premiumCollected || 0);
-  const target = Number(record?.monthlyTarget || 0);
-  if (!target) return 0;
-  return (premium / target) * 100;
 }
 
 export default PerformanceTracker;

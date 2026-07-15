@@ -3,22 +3,23 @@ import { useCrm } from "../crmContext.jsx";
 import { formatDate } from "../utils.js";
 import StageSelect from "./StageSelect.jsx";
 
-export default function CandidateModal({ candidate, stageOptions, stageColors, onClose, onStageUpdate, onNoteSave, onSave }) {
-  const { pipelineStages, sources, recruiterNames } = useCrm();
+export default function CandidateModal({ candidate, stageOptions, stageColors, onClose, onStageUpdate, onNoteSave, onSave, pipelineStages: propPipelineStages, sources: propSources }) {
+  const { pipelineStages: contextStages, sources: contextSources } = useCrm();
+  const pipelineStages = propPipelineStages || contextStages;
+  const sources = propSources || contextSources;
   const [form, setForm] = useState({
     name: candidate.name || "",
-    phone: candidate.phone || "",
+    mobile: candidate.mobile || candidate.phone || "",
     email: candidate.email || "",
     city: candidate.city || "",
-    qualification: candidate.qualification || "",
-    source: candidate.source || "",
-    stage: candidate.stage || pipelineStages[0],
-    trainingStatus: candidate.trainingStatus || "Pending",
-    examResult: candidate.examResult || "Pending",
-    followUpDate: candidate.followUpDate || "",
+    leadSource: candidate.leadSource || candidate.source || "",
+    workflowStage: candidate.workflowStage || pipelineStages[0],
+    leadStatus: candidate.leadStatus || "Open",
+    assignedTo: candidate.assignedTo || "",
+    followUpDate: candidate.nextFollowUp || candidate.followUpDate || "",
     notes: candidate.notes || ""
   });
-  const [selectedStage, setSelectedStage] = useState(candidate.stage);
+  const [selectedStage, setSelectedStage] = useState(candidate.workflowStage || candidate.stage || pipelineStages[0]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -28,8 +29,14 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
   const handleSave = () => {
     const payload = {
       ...form,
-      stage: selectedStage,
-      followUpDate: form.followUpDate || "",
+      mobile: form.mobile || candidate.mobile || candidate.phone || "",
+      phone: form.mobile || candidate.mobile || candidate.phone || "",
+      workflowStage: selectedStage,
+      leadSource: form.leadSource || candidate.leadSource || candidate.source || "",
+      source: form.leadSource || candidate.leadSource || candidate.source || "",
+      leadStatus: form.leadStatus || candidate.leadStatus || "Open",
+      assignedTo: form.assignedTo || candidate.assignedTo || "",
+      nextFollowUp: form.followUpDate || candidate.nextFollowUp || candidate.followUpDate || "",
       followUp: {
         ...candidate.followUp,
         type: candidate.followUp?.type || "Phone Call",
@@ -52,7 +59,7 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
       <div className="modal-content edit-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <p className="section-kicker">Edit Candidate</p>
+            <p className="section-kicker">Edit Lead</p>
             <h2>{candidate.name}</h2>
           </div>
           <button onClick={onClose}>Close</button>
@@ -64,8 +71,8 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
             <input name="name" value={form.name} onChange={handleChange} />
           </label>
           <label>
-            <span>Phone Number</span>
-            <input name="phone" value={form.phone} onChange={handleChange} />
+            <span>Mobile Number</span>
+            <input name="mobile" value={form.mobile} onChange={handleChange} />
           </label>
           <label>
             <span>Email</span>
@@ -76,36 +83,30 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
             <input name="city" value={form.city} onChange={handleChange} />
           </label>
           <label>
-            <span>Qualification</span>
-            <input name="qualification" value={form.qualification} onChange={handleChange} />
-          </label>
-          <label>
-            <span>Source</span>
-            <select name="source" value={form.source} onChange={handleChange}>
+            <span>Lead Source</span>
+            <select name="leadSource" value={form.leadSource} onChange={handleChange}>
               {sources.map((source) => (
                 <option key={source}>{source}</option>
               ))}
             </select>
           </label>
           <label>
-            <span>Recruitment Stage</span>
-            <StageSelect stage={selectedStage} onChange={(value) => setSelectedStage(value)} />
+            <span>Workflow Stage</span>
+            <StageSelect stage={selectedStage} leadType={candidate.leadType} onChange={(value) => setSelectedStage(value)} />
           </label>
           <label>
-            <span>Training Status</span>
-            <select name="trainingStatus" value={form.trainingStatus} onChange={handleChange}>
-              <option>Pending</option>
+            <span>Lead Status</span>
+            <select name="leadStatus" value={form.leadStatus} onChange={handleChange}>
+              <option>Open</option>
+              <option>Assigned</option>
               <option>In Progress</option>
-              <option>Completed</option>
+              <option>Converted</option>
+              <option>Lost</option>
             </select>
           </label>
           <label>
-            <span>Exam Result</span>
-            <select name="examResult" value={form.examResult} onChange={handleChange}>
-              <option>Pending</option>
-              <option>Passed</option>
-              <option>Failed</option>
-            </select>
+            <span>Assigned To</span>
+            <input name="assignedTo" value={form.assignedTo} onChange={handleChange} />
           </label>
           <label>
             <span>Follow-up Date</span>
@@ -121,7 +122,7 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
           <h3>Timeline</h3>
           <div className="timeline">
             {stageOptions.map((stage) => (
-              <div key={stage} className={`timeline-step ${candidate.stage === stage ? "active" : ""}`}>
+              <div key={stage} className={`timeline-step ${selectedStage === stage ? "active" : ""}`}>
                 <span className="timeline-dot" style={{ backgroundColor: stageColors[stage] }} />
                 <span>{stage}</span>
               </div>

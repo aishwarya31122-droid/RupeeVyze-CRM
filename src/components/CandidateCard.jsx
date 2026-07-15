@@ -1,28 +1,30 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { formatDate } from "../utils.js";
 
-export default function CandidateCard({ candidate, onOpen, stageColor }) {
+export default function CandidateCard({ candidate, onOpen, stageColor, detailsPrefix = "/adviser/lead-management/lead" }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="candidate-card" onClick={() => onOpen(candidate)}>
+    <div className="candidate-card" onClick={() => navigate(`${detailsPrefix}/${candidate.id}`)}>
       <div className="card-header">
         <div>
           <h3>{candidate.name}</h3>
-          <p>{candidate.phone}</p>
+          <p>{candidate.mobile || candidate.phone}</p>
         </div>
         <span className="badge" style={{ backgroundColor: stageColor }}>
-          {candidate.stage}
+          {candidate.workflowStage}
         </span>
       </div>
-      <p>{candidate.source} · {candidate.recruitedBy}</p>
+      <p>{candidate.leadSource || candidate.source} · {candidate.recruitedBy || candidate.assignedTo}</p>
       <div className="card-row">
-        <span>Follow-up: {formatDate(candidate.followUpDate)}</span>
-        <span>{candidate.followUp.priority} priority</span>
+        <span>Next Follow-up: {formatDate(candidate.followUpDate || candidate.nextFollowUp)}</span>
+        <span>{candidate.priority || candidate.followUp?.priority || "Medium"} priority</span>
       </div>
       <div className="card-actions">
         <Link
           className="button secondary"
-          to={`/adviser/candidate/${candidate.id}`}
+          to={`${detailsPrefix}/${candidate.id}`}
           onClick={(event) => event.stopPropagation()}
         >
           View Details

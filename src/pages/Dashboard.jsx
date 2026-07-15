@@ -11,22 +11,23 @@ function Dashboard() {
     }, {});
 
     candidates.forEach((candidate) => {
-      if (stageCounts[candidate.stage] !== undefined) {
-        stageCounts[candidate.stage] += 1;
+      if (stageCounts[candidate.workflowStage] !== undefined) {
+        stageCounts[candidate.workflowStage] += 1;
       }
     });
 
     const overdueFollowUps = candidates.filter((candidate) => {
-      if (!candidate.followUpDate) return false;
-      const due = new Date(candidate.followUpDate);
+      const followUpDate = candidate.nextFollowUp || candidate.followUpDate;
+      if (!followUpDate) return false;
+      const due = new Date(followUpDate);
       return due < new Date();
     }).length;
 
     return {
       total: candidates.length,
-      activated: stageCounts["Activated"] || 0,
-      trainingCompleted: stageCounts["Training Completed"] || 0,
-      examPassed: stageCounts["Exam Passed"] || 0,
+      activated: stageCounts["Active Client"] || 0,
+      trainingCompleted: stageCounts["Training"] || 0,
+      examPassed: stageCounts["Exam"] || 0,
       overdueFollowUps,
       stageCounts
     };

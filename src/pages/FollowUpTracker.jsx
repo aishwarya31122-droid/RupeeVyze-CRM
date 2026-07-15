@@ -1,24 +1,26 @@
 import { useMemo, useState, useCallback } from "react";
 import { useCrm } from "../crmContext.jsx";
-import { formatDate, getTodayFollowUps, getOverdueFollowUps, sortByPriority } from "../utils.js";
+import { formatDate, getFollowUpDate, getTodayFollowUps, getOverdueFollowUps, sortByPriority } from "../utils.js";
 
 const tabs = ["Today", "Overdue", "Upcoming", "Completed"];
 
-function FollowUpTracker() {
+function FollowUpTracker({ items, onMarkDone }) {
   const { candidates, markFollowUpDone } = useCrm();
+  const sourceItems = items ?? candidates;
+  const markDoneHandler = onMarkDone ?? markFollowUpDone;
   const [activeTab, setActiveTab] = useState("Today");
   const [markedDone, setMarkedDone] = useState(new Set());
   const [priorityFilter, setPriorityFilter] = useState("All");
 
-  const todayList = useMemo(() => sortByPriority(getTodayFollowUps(candidates)), [candidates]);
-  const overdueList = useMemo(() => sortByPriority(getOverdueFollowUps(candidates)), [candidates]);
+  const todayList = useMemo(() => sortByPriority(getTodayFollowUps(sourceItems)), [sourceItems]);
+  const overdueList = useMemo(() => sortByPriority(getOverdueFollowUps(sourceItems)), [sourceItems]);
   const upcomingList = useMemo(
-    () => sortByPriority(candidates.filter((candidate) => candidate.followUpDate && !getOverdueFollowUps([candidate]).length && !getTodayFollowUps([candidate]).length)),
-    [candidates]
+    () => sortByPriority(sourceItems.filter((candidate) => getFollowUpDate(candidate) && !getOverdueFollowUps([candidate]).length && !getTodayFollowUps([candidate]).length)),
+    [sourceItems]
   );
   const completedList = useMemo(
-    () => sortByPriority(candidates.filter((candidate) => candidate.followUp?.status === "Done")),
-    [candidates]
+    () => sortByPriority(sourceItems.filter((candidate) => candidate.followUp?.status === "Done")),
+    [sourceItems]
   );
 
   const currentList = useMemo(() => {
@@ -28,7 +30,7 @@ function FollowUpTracker() {
   }, [activeTab, todayList, overdueList, upcomingList, completedList, priorityFilter]);
 
   const handleMarkDone = useCallback((candidateId) => {
-    markFollowUpDone(candidateId);
+    markDoneHandler(candidateId);
     setMarkedDone((prev) => new Set(prev).add(candidateId));
     setTimeout(() => {
       setMarkedDone((prev) => {
@@ -37,7 +39,7 @@ function FollowUpTracker() {
         return updated;
       });
     }, 500);
-  }, [markFollowUpDone]);
+  }, [markDoneHandler]);
 
   return (
     <div>
@@ -74,12 +76,12 @@ function FollowUpTracker() {
             <div key={candidate.id} className="followup-row">
               <div>
                 <h3>{candidate.name}</h3>
-                <p>{candidate.phone} · {candidate.stage}</p>
-                <p>{candidate.followUp.type} · {candidate.followUp.priority}</p>
-                <p className="muted-text">Due: {formatDate(candidate.followUpDate)}</p>
+                <p>{candidate.mobile || candidate.phone} · {candidate.workflowStage}</p>
+                <p>{candidate.followUp?.type ?? "Follow-up"} · {candidate.followUp?.priority ?? "Medium"}</p>
+                <p className="muted-text">Due: {formatDate(getFollowUpDate(candidate))}</p>
               </div>
               <div className="followup-actions">
-                <span className={`status-pill compact ${candidate.followUp.priority.toLowerCase()}`}>{candidate.followUp.priority}</span>
+                <span className={`status-pill compact ${String(candidate.followUp?.priority || "Medium").toLowerCase()}`}>{candidate.followUp?.priority || "Medium"}</span>
                 <button className="secondary">Call</button>
                 <button className="secondary">WhatsApp</button>
                 {activeTab !== "Completed" && (

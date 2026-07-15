@@ -1,5 +1,18 @@
 import { useMemo } from "react";
-import { useCrm } from "../crmContext.jsx";
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Grid,
+  Paper,
+  Stack,
+  Typography
+} from "@mui/material";
+import PeopleIcon from "@mui/icons-material/People";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import {
   PieChart,
   Pie,
@@ -18,6 +31,7 @@ import {
   Funnel,
   LabelList
 } from "recharts";
+import { useCrm } from "../crmContext.jsx";
 
 const PIE_COLORS = ["#2563eb", "#60a5fa", "#3b82f6", "#1d4ed8", "#0284c7", "#0ea5e9"];
 const BAR_COLOR = "#0891b2";
@@ -28,40 +42,36 @@ const LINE_ACTIVATED = "#10b981";
 function Reports() {
   const { candidates, pipelineStages } = useCrm();
 
-  // KPI Calculations
   const totalCandidates = candidates.length;
-  const activatedAdvisors = candidates.filter((c) => c.stage === "Activated").length;
+  const activatedAdvisors = candidates.filter((c) => c.leadStatus === "Converted" || c.workflowStage === "Active Client").length;
   const conversionRate = totalCandidates > 0 ? Math.round((activatedAdvisors / totalCandidates) * 100) : 0;
-  const documentsPending = candidates.filter((c) => ["Sourced", "Contacted"].includes(c.stage)).length;
+  const documentsPending = candidates.filter((c) => (c.documents || []).length > 0).length;
 
-  // Source Analysis
   const sourceAnalysis = useMemo(() => {
     const counts = candidates.reduce((acc, candidate) => {
-      acc[candidate.source] = (acc[candidate.source] || 0) + 1;
+      const source = candidate.leadSource || candidate.source || "Unknown";
+      acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {});
     return Object.entries(counts).map(([source, count]) => ({ name: source, value: count }));
   }, [candidates]);
 
-  // Stage Distribution
   const stageDistribution = useMemo(
     () => pipelineStages.map((stage) => ({
       stage,
-      count: candidates.filter((candidate) => candidate.stage === stage).length
-    })).filter(item => item.count > 0),
+      count: candidates.filter((candidate) => candidate.workflowStage === stage).length
+    })).filter((item) => item.count > 0),
     [candidates, pipelineStages]
   );
 
-  // Funnel Data
   const funnelData = useMemo(
     () => pipelineStages.map((stage) => ({
       name: stage,
-      value: candidates.filter((candidate) => candidate.stage === stage).length
-    })).filter(item => item.value > 0),
+      value: candidates.filter((candidate) => candidate.workflowStage === stage).length
+    })).filter((item) => item.value > 0),
     [candidates, pipelineStages]
   );
 
-  // Monthly Recruitment Trend (Dummy Data)
   const monthlyTrend = [
     { month: "Jan", recruited: 12, activated: 3 },
     { month: "Feb", recruited: 18, activated: 5 },
@@ -71,198 +81,149 @@ function Reports() {
     { month: "Jun", recruited: 32, activated: 12 }
   ];
 
-  // Key Insights
-  const bestSource = sourceAnalysis.length > 0 
-    ? sourceAnalysis.reduce((max, item) => item.value > max.value ? item : max)
+  const bestSource = sourceAnalysis.length > 0
+    ? sourceAnalysis.reduce((max, item) => (item.value > max.value ? item : max))
     : { name: "N/A", value: 0 };
 
   const bottleneckStage = stageDistribution.length > 0
-    ? stageDistribution.reduce((max, item) => item.count > max.count ? item : max)
+    ? stageDistribution.reduce((max, item) => (item.count > max.count ? item : max))
     : { stage: "N/A", count: 0 };
 
-  const followUpRequired = candidates.filter((c) => 
-    c.followUp.status === "Pending" && !["Activated", "Dropped"].includes(c.stage)
-  ).length;
+  const followUpRequired = candidates.filter((c) => c.followUp?.status === "Pending" && !["Converted", "Lost"].includes(c.leadStatus)).length;
+
+  const kpis = [
+    { label: "Total Candidates", value: totalCandidates, icon: PeopleIcon, color: "#2563eb" },
+    { label: "Activated Advisors", value: activatedAdvisors, icon: TrendingUpIcon, color: "#0f766e" },
+    { label: "Conversion Rate", value: `${conversionRate}%`, icon: AssessmentIcon, color: "#d97706" },
+    { label: "Documents Pending", value: documentsPending, icon: FactCheckIcon, color: "#7c3aed" }
+  ];
+
+  const insights = [
+    { label: "Best Source", value: bestSource.name, detail: `${bestSource.value} candidates` },
+    { label: "Bottleneck Stage", value: bottleneckStage.stage, detail: `${bottleneckStage.count} candidates stuck` },
+    { label: "Activation Rate", value: `${conversionRate}%`, detail: `${activatedAdvisors} of ${totalCandidates} activated` },
+    { label: "Needs Follow-up", value: followUpRequired, detail: "Pending actions" }
+  ];
 
   return (
-    <div className="reports-container">
-      <div className="page-header">
-        <div>
-          <h1>Reports & Analytics</h1>
-          <p>Comprehensive recruitment analytics and performance metrics.</p>
-        </div>
-      </div>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>Reports & Analytics</Typography>
+        <Typography variant="body1" sx={{ color: "#475569" }}>
+          Recruitment analytics presented in a consistent enterprise dashboard layout.
+        </Typography>
+      </Box>
 
-      {/* KPI Cards Section */}
-      <section className="analytics-section">
-        <h2 className="section-title">Key Performance Indicators</h2>
-        <div className="kpi-grid">
-          <div className="kpi-card large">
-            <span className="kpi-label">Total Candidates</span>
-            <span className="kpi-value">{totalCandidates}</span>
-            <span className="kpi-icon"></span>
-          </div>
-          <div className="kpi-card large accent-blue">
-            <span className="kpi-label">Activated Advisors</span>
-            <span className="kpi-value">{activatedAdvisors}</span>
-            <span className="kpi-icon"></span>
-          </div>
-          <div className="kpi-card large accent-green">
-            <span className="kpi-label">Conversion Rate</span>
-            <span className="kpi-value">{conversionRate}%</span>
-            <span className="kpi-icon"></span>
-          </div>
-          <div className="kpi-card large">
-            <span className="kpi-label">Documents Pending</span>
-            <span className="kpi-value">{documentsPending}</span>
-            <span className="kpi-icon"></span>
-          </div>
-        </div>
-      </section>
+      <Grid container spacing={2}>
+        {kpis.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Grid item xs={12} sm={6} md={3} key={card.label}>
+              <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", height: "100%" }}>
+                <CardContent>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ bgcolor: `${card.color}15`, color: card.color, borderRadius: "50%", p: 1 }}>
+                      <Icon fontSize="small" />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">{card.label}</Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>{card.value}</Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid>
 
-      {/* Charts Grid */}
-      <section className="analytics-section">
-        <h2 className="section-title">Analytics Overview</h2>
-        <div className="charts-grid">
-          {/* Source Analysis Pie Chart */}
-          <div className="chart-card">
-            <h3>Source Analysis</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={sourceAnalysis}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  outerRadius={100}
-                  fill="#2563eb"
-                  dataKey="value"
-                >
-                  {sourceAnalysis.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value} candidates`} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+      <Grid container spacing={3}>
+        <Grid item xs={12} lg={6}>
+          <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3, height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Source Analysis</Typography>
+            <Box sx={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={sourceAnalysis} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                    {sourceAnalysis.map((entry, index) => (
+                      <Cell key={`${entry.name}-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `${value} candidates`} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} lg={6}>
+          <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3, height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Stage Distribution</Typography>
+            <Box sx={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="stage" type="category" width={120} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill={BAR_COLOR} radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
 
-          {/* Stage Distribution Bar Chart */}
-          <div className="chart-card">
-            <h3>Stage Distribution</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart
-                data={stageDistribution}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 150, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="stage" type="category" width={140} />
-                <Tooltip />
-                <Bar dataKey="count" fill={BAR_COLOR} radius={[0, 8, 8, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </section>
+      <Grid container spacing={3}>
+        <Grid item xs={12} lg={6}>
+          <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3, height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Recruitment Funnel</Typography>
+            <Box sx={{ height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <FunnelChart>
+                  <Tooltip formatter={(value) => `${value} candidates`} />
+                  <Funnel data={funnelData} dataKey="value" stroke={FUNNEL_COLOR} fill={FUNNEL_COLOR} name="Candidates">
+                    <LabelList dataKey="value" position="right" />
+                  </Funnel>
+                </FunnelChart>
+              </ResponsiveContainer>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} lg={6}>
+          <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3, height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Monthly Recruitment Trend</Typography>
+            <Box sx={{ height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="recruited" stroke={LINE_RECRUITED} strokeWidth={2} dot={{ fill: LINE_RECRUITED, r: 5 }} name="Recruited" />
+                  <Line type="monotone" dataKey="activated" stroke={LINE_ACTIVATED} strokeWidth={2} dot={{ fill: LINE_ACTIVATED, r: 5 }} name="Activated" />
+                </LineChart>
+              </ResponsiveContainer>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
 
-      {/* Funnel Chart */}
-      <section className="analytics-section">
-        <h2 className="section-title">Recruitment Funnel</h2>
-        <div className="chart-card full-width">
-          <ResponsiveContainer width="100%" height={350}>
-            <FunnelChart>
-              <Tooltip formatter={(value) => `${value} candidates`} />
-              <Funnel
-                data={funnelData}
-                dataKey="value"
-                stroke={FUNNEL_COLOR}
-                fill={FUNNEL_COLOR}
-                name="Candidates"
-              >
-                <LabelList dataKey="value" position="right" />
-              </Funnel>
-            </FunnelChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
+      <Grid container spacing={2}>
+        {insights.map((item) => (
+          <Grid item xs={12} md={6} lg={3} key={item.label}>
+            <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", height: "100%" }}>
+              <CardContent>
+                <Typography variant="body2" color="text.secondary">{item.label}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{item.value}</Typography>
+                <Typography variant="body2" color="text.secondary">{item.detail}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
-      {/* Monthly Trend Chart */}
-      <section className="analytics-section">
-        <h2 className="section-title">Monthly Recruitment Trend</h2>
-        <div className="chart-card full-width">
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart
-              data={monthlyTrend}
-              margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="recruited"
-                stroke={LINE_RECRUITED}
-                strokeWidth={2}
-                dot={{ fill: LINE_RECRUITED, r: 5 }}
-                name="Recruited"
-              />
-              <Line
-                type="monotone"
-                dataKey="activated"
-                stroke={LINE_ACTIVATED}
-                strokeWidth={2}
-                dot={{ fill: LINE_ACTIVATED, r: 5 }}
-                name="Activated"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-
-      {/* Key Insights */}
-      <section className="analytics-section">
-        <h2 className="section-title">Key Insights</h2>
-        <div className="insights-grid">
-          <div className="insight-card">
-            <div className="insight-icon"></div>
-            <div className="insight-content">
-              <span className="insight-label">Best Recruitment Source</span>
-              <span className="insight-value">{bestSource.name}</span>
-              <span className="insight-detail">{bestSource.value} candidates</span>
-            </div>
-          </div>
-          <div className="insight-card">
-            <div className="insight-icon"></div>
-            <div className="insight-content">
-              <span className="insight-label">Current Bottleneck Stage</span>
-              <span className="insight-value">{bottleneckStage.stage}</span>
-              <span className="insight-detail">{bottleneckStage.count} candidates stuck</span>
-            </div>
-          </div>
-          <div className="insight-card">
-            <div className="insight-icon"></div>
-            <div className="insight-content">
-              <span className="insight-label">Total Activation Rate</span>
-              <span className="insight-value">{conversionRate}%</span>
-              <span className="insight-detail">{activatedAdvisors} of {totalCandidates} activated</span>
-            </div>
-          </div>
-          <div className="insight-card">
-            <div className="insight-icon"></div>
-            <div className="insight-content">
-              <span className="insight-label">Candidates Requiring Follow-up</span>
-              <span className="insight-value">{followUpRequired}</span>
-              <span className="insight-detail">Pending actions</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+    </Box>
   );
 }
 

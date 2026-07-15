@@ -16,7 +16,7 @@ export default function AdminModule() {
         <Route path="permissions" element={<Permissions />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>
-      <Route path="*" element={<Navigate to="/adviser/administration" replace />} />
+      <Route path="*" element={<Navigate to="/adviser/administration/users" replace />} />
     </Routes>
   );
 }

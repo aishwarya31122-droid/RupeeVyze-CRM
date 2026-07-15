@@ -18,10 +18,12 @@ function AllLeads({ leads = [] }) {
               <tr>
                 <th>Lead ID</th>
                 <th>Name</th>
-                <th>Type</th>
-                <th>City</th>
+                <th>Lead Type</th>
+                <th>Workflow Stage</th>
+                <th>Lead Status</th>
                 <th>Assigned To</th>
-                <th>Stage</th>
+                <th>Lead Source</th>
+                <th>Priority</th>
                 <th>Next Follow-up</th>
                 <th>Actions</th>
               </tr>
@@ -32,9 +34,11 @@ function AllLeads({ leads = [] }) {
                   <td>{l.leadId}</td>
                   <td>{l.name}</td>
                   <td>{l.leadType}</td>
-                  <td>{l.city}</td>
+                  <td>{l.workflowStage}</td>
+                  <td>{l.leadStatus}</td>
                   <td>{l.assignedTo}</td>
-                  <td>{l.stage}</td>
+                  <td>{l.leadSource || l.source}</td>
+                  <td>{l.priority || l.followUp?.priority}</td>
                   <td>{l.nextFollowUp}</td>
                   <td>
                     <Link className="button secondary" to={`/adviser/lead-management/lead/${l.id}`}>View</Link>

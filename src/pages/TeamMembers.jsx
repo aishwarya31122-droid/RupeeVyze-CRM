@@ -1,11 +1,12 @@
 import { useCrm } from "../crmContext.jsx";
 
-function TeamMembers() {
+function TeamMembers({ title = "Team Members", description = "" }) {
   const { teamMembers } = useCrm();
 
   return (
     <div>
-      <h1>Team Members</h1>
+      <h1>{title}</h1>
+      {description && <p>{description}</p>}
       <div className="team-grid">
         {teamMembers.map((member) => (
           <div key={member.id} className="team-card">

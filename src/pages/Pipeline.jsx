@@ -5,8 +5,27 @@ import CandidateModal from "../components/CandidateModal.jsx";
 import CandidateForm from "../components/CandidateForm.jsx";
 import { stageBadge } from "../data/dropdowns.js";
 
-function Pipeline() {
-  const { candidates, updateCandidateStage, updateCandidate, updateCandidateNote, pipelineStages, sources, recruiterNames, addCandidate } = useCrm();
+function Pipeline({
+  candidates: propCandidates,
+  updateCandidateStage: propUpdateCandidateStage,
+  updateCandidate: propUpdateCandidate,
+  updateCandidateNote: propUpdateCandidateNote,
+  addCandidate: propAddCandidate,
+  pipelineStages: propPipelineStages,
+  sources: propSources,
+  recruiterNames: propRecruiterNames,
+  detailsPrefix
+}) {
+  const crm = useCrm();
+  const candidates = propCandidates || crm.candidates;
+  const updateCandidateStage = propUpdateCandidateStage || crm.updateCandidateStage;
+  const updateCandidate = propUpdateCandidate || crm.updateCandidate;
+  const updateCandidateNote = propUpdateCandidateNote || crm.updateCandidateNote;
+  const addCandidate = propAddCandidate || crm.addCandidate;
+  const pipelineStages = propPipelineStages || crm.pipelineStages;
+  const sources = propSources || crm.sources;
+  const recruiterNames = propRecruiterNames || crm.recruiterNames;
+  const detailsPathPrefix = detailsPrefix || "/adviser/lead-management/lead";
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("All Stages");
   const [sourceFilter, setSourceFilter] = useState("All Sources");
@@ -19,11 +38,11 @@ function Pipeline() {
 
   const filteredCandidates = useMemo(() => {
     return candidates.filter((candidate) => {
-      const searchText = [candidate.name, candidate.phone, candidate.email, candidate.city].join(" ").toLowerCase();
+      const searchText = [candidate.name, candidate.mobile, candidate.phone, candidate.email, candidate.city].join(" ").toLowerCase();
       const matchesSearch = searchText.includes(search.toLowerCase());
-      const matchesStage = stageFilter === "All Stages" || candidate.stage === stageFilter;
-      const matchesSource = sourceFilter === "All Sources" || candidate.source === sourceFilter;
-      const matchesRecruiter = recruiterFilter === "All Recruiters" || candidate.recruitedBy === recruiterFilter;
+      const matchesStage = stageFilter === "All Stages" || candidate.workflowStage === stageFilter;
+      const matchesSource = sourceFilter === "All Sources" || candidate.source === sourceFilter || candidate.leadSource === sourceFilter;
+      const matchesRecruiter = recruiterFilter === "All Recruiters" || candidate.recruitedBy === recruiterFilter || candidate.assignedTo === recruiterFilter;
       const matchesCity = cityFilter === "All Cities" || candidate.city === cityFilter;
       return matchesSearch && matchesStage && matchesSource && matchesRecruiter && matchesCity;
     });
@@ -32,7 +51,17 @@ function Pipeline() {
   const exportCsv = () => {
     const rows = [
       ["Name", "Phone", "Email", "City", "Source", "Recruiter", "Stage", "Follow-up Date", "Notes"],
-      ...filteredCandidates.map((candidate) => [candidate.name, candidate.phone, candidate.email, candidate.city, candidate.source, candidate.recruitedBy, candidate.stage, candidate.followUpDate, candidate.notes])
+      ...filteredCandidates.map((candidate) => [
+        candidate.name,
+        candidate.mobile || candidate.phone,
+        candidate.email,
+        candidate.city,
+        candidate.leadSource || candidate.source,
+        candidate.assignedTo || candidate.recruitedBy || "",
+        candidate.workflowStage,
+        candidate.nextFollowUp || candidate.followUpDate || "",
+        candidate.notes
+      ])
     ];
 
     const csvContent = rows.map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -40,7 +69,7 @@ function Pipeline() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "candidate_pipeline.csv";
+    link.download = "lead_pipeline.csv";
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -49,15 +78,15 @@ function Pipeline() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Recruitment Pipeline</h1>
-          <p>Manage candidate stages, follow-ups, and recruiter assignments.</p>
+          <h1>Lead Pipeline</h1>
+          <p>Manage lead stages, follow-ups, and recruiter assignments.</p>
         </div>
         <div className="page-actions">
           <button type="button" className="secondary-btn" onClick={exportCsv}>
             Export CSV
           </button>
           <button type="button" className="primary-btn" onClick={() => setFormOpen(true)}>
-            + Add Candidate
+            + Add Lead
           </button>
         </div>
       </div>
@@ -66,7 +95,7 @@ function Pipeline() {
         <div className="filters-row">
           <input
             type="text"
-            placeholder="Search candidate by name, phone, email or city"
+            placeholder="Search lead by name, phone, email or city"
             className="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -104,7 +133,8 @@ function Pipeline() {
             key={candidate.id}
             candidate={candidate}
             onOpen={setActiveCandidate}
-            stageColor={stageBadge[candidate.stage] || "#64748b"}
+            stageColor={stageBadge[candidate.workflowStage] || "#64748b"}
+            detailsPrefix={detailsPathPrefix}
           />
         ))}
       </div>
@@ -137,6 +167,8 @@ function Pipeline() {
           addCandidate(candidateData);
           setFormOpen(false);
         }}
+        pipelineStages={pipelineStages}
+        sources={sources}
       />
     </div>
   );

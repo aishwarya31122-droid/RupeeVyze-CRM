@@ -8,42 +8,34 @@ import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Alert from "@mui/material/Alert";
 import { useCrm } from "../crmContext.jsx";
-import { sources } from "../config";
+import { sources as configSources } from "../config";
 
-const trainingStatuses = ["Pending", "In Progress", "Completed"];
-const examResults = ["Pending", "Passed", "Failed"];
-
-const shouldShowFollowUpDate = (stage) => ["Contacted", "Documents Submitted"].includes(stage);
-const shouldShowTrainingStatus = (stage) => ["Training"].includes(stage);
-const shouldShowExamResult = (stage) => ["Exam Result"].includes(stage);
-
-const createEmptyForm = (stage = "Sourced") => ({
+const createEmptyForm = (leadType = "Insurance Customer", workflowStage = "New Lead") => ({
   name: "",
-  phone: "",
+  mobile: "",
   email: "",
   city: "",
-  qualification: "",
   source: "",
-  stage,
+  leadType,
+  workflowStage,
   followUpDate: "",
-  trainingStatus: "Pending",
-  examResult: "Pending",
   notes: ""
 });
 
-export default function CandidateForm({ open, onClose, onAdd }) {
-  const { pipelineStages } = useCrm();
-  const [form, setForm] = useState(() => createEmptyForm(pipelineStages[0] || "Sourced"));
+export default function CandidateForm({ open, onClose, onAdd, pipelineStages: propPipelineStages, sources: propSources }) {
+  const { advisorWorkflowStages, customerWorkflowStages, leadTypes, sources: contextSources } = useCrm();
+  const sources = propSources || contextSources || configSources;
+  const [form, setForm] = useState(() => createEmptyForm(leadTypes?.[0] || "Insurance Customer", "New Lead"));
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (!open) {
-      setForm(createEmptyForm(pipelineStages[0] || "Sourced"));
+      setForm(createEmptyForm(leadTypes?.[0] || "Insurance Customer", "New Lead"));
       setErrors({});
       setSuccessMessage("");
     }
-  }, [open, pipelineStages]);
+  }, [open, leadTypes]);
 
   const handle = (e) => {
     const { name, value } = e.target;
@@ -57,13 +49,12 @@ export default function CandidateForm({ open, onClose, onAdd }) {
   const validate = () => {
     const newErrors = {};
     if (!form.name.trim()) newErrors.name = "Full Name is required";
-    if (!form.phone.trim()) newErrors.phone = "Phone Number is required";
+    if (!form.mobile.trim()) newErrors.mobile = "Mobile Number is required";
     if (!form.email.trim()) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = "Invalid email";
     if (!form.city.trim()) newErrors.city = "City is required";
-    if (!form.qualification.trim()) newErrors.qualification = "Qualification is required";
     if (!form.source) newErrors.source = "Source is required";
-    if (!form.stage) newErrors.stage = "Recruitment Stage is required";
+    if (!form.workflowStage) newErrors.workflowStage = "Workflow Stage is required";
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -74,19 +65,19 @@ export default function CandidateForm({ open, onClose, onAdd }) {
 
     onAdd({
       ...form,
-      stage: form.stage || pipelineStages[0] || "Sourced",
+      workflowStage: form.workflowStage || "New Lead",
       source: form.source || "Referral"
     });
 
-    setSuccessMessage("Candidate added successfully!");
-    setForm(createEmptyForm(pipelineStages[0] || "Sourced"));
+    setSuccessMessage("Lead added successfully!");
+    setForm(createEmptyForm(leadTypes?.[0] || "Insurance Customer", "New Lead"));
     setErrors({});
     onClose();
   };
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Add Candidate</DialogTitle>
+      <DialogTitle>Add Lead</DialogTitle>
       <DialogContent>
         {successMessage && (
           <Alert severity="success" style={{ marginBottom: "16px" }}>
@@ -108,12 +99,12 @@ export default function CandidateForm({ open, onClose, onAdd }) {
         <TextField
           fullWidth
           margin="dense"
-          label="Phone Number"
-          name="phone"
-          value={form.phone}
+          label="Mobile Number"
+          name="mobile"
+          value={form.mobile}
           onChange={handle}
-          error={!!errors.phone}
-          helperText={errors.phone}
+          error={!!errors.mobile}
+          helperText={errors.mobile}
         />
         
         <TextField
@@ -140,17 +131,6 @@ export default function CandidateForm({ open, onClose, onAdd }) {
         />
         
         <TextField
-          fullWidth
-          margin="dense"
-          label="Qualification"
-          name="qualification"
-          value={form.qualification}
-          onChange={handle}
-          error={!!errors.qualification}
-          helperText={errors.qualification}
-        />
-
-        <TextField
           select
           fullWidth
           margin="dense"
@@ -172,68 +152,46 @@ export default function CandidateForm({ open, onClose, onAdd }) {
           select
           fullWidth
           margin="dense"
-          label="Recruitment Stage"
-          name="stage"
-          value={form.stage}
-          onChange={handle}
-          error={!!errors.stage}
-          helperText={errors.stage}
+          label="Lead Type"
+          name="leadType"
+          value={form.leadType}
+          onChange={(e) => setForm((prev) => ({ ...prev, leadType: e.target.value, workflowStage: "New Lead" }))}
         >
-          {pipelineStages.map((option) => (
+          {leadTypes?.map((option) => (
             <MenuItem key={option} value={option}>
               {option}
             </MenuItem>
           ))}
         </TextField>
 
-        {shouldShowFollowUpDate(form.stage) && (
-          <TextField
-            fullWidth
-            margin="dense"
-            label="Follow-up Date"
-            name="followUpDate"
-            type="date"
-            value={form.followUpDate}
-            onChange={handle}
-            InputLabelProps={{ shrink: true }}
-          />
-        )}
+        <TextField
+          select
+          fullWidth
+          margin="dense"
+          label="Workflow Stage"
+          name="workflowStage"
+          value={form.workflowStage}
+          onChange={(e) => setForm((prev) => ({ ...prev, workflowStage: e.target.value }))}
+          error={!!errors.workflowStage}
+          helperText={errors.workflowStage}
+        >
+          {(form.leadType === "Advisor Recruitment" ? advisorWorkflowStages : customerWorkflowStages).map((option) => (
+            <MenuItem key={option} value={option}>
+              {option}
+            </MenuItem>
+          ))}
+        </TextField>
 
-        {shouldShowTrainingStatus(form.stage) && (
-          <TextField
-            select
-            fullWidth
-            margin="dense"
-            label="Training Status"
-            name="trainingStatus"
-            value={form.trainingStatus}
-            onChange={handle}
-          >
-            {trainingStatuses.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </TextField>
-        )}
-
-        {shouldShowExamResult(form.stage) && (
-          <TextField
-            select
-            fullWidth
-            margin="dense"
-            label="Exam Result"
-            name="examResult"
-            value={form.examResult}
-            onChange={handle}
-          >
-            {examResults.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </TextField>
-        )}
+        <TextField
+          fullWidth
+          margin="dense"
+          label="Follow-up Date"
+          name="followUpDate"
+          type="date"
+          value={form.followUpDate}
+          onChange={handle}
+          InputLabelProps={{ shrink: true }}
+        />
 
         <TextField
           fullWidth
@@ -253,7 +211,7 @@ export default function CandidateForm({ open, onClose, onAdd }) {
           onClick={submit}
           disabled={!!successMessage}
         >
-          Save
+          Save Lead
         </Button>
       </DialogActions>
     </Dialog>

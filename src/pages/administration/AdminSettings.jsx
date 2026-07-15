@@ -1,10 +1,8 @@
 import React from "react";
+import Settings from "../Settings.jsx";
 
 export default function AdminSettings() {
   return (
-    <div>
-      <h3>Administration Settings</h3>
-      <p>System-wide configuration and integrations.</p>
-    </div>
+    <Settings title="Business Settings" description="Manage business configuration, workflows, and company settings from Administration." />
   );
 }
