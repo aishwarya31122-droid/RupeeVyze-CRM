@@ -2,6 +2,10 @@ import React, { createContext, useContext, useMemo, useState, useEffect, useCall
 import { candidatesApi, clientsApi, settingsApi, teamMembersApi, performanceApi, overridePayoutsApi } from "./api/endpoints.js";
 import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, sources, recruiterNames } from "./data/dropdowns.js";
 import { businessConfigs, defaultBusinessSettings } from "./data/config.js";
+import { initialLeads } from "./data/leads.js";
+import { initialClientLeads } from "./data/clientCrmData.js";
+import { teamMembers as defaultTeamMembers } from "./data/team.js";
+import { initialPerformanceRecords } from "./data/performanceRecords.js";
 
 const CrmContext = createContext(null);
 
@@ -33,7 +37,14 @@ export function CrmProvider({ children }) {
       setPerformanceRecords(perf);
       setOverridePayoutRecords(overrides);
     } catch (err) {
-      console.error("Failed to load CRM data:", err);
+      console.warn("API unavailable, using local data:", err.message);
+      setCandidates(initialLeads);
+      setClients(initialClientLeads);
+      setSettingsState(defaultBusinessSettings);
+      setSelectedConfigId(defaultBusinessSettings.selectedConfigId || "standard");
+      setTeamMembers(defaultTeamMembers);
+      setPerformanceRecords(initialPerformanceRecords);
+      setOverridePayoutRecords([]);
     } finally {
       setLoading(false);
     }
