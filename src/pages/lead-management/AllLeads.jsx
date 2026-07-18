@@ -1,15 +1,18 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Box, Paper, Typography } from "@mui/material";
+import { useCrm } from "../../crmContext.jsx";
 
-function AllLeads({ leads = [] }) {
+function AllLeads() {
+  const { candidates } = useCrm();
+  const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
   return (
     <div>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>All Leads</Typography>
           <Typography variant="body1" sx={{ color: "#475569" }}>
-            Table of all leads (advisor + client).
+            Table of all insurance customer leads.
           </Typography>
         </Box>
       </Box>

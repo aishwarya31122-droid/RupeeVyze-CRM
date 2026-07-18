@@ -187,6 +187,63 @@ export function remove(req, res) {
   } catch (err) { res.status(500).json({ error: err.message }); }
 }
 
+export function bulkCreate(req, res) {
+  try {
+    const { records } = req.body;
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: "records array is required" });
+    }
+    const all = candidates.all();
+    const existingPhones = new Set(
+      all.map(r => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
+    );
+    let maxId = all.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0);
+    const created = [];
+    for (const b of records) {
+      const phone = String(b.mobile || b.phone || "").replace(/\D/g, "");
+      if (phone && existingPhones.has(phone)) continue;
+      if (phone) existingPhones.add(phone);
+      maxId += 1;
+      const id = maxId;
+      const leadId = b.leadId || "LD-" + (1000 + id);
+      const rawLead = {
+        id, leadId,
+        leadType: b.leadType || "Insurance Customer",
+        name: b.name || "",
+        mobile: b.mobile || b.phone || "",
+        phone: b.phone || b.mobile || "",
+        email: b.email || "",
+        city: b.city || "",
+        workflowStage: b.workflowStage || "New Lead",
+        leadStatus: b.leadStatus || "Open",
+        assignedTo: b.assignedTo || "",
+        leadSource: b.leadSource || b.source || "",
+        source: b.source || b.leadSource || "",
+        priority: b.priority || "Medium",
+        nextFollowUp: b.nextFollowUp || b.followUpDate || "",
+        createdDate: b.createdDate || new Date().toISOString().slice(0, 10),
+        notes: b.notes || "",
+        qualification: b.qualification || "",
+        trainingStatus: b.trainingStatus || "",
+        examResult: b.examResult || "",
+        policyNumber: b.policyNumber || "",
+        advisorCode: b.advisorCode || "",
+        timeline: b.timeline || [],
+        activities: b.activities || [],
+        documents: b.documents || [],
+        communication: b.communication || [],
+        tasks: b.tasks || [],
+        followUp: b.followUp || { type: "Phone Call", priority: "Medium", status: "Pending", response: "Interested" }
+      };
+      const result = prepareLeadForSave(rawLead, b, { isCreate: true });
+      candidates.insert(result.lead);
+      applyWorkflowSideEffects(result);
+      created.push(result.lead);
+    }
+    res.status(201).json({ imported: created.length, skipped: records.length - created.length });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+}
+
 export function exportCsv(req, res) {
   try {
     const rows = candidates.all().map(parseCandidate);

@@ -1,17 +1,22 @@
 import { useMemo, useState } from "react";
-import { Box, Button, Card, CardContent, Chip, Grid, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Divider, Grid, IconButton, Paper, Stack, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 import GroupIcon from "@mui/icons-material/Group";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import EventNoteIcon from "@mui/icons-material/EventNote";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import DeleteIcon from "@mui/icons-material/Delete";
+import HistoryIcon from "@mui/icons-material/History";
 import { useCrm } from "../../crmContext.jsx";
 import { formatDate, getTodayFollowUps, getOverdueFollowUps } from "../../utils.js";
+import ImportDialog from "../../components/ImportDialog.jsx";
 
 function Dashboard() {
-  const { candidates, pipelineStages } = useCrm();
+  const { candidates, pipelineStages, importCandidates, importHistory, removeImportRecord, removeImportedCandidates, addImportRecord } = useCrm();
   const [activeFilter, setActiveFilter] = useState("All");
+  const [importOpen, setImportOpen] = useState(false);
 
   const todayFollowUps = useMemo(() => getTodayFollowUps(candidates), [candidates]);
   const overdueFollowUps = useMemo(() => getOverdueFollowUps(candidates), [candidates]);
@@ -46,8 +51,8 @@ function Dashboard() {
     if (activeFilter === "Today") return todayFollowUps;
     if (activeFilter === "Overdue") return overdueFollowUps;
     if (activeFilter === "Documents Submitted") return candidates.filter((candidate) => (candidate.documents || []).length > 0);
-    if (activeFilter === "Training Completed") return candidates.filter((candidate) => ["Training", "Exam", "Active Client", "Policy Issued"].includes(candidate.workflowStage));
-    if (activeFilter === "Activated") return candidates.filter((candidate) => candidate.leadStatus === "Converted" || candidate.workflowStage === "Active Client");
+    if (activeFilter === "Training Completed") return candidates.filter((candidate) => ["Training", "Exam", "Activated"].includes(candidate.workflowStage));
+    if (activeFilter === "Activated") return candidates.filter((candidate) => candidate.workflowStage === "Activated");
     if (activeFilter === "Conversion") return candidates;
     if (activeFilter === "Exam Passed") return candidates.filter((candidate) => candidate.workflowStage === "Exam");
     return candidates.filter((candidate) => candidate.workflowStage === activeFilter);
@@ -61,6 +66,9 @@ function Dashboard() {
           <Typography variant="body1" sx={{ color: "#475569" }}>Monitor progress, prioritize follow-ups, and keep recruiter activity moving smoothly.</Typography>
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+          <Button variant="contained" size="small" startIcon={<UploadFileIcon />} onClick={() => setImportOpen(true)}>
+            Import Data
+          </Button>
           <Chip label={formatDate(now.toISOString())} color="primary" variant="outlined" />
           <Chip label="Last updated: just now" color="default" />
           {overdueFollowUps.length > 0 && <Chip label={`${overdueFollowUps.length} alert${overdueFollowUps.length !== 1 ? "s" : ""}`} color="warning" />}
@@ -136,6 +144,45 @@ function Dashboard() {
           ))}
         </Grid>
       </Paper>
+
+      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} onImport={async (records, fileName) => {
+        const result = await importCandidates(records);
+        if (result && result.imported > 0) {
+          addImportRecord({ type: "candidates", fileName: fileName || "import.csv", count: result.imported, id: result.importId });
+        }
+        return result;
+      }} />
+
+      {importHistory.length > 0 && (
+        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+            <HistoryIcon sx={{ color: "#475569" }} />
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>Import History</Typography>
+          </Stack>
+          <Stack spacing={1.5}>
+            {[...importHistory].reverse().map((entry) => (
+              <Paper key={entry.id} elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 1.5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
+                  <Chip size="small" label={entry.type} color="primary" variant="outlined" />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{entry.fileName}</Typography>
+                  <Typography variant="body2" color="text.secondary">{entry.count} records</Typography>
+                  <Typography variant="body2" color="text.secondary">{new Date(entry.timestamp).toLocaleString()}</Typography>
+                </Stack>
+                <Stack direction="row" spacing={0.5}>
+                  {entry.type === "candidates" && (
+                    <IconButton size="small" color="error" onClick={() => removeImportedCandidates(entry.id)} title="Remove imported candidates">
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                  <IconButton size="small" color="default" onClick={() => removeImportRecord(entry.id)} title="Remove from history">
+                      <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+        </Paper>
+      )}
     </Box>
   );
 }

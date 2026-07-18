@@ -32,14 +32,10 @@ const tabs = [
   "Conversion"
 ];
 
-function CandidateDetails({ candidates: propCandidates, updateCandidateStage: propUpdateCandidateStage, updateCandidateNote: propUpdateCandidateNote, updateCandidate: propUpdateCandidate }) {
+function CandidateDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const crm = useCrm();
-  const candidates = propCandidates ?? crm.candidates;
-  const updateCandidateStage = propUpdateCandidateStage ?? crm.updateCandidateStage;
-  const updateCandidateNote = propUpdateCandidateNote ?? crm.updateCandidateNote;
-  const updateCandidate = propUpdateCandidate ?? crm.updateCandidate;
+  const { candidates, updateCandidateStage, updateCandidateNote, updateCandidate } = useCrm();
   const [activeTab, setActiveTab] = useState("Overview");
   const [note, setNote] = useState("");
   const [tasks, setTasks] = useState([]);

@@ -4,9 +4,15 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { useCrm } from "../../crmContext.jsx";
 
 export default function Users() {
-  const { teamMembers } = useCrm();
+  const { teamMembers, roles } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("All");
+
+  const uniqueRoles = useMemo(() => {
+    const memberRoles = [...new Set(teamMembers.map((m) => m.role).filter(Boolean))];
+    const contextRoles = roles.map((r) => r.name).filter(Boolean);
+    return [...new Set([...contextRoles, ...memberRoles])];
+  }, [teamMembers, roles]);
 
   const filteredUsers = useMemo(() => teamMembers.filter((member) => {
     const matchesSearch = !searchTerm || member.name.toLowerCase().includes(searchTerm.toLowerCase()) || member.role.toLowerCase().includes(searchTerm.toLowerCase());
@@ -43,10 +49,9 @@ export default function Users() {
               <InputLabel>Role</InputLabel>
               <Select value={roleFilter} label="Role" onChange={(event) => setRoleFilter(event.target.value)}>
                 <MenuItem value="All">All Roles</MenuItem>
-                <MenuItem value="Admin">Admin</MenuItem>
-                <MenuItem value="Recruiter">Recruiter</MenuItem>
-                <MenuItem value="Manager">Manager</MenuItem>
-                <MenuItem value="Advisor">Advisor</MenuItem>
+                {uniqueRoles.map((role) => (
+                  <MenuItem key={role} value={role}>{role}</MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Stack>

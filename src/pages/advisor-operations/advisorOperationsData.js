@@ -5,7 +5,12 @@ const getAdvisorCode = (candidate, record) => {
 };
 
 const getFallbackPaymentDate = (month, index) => {
-  if (!month) return `2026-0${(index % 9) + 1}-15`;
+  if (!month) {
+    const now = new Date();
+    const fallbackMonth = (now.getMonth() + (index % 12)) % 12;
+    const fallbackYear = now.getFullYear() + Math.floor((now.getMonth() + (index % 12)) / 12);
+    return `${fallbackYear}-${String(fallbackMonth + 1).padStart(2, "0")}-15`;
+  }
   const [year, monthValue] = month.split("-");
   const date = new Date(Number(year), Number(monthValue), 15);
   return date.toISOString().slice(0, 10);
@@ -18,7 +23,7 @@ const getFallbackRemarks = (advisorName, paymentStatus, index) => {
 
 export function getActiveAdvisorRows(candidates = [], performanceRecords = []) {
   return (candidates || [])
-    .filter((candidate) => candidate.leadType === "Advisor Recruitment" && (candidate.leadStatus === "Converted" || candidate.workflowStage === "Active Client" || candidate.workflowStage === "Activated"))
+    .filter((candidate) => candidate.leadType === "Advisor Recruitment" && (candidate.leadStatus === "Converted" || candidate.workflowStage === "Activation"))
     .map((candidate) => {
       const record = (performanceRecords || []).find((item) => {
         const sameAdvisorCode = Boolean(item.advisorCode) && item.advisorCode === candidate.advisorCode;

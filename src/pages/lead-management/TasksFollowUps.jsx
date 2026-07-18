@@ -32,6 +32,7 @@ import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlin
 import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import { formatDate, getOverdueFollowUps, getTodayFollowUps, getUpcomingFollowUps } from "../../utils.js";
+import { useCrm } from "../../crmContext.jsx";
 
 const priorityColors = {
   High: "error",
@@ -47,7 +48,9 @@ const statusColors = {
   Done: "success"
 };
 
-function TasksFollowUps({ leads = [], onUpdateLead }) {
+function TasksFollowUps() {
+  const { candidates, updateCandidate } = useCrm();
+  const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
   const [selectedLead, setSelectedLead] = useState(String(leads[0]?.id || ""));
   const [newTask, setNewTask] = useState({ title: "", assignedTo: "", dueDate: "", priority: "Medium", notes: "" });
   const [searchTerm, setSearchTerm] = useState("");
@@ -197,8 +200,7 @@ function TasksFollowUps({ leads = [], onUpdateLead }) {
       notes: newTask.notes.trim()
     };
 
-    const updatedLead = { ...lead, tasks: [...(lead.tasks || []), task] };
-    onUpdateLead?.(updatedLead);
+    updateCandidate(lead.id, { tasks: [...(lead.tasks || []), task] });
     setNewTask({ title: "", assignedTo: "", dueDate: "", priority: "Medium", notes: "" });
     setDialogOpen(false);
   };
@@ -209,20 +211,19 @@ function TasksFollowUps({ leads = [], onUpdateLead }) {
     const updatedTasks = existingTasks.length
       ? existingTasks.map((task) => (task.id === row.id ? { ...task, status: "Completed" } : task))
       : [{ id: row.id, title: row.title, assignedTo: row.assignedTo, dueDate: row.dueDate, priority: row.priority, status: "Completed", notes: row.notes }];
-    onUpdateLead?.({ ...row.lead, tasks: updatedTasks });
+    updateCandidate(row.lead.id, { tasks: updatedTasks });
   };
 
   const handleFollowUpAction = (leadItem, action) => {
     if (!leadItem) return;
     if (action === "mark-complete") {
-      onUpdateLead?.({ ...leadItem, followUp: { ...(leadItem.followUp || {}), status: "Done" } });
+      updateCandidate(leadItem.id, { followUp: { ...(leadItem.followUp || {}), status: "Done" } });
       return;
     }
     if (action === "reschedule") {
       const nextDate = new Date();
       nextDate.setDate(nextDate.getDate() + 3);
-      onUpdateLead?.({
-        ...leadItem,
+      updateCandidate(leadItem.id, {
         nextFollowUp: nextDate.toISOString().slice(0, 10),
         followUp: { ...(leadItem.followUp || {}), status: "Pending" }
       });

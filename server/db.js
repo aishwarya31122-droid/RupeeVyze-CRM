@@ -13,7 +13,7 @@ function ensureDir() {
 function load() {
   ensureDir();
   if (!fs.existsSync(DB_FILE)) {
-    return { candidates: [], clients: [], performance_records: [], override_payout_records: [], team_members: [], settings: { id: 1, businessName: "Apex Recruitment", selectedConfigId: "standard", followUpReminderDays: 3, contactEmail: "support@apexrecruit.com" }, service_requests: [] };
+    return { candidates: [], clients: [], performance_records: [], override_payout_records: [], team_members: [], settings: { id: 1, businessName: "", selectedConfigId: "standard", followUpReminderDays: 3, contactEmail: "" }, service_requests: [] };
   }
   return JSON.parse(fs.readFileSync(DB_FILE, "utf-8"));
 }

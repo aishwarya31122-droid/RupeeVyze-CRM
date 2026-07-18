@@ -4,28 +4,9 @@ import { useCrm } from "../crmContext.jsx";
 import CandidateCard from "../components/CandidateCard.jsx";
 import CandidateModal from "../components/CandidateModal.jsx";
 import CandidateForm from "../components/CandidateForm.jsx";
-import { stageBadge } from "../data/dropdowns.js";
 
-function Pipeline({
-  candidates: propCandidates,
-  updateCandidateStage: propUpdateCandidateStage,
-  updateCandidate: propUpdateCandidate,
-  updateCandidateNote: propUpdateCandidateNote,
-  addCandidate: propAddCandidate,
-  pipelineStages: propPipelineStages,
-  sources: propSources,
-  recruiterNames: propRecruiterNames,
-  detailsPrefix
-}) {
-  const crm = useCrm();
-  const candidates = propCandidates || crm.candidates;
-  const updateCandidateStage = propUpdateCandidateStage || crm.updateCandidateStage;
-  const updateCandidate = propUpdateCandidate || crm.updateCandidate;
-  const updateCandidateNote = propUpdateCandidateNote || crm.updateCandidateNote;
-  const addCandidate = propAddCandidate || crm.addCandidate;
-  const pipelineStages = propPipelineStages || crm.pipelineStages;
-  const sources = propSources || crm.sources;
-  const recruiterNames = propRecruiterNames || crm.recruiterNames;
+function Pipeline({ detailsPrefix }) {
+  const { candidates, updateCandidateStage, updateCandidate, updateCandidateNote, addCandidate, pipelineStages, sources, recruiterNames, stageBadge } = useCrm();
   const detailsPathPrefix = detailsPrefix || "/adviser/lead-management/lead";
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("All Stages");
@@ -35,17 +16,21 @@ function Pipeline({
   const [activeCandidate, setActiveCandidate] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
 
-  const cityOptions = useMemo(() => [...new Set(candidates.map((candidate) => candidate.city).filter(Boolean))], [candidates]);
+  const cityOptions = useMemo(() => {
+    const customerLeads = candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer");
+    return [...new Set(customerLeads.map((candidate) => candidate.city).filter(Boolean))];
+  }, [candidates]);
 
   const filteredCandidates = useMemo(() => {
     return candidates.filter((candidate) => {
+      const matchesType = !candidate.leadType || candidate.leadType === "Insurance Customer";
       const searchText = [candidate.name, candidate.mobile, candidate.phone, candidate.email, candidate.city].join(" ").toLowerCase();
       const matchesSearch = searchText.includes(search.toLowerCase());
       const matchesStage = stageFilter === "All Stages" || candidate.workflowStage === stageFilter;
       const matchesSource = sourceFilter === "All Sources" || candidate.source === sourceFilter || candidate.leadSource === sourceFilter;
       const matchesRecruiter = recruiterFilter === "All Recruiters" || candidate.recruitedBy === recruiterFilter || candidate.assignedTo === recruiterFilter;
       const matchesCity = cityFilter === "All Cities" || candidate.city === cityFilter;
-      return matchesSearch && matchesStage && matchesSource && matchesRecruiter && matchesCity;
+      return matchesType && matchesSearch && matchesStage && matchesSource && matchesRecruiter && matchesCity;
     });
   }, [candidates, search, stageFilter, sourceFilter, recruiterFilter, cityFilter]);
 
@@ -164,7 +149,6 @@ function Pipeline({
           }}
           onSave={(id, payload) => {
             updateCandidate(id, payload);
-            setActiveCandidate(null);
           }}
         />
       )}

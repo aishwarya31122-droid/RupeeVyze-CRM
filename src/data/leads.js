@@ -1,38 +1,30 @@
-import { advisorWorkflowStages, customerWorkflowStages, leadStatuses, recruiterNames, sources } from "./dropdowns.js";
-
-function createFutureDate(daysFromNow) {
-  const date = new Date();
-  date.setDate(date.getDate() + daysFromNow);
-  return date.toISOString().slice(0, 10);
-}
-
 export function normalizeLead(lead, index = 0) {
   const leadType = lead.leadType || "Insurance Customer";
-  const workflowStage = lead.workflowStage || (leadType === "Advisor Recruitment" ? advisorWorkflowStages[0] : customerWorkflowStages[0]);
-  const createdDate = lead.createdDate || createFutureDate(-(index + 2));
-  const nextFollowUp = lead.nextFollowUp || createFutureDate(5 + index);
-  const assignedTo = lead.assignedTo || recruiterNames[index % recruiterNames.length];
-  const leadSource = lead.leadSource || lead.source || sources[index % sources.length];
-  const priority = lead.priority || lead.followUp?.priority || ["High", "Medium", "Low"][index % 3];
-  const mobile = lead.mobile || lead.phone || `98${String(700000000 + index * 1000000).slice(0, 10)}`;
-  const notes = lead.notes || "Lead details captured in the new CRM workflow.";
-  const timeline = lead.timeline?.length ? lead.timeline : [{ stage: "New Lead", date: createdDate }, { stage: workflowStage, date: nextFollowUp }];
-  const activities = lead.activities?.length ? lead.activities : [{ type: "Call", text: "Initial discovery completed", date: createdDate }];
-  const documents = lead.documents?.length ? lead.documents : (leadType === "Advisor Recruitment" ? ["PAN", "Aadhar"] : ["KYC", "Illustration"]);
-  const communication = lead.communication?.length ? lead.communication : [{ type: "WhatsApp", date: createdDate, remarks: "Shared onboarding details" }];
-  const tasks = lead.tasks?.length ? lead.tasks : [{ id: `T-${index + 1}`, title: "Prepare follow-up plan", assignedTo, dueDate: nextFollowUp, priority, status: "Open" }];
+  const workflowStage = lead.workflowStage || "New Lead";
+  const createdDate = lead.createdDate || new Date().toISOString().slice(0, 10);
+  const nextFollowUp = lead.nextFollowUp || "";
+  const assignedTo = lead.assignedTo || "";
+  const leadSource = lead.leadSource || lead.source || "";
+  const priority = lead.priority || "Medium";
+  const mobile = lead.mobile || lead.phone || "";
+  const notes = lead.notes || "";
+  const timeline = lead.timeline?.length ? lead.timeline : [{ stage: "New Lead", date: createdDate }];
+  const activities = lead.activities?.length ? lead.activities : [];
+  const documents = lead.documents?.length ? lead.documents : [];
+  const communication = lead.communication?.length ? lead.communication : [];
+  const tasks = lead.tasks?.length ? lead.tasks : [];
 
   return {
     id: lead.id ?? index + 1,
     leadId: lead.leadId || `LD-${1000 + (lead.id ?? index + 1)}`,
     leadType,
-    name: lead.name || `Lead ${index + 1}`,
+    name: lead.name || "",
     mobile,
     phone: lead.phone || mobile,
-    email: lead.email || `lead${index + 1}@example.com`,
-    city: lead.city || ["Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Pune"][index % 5],
+    email: lead.email || "",
+    city: lead.city || "",
     workflowStage,
-    leadStatus: lead.leadStatus || leadStatuses[index % leadStatuses.length],
+    leadStatus: lead.leadStatus || "Open",
     assignedTo,
     leadSource,
     priority,
@@ -48,7 +40,7 @@ export function normalizeLead(lead, index = 0) {
       type: lead.followUp?.type || "Phone Call",
       priority,
       status: lead.followUp?.status || "Pending",
-      response: lead.followUp?.response || "Interested"
+      response: lead.followUp?.response || ""
     },
     source: lead.source || leadSource,
     policyNumber: lead.policyNumber || "",

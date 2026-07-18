@@ -1,8 +1,11 @@
 import { useMemo } from "react";
 import { Box, Paper, Tab, Tabs, Typography } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useCrm } from "../../crmContext.jsx";
 
-function LeadLayout({ children, leads = [] }) {
+function LeadLayout({ children }) {
+  const { candidates } = useCrm();
+  const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
   const location = useLocation();
   const navigate = useNavigate();
   const currentLeadId = location.pathname.match(/^\/adviser\/lead-management\/lead\/([^/]+)/)?.[1];

@@ -61,7 +61,7 @@ export function getAllowedStageOptions(stages, currentStage) {
 export function getStageConversion(stageCounts) {
   const total = stageCounts.reduce((sum, item) => sum + item.count, 0);
   return {
-    overall: total ? Math.round((stageCounts.find((item) => item.stage === "Activated")?.count || 0 / total) * 100) : 0,
+    overall: total ? Math.round(((stageCounts.find((item) => item.stage === "Activated")?.count || 0) / total) * 100) : 0,
     byStage: stageCounts.map((item) => ({
       stage: item.stage,
       rate: total ? Math.round((item.count / total) * 100) : 0

@@ -16,10 +16,9 @@ import {
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useCrm } from "../crmContext.jsx";
-import { businessConfigs } from "../data/config.js";
 
 function Settings({ title = "Business Settings", description = "Manage your business information, workflow profile, and platform preferences." }) {
-  const { selectedConfigId, setSelectedConfigId, settings, setSettings } = useCrm();
+  const { selectedConfigId, setSelectedConfigId, settings, setSettings, businessConfigs } = useCrm();
   const [localSettings, setLocalSettings] = useState(settings);
 
   useEffect(() => {

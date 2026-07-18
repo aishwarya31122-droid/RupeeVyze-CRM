@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { Box, Card, CardContent, Chip, Grid, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
-
-const permissions = [];
+import { useCrm } from "../../crmContext.jsx";
 
 export default function Permissions() {
+  const { permissions: contextPermissions } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
-  const filteredPermissions = useMemo(() => permissions.filter((permission) => !searchTerm || permission.feature.toLowerCase().includes(searchTerm.toLowerCase()) || permission.role.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
+
+  const allPermissions = useMemo(() => contextPermissions || [], [contextPermissions]);
+  const filteredPermissions = useMemo(() => allPermissions.filter((permission) => !searchTerm || permission.feature.toLowerCase().includes(searchTerm.toLowerCase()) || permission.role.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm, allPermissions]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -23,7 +25,7 @@ export default function Permissions() {
                 <Box sx={{ bgcolor: "#2563eb15", color: "#2563eb", borderRadius: "50%", p: 1 }}><LockIcon fontSize="small" /></Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Configured Access</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{permissions.length}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{allPermissions.length}</Typography>
                 </Box>
               </Stack>
             </CardContent>

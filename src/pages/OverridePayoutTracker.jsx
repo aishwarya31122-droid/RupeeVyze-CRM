@@ -28,7 +28,6 @@ import {
 } from "@mui/material";
 import InboxIcon from "@mui/icons-material/Inbox";
 import { useCrm } from "../crmContext.jsx";
-import { getActiveAdvisorRows, getOverrideRecords } from "./advisor-operations/advisorOperationsData.js";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-IN", {
@@ -48,7 +47,7 @@ const formatMonth = (value) => {
 };
 
 function OverridePayoutTracker() {
-  const { candidates, performanceRecords, overridePayoutRecords, saveOverridePayoutRecords } = useCrm();
+  const { performanceRecords, overridePayoutRecords, saveOverridePayoutRecords, activeAdvisors: activeAdvisers, overrideRecordsDerived } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
@@ -65,11 +64,7 @@ function OverridePayoutTracker() {
 
   const pageSize = 8;
 
-  const activeAdvisers = useMemo(() => getActiveAdvisorRows(candidates, performanceRecords), [candidates, performanceRecords]);
-  const derivedOverrideRecords = useMemo(
-    () => getOverrideRecords(activeAdvisers, performanceRecords, overridePayoutRecords),
-    [activeAdvisers, performanceRecords, overridePayoutRecords]
-  );
+  const derivedOverrideRecords = overrideRecordsDerived;
 
   useEffect(() => {
     if (!saveOverridePayoutRecords) return;

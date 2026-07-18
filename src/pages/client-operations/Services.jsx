@@ -38,39 +38,24 @@ const statusColors = {
 };
 
 function Services() {
-  const { clients } = useCrm();
+  const { serviceRequests } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedService, setSelectedService] = useState(null);
 
   const services = useMemo(() => {
-    return (clients || []).flatMap((client) => {
-      const baseRequests = [
-        {
-          id: `${client.id}-svc-1`,
-          serviceType: "Policy Review",
-          clientName: client.name,
-          assignedTo: client.advisorAssigned,
-          status: client.finalStatus === "Active Client" ? "In Progress" : "Open",
-          priority: client.interestLevel === "High" ? "High" : "Medium",
-          createdDate: client.dateReceived,
-          notes: `${client.name} requested a policy review and premium comparison.`
-        },
-        {
-          id: `${client.id}-svc-2`,
-          serviceType: "Renewal Reminder",
-          clientName: client.name,
-          assignedTo: client.advisorAssigned,
-          status: client.followUpStatus === "Overdue" ? "Escalated" : "Open",
-          priority: client.leadQuality === "Hot" ? "High" : "Low",
-          createdDate: client.nextFollowUpDate,
-          notes: `Follow-up reminder scheduled for ${client.nextFollowUpDate || "upcoming review"}.`
-        }
-      ];
-
-      return baseRequests;
-    });
-  }, [clients]);
+    return (serviceRequests || []).map((sr) => ({
+      ...sr,
+      id: sr.id || sr.requestId,
+      clientName: sr.clientName || "",
+      assignedTo: sr.assignedTo || "",
+      serviceType: sr.serviceType || "General",
+      status: sr.status || "Open",
+      priority: sr.priority || "Medium",
+      createdDate: sr.createdDate || "",
+      notes: sr.notes || ""
+    }));
+  }, [serviceRequests]);
 
   const filteredServices = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();

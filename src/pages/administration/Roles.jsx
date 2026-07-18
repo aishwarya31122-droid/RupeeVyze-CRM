@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
-import { Box, Card, CardContent, Chip, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
+import { Box, Card, CardContent, Chip, Grid, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import SecurityIcon from "@mui/icons-material/Security";
-
-const roles = [];
+import { useCrm } from "../../crmContext.jsx";
 
 export default function Roles() {
+  const { roles: contextRoles } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
-  const filteredRoles = useMemo(() => roles.filter((role) => !searchTerm || role.name.toLowerCase().includes(searchTerm.toLowerCase()) || role.scope.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
+
+  const allRoles = useMemo(() => contextRoles || [], [contextRoles]);
+  const filteredRoles = useMemo(() => allRoles.filter((role) => !searchTerm || role.name.toLowerCase().includes(searchTerm.toLowerCase()) || role.scope.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm, allRoles]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -23,7 +25,7 @@ export default function Roles() {
                 <Box sx={{ bgcolor: "#2563eb15", color: "#2563eb", borderRadius: "50%", p: 1 }}><SecurityIcon fontSize="small" /></Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Defined Roles</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{roles.length}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{allRoles.length}</Typography>
                 </Box>
               </Stack>
             </CardContent>
@@ -55,7 +57,7 @@ export default function Roles() {
                   <TableRow key={role.name} hover>
                     <TableCell>{role.name}</TableCell>
                     <TableCell>{role.scope}</TableCell>
-                    <TableCell>{role.team}</TableCell>
+                    <TableCell>{Array.isArray(role.team) ? role.team.join(", ") : role.team}</TableCell>
                     <TableCell><Chip label={role.status} size="small" color="success" /></TableCell>
                   </TableRow>
                 ))

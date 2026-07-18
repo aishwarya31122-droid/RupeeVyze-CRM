@@ -41,7 +41,6 @@ import {
 } from "recharts";
 import InboxIcon from "@mui/icons-material/Inbox";
 import { useCrm } from "../crmContext.jsx";
-import { getActiveAdvisorRows, getPerformanceSummary } from "./advisor-operations/advisorOperationsData.js";
 
 const defaultForm = (adviser) => ({
   advisorName: adviser?.name || "",
@@ -79,7 +78,7 @@ function getAchievement(record) {
 }
 
 function PerformanceTracker() {
-  const { candidates, performanceRecords, addPerformanceRecord } = useCrm();
+  const { performanceRecords, addPerformanceRecord, activeAdvisors: adviserRows, performanceSummary: summary } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [sortKey, setSortKey] = useState("premium");
@@ -89,10 +88,6 @@ function PerformanceTracker() {
   const [formData, setFormData] = useState(defaultForm(null));
 
   const pageSize = 8;
-
-  const adviserRows = useMemo(() => getActiveAdvisorRows(candidates, performanceRecords), [candidates, performanceRecords]);
-
-  const summary = useMemo(() => getPerformanceSummary(adviserRows), [adviserRows]);
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();

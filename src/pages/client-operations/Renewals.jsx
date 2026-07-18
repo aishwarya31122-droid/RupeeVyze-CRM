@@ -36,12 +36,14 @@ export default function Renewals() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   const renewals = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
     return (clients || []).flatMap((client) => (
       (client.renewals || []).map((renewal) => ({
         ...renewal,
         clientName: client.name,
         policyNumber: renewal.policyNumber || client.policyNumber || "—",
-        status: renewal.status || (renewal.dueDate && renewal.dueDate < "2026-07-15" ? "Overdue" : "Upcoming")
+        advisor: renewal.advisor || client.advisorAssigned || "",
+        status: renewal.status || (renewal.dueDate && renewal.dueDate < today ? "Overdue" : "Upcoming")
       }))
     ));
   }, [clients]);

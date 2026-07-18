@@ -13,7 +13,8 @@ export const candidatesApi = {
   updateNote: (id, note) => api.patch("/candidates/" + id + "/note", { note }),
   updateFollowUp: (id, data) => api.patch("/candidates/" + id + "/follow-up", data),
   addTask: (id, task) => api.patch("/candidates/" + id + "/tasks", task),
-  exportCsv: () => api.get("/candidates/export/csv")
+  exportCsv: () => api.get("/candidates/export/csv"),
+  bulkCreate: (records) => api.post("/candidates/bulk", { records })
 };
 
 export const clientsApi = {

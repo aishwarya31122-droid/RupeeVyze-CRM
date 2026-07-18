@@ -32,18 +32,15 @@ import EventIcon from "@mui/icons-material/Event";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import InboxIcon from "@mui/icons-material/Inbox";
 import { useCrm } from "../../crmContext.jsx";
-import { getActiveAdvisorRows } from "./advisorOperationsData.js";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 
 function ActiveAdvisors() {
-  const { candidates, performanceRecords } = useCrm();
+  const { activeAdvisors: advisors } = useCrm();
   const [selectedAdvisor, setSelectedAdvisor] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-
-  const advisors = useMemo(() => getActiveAdvisorRows(candidates, performanceRecords), [candidates, performanceRecords]);
 
   const filteredAdvisors = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();

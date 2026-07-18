@@ -26,7 +26,7 @@ function Layout({ children }) {
         const sameDay = due.toDateString() === today.toDateString();
         if (sameDay) alertItems.push({ id: candidate.id, message: `Follow-up Due Today • ${candidate.name}` });
       }
-      if (candidate.workflowStage === "KYC Pending") alertItems.push({ id: `${candidate.id}-training`, message: `Training Pending • ${candidate.name}` });
+      if (candidate.workflowStage === "Training") alertItems.push({ id: `${candidate.id}-training`, message: `Training Pending • ${candidate.name}` });
       if (candidate.workflowStage === "Exam") alertItems.push({ id: `${candidate.id}-exam`, message: `Exam Scheduled Today • ${candidate.name}` });
       if (candidate.documents?.length === 0) alertItems.push({ id: `${candidate.id}-docs`, message: `Documents Pending • ${candidate.name}` });
     });

@@ -32,24 +32,41 @@ const statusColors = {
 };
 
 export default function Claims() {
-  const { clients } = useCrm();
+  const { clients, claims: contextClaims } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
   const claims = useMemo(() => {
-    return (clients || []).flatMap((client) => (
+    const fromClients = (clients || []).flatMap((client) => (
       (client.claims || []).map((claim) => ({
         ...claim,
         clientName: client.name,
         policyNumber: claim.policyNumber || client.policyNumber || "—"
       }))
     ));
-  }, [clients]);
+    const fromContext = (contextClaims || []).map((claim) => ({
+      ...claim,
+      clientName: claim.clientName || claim.client || "",
+      policyNumber: claim.policyNumber || "—",
+      amount: claim.amount || claim.claimAmount || 0,
+      settlementDate: claim.settlementDate || "",
+      status: claim.status || "Pending",
+      remarks: claim.remarks || ""
+    }));
+    const claimKeys = new Set(fromClients.map((c) => String(c.claimId || c.id || "").toLowerCase()));
+    const newFromContext = fromContext.filter((c) => {
+      const key = String(c.claimId || c.id || "").toLowerCase();
+      if (!key || claimKeys.has(key)) return false;
+      claimKeys.add(key);
+      return true;
+    });
+    return [...fromClients, ...newFromContext];
+  }, [clients, contextClaims]);
 
   const filteredClaims = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
     return claims.filter((claim) => {
-      const matchesSearch = !normalized || claim.clientName.toLowerCase().includes(normalized) || claim.policyNumber.toLowerCase().includes(normalized) || claim.remarks.toLowerCase().includes(normalized);
+      const matchesSearch = !normalized || claim.clientName.toLowerCase().includes(normalized) || claim.policyNumber.toLowerCase().includes(normalized) || (claim.remarks || "").toLowerCase().includes(normalized);
       const matchesStatus = statusFilter === "All" || claim.status === statusFilter;
       return matchesSearch && matchesStatus;
     });

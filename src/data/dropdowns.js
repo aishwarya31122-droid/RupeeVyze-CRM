@@ -1,15 +1,15 @@
 export const pipelineStages = [
   "New Lead",
-  "First Contact",
-  "Interested",
-  "KYC Pending",
-  "KYC Complete",
-  "Training",
-  "Exam",
-  "Code Generation",
-  "Activation",
-  "Business Started",
-  "Dropped"
+  "Qualified",
+  "Financial Need Analysis",
+  "Product Recommendation",
+  "Illustration Shared",
+  "Proposal Submitted",
+  "Medical",
+  "Underwriting",
+  "Policy Issued",
+  "Premium Collected",
+  "Active Client"
 ];
 
 export const leadTypes = ["Advisor Recruitment", "Insurance Customer"];
@@ -17,16 +17,14 @@ export const leadTypes = ["Advisor Recruitment", "Insurance Customer"];
 export const leadStatuses = ["Open", "Assigned", "Converted", "Lost"];
 
 export const advisorWorkflowStages = [
-  "New Lead",
-  "First Contact",
-  "Interested",
-  "KYC Pending",
-  "KYC Complete",
+  "Interview",
+  "Documents",
+  "NAAF Generation",
   "Training",
   "Exam",
   "Code Generation",
   "Activation",
-  "Business Started"
+  "Dropped"
 ];
 
 export const customerWorkflowStages = [
@@ -49,7 +47,7 @@ export const priorities = ["High", "Medium", "Low"];
 
 export const followUpTypes = ["Phone Call", "WhatsApp", "Email", "Meeting"];
 
-export const recruiterNames = ["Aishwarya", "Rohan Mehta", "Simran Kaur", "Team C"];
+export const recruiterNames = [];
 
 export const adviserStatuses = ["Lead", "Prospect", "Activated", "Dropped"];
 
@@ -67,12 +65,13 @@ export const stageBadge = {
   "Policy Issued": "#0f766e",
   "Premium Collected": "#16a34a",
   "Active Client": "#0f766e",
-  "KYC Pending": "#a855f7",
-  "KYC Complete": "#38bdf8",
+  "Interview": "#0ea5e9",
+  "Documents": "#f97316",
+  "NAAF Generation": "#8b5cf6",
   "Training": "#0284c7",
   "Exam": "#f59e0b",
   "Code Generation": "#22c55e",
-  "Activation": "#0f766e",
-  "Business Started": "#16a34a",
+  "Activation": "#16a34a",
+  "Dropped": "#ef4444",
   "Lost": "#ef4444"
 };

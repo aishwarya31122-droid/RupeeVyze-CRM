@@ -37,7 +37,6 @@ import {
   YAxis
 } from "recharts";
 import { useCrm } from "../../crmContext.jsx";
-import { getActiveAdvisorRows } from "./advisorOperationsData.js";
 
 const colors = ["#2563eb", "#0f766e", "#d97706", "#7c3aed", "#dc2626", "#64748b"];
 
@@ -52,10 +51,9 @@ const formatMonth = (value) => {
 };
 
 function Business() {
-  const { candidates, performanceRecords } = useCrm();
+  const { candidates, performanceRecords, activeAdvisors } = useCrm();
 
   const advisorLeads = useMemo(() => candidates.filter((candidate) => candidate.leadType === "Advisor Recruitment"), [candidates]);
-  const activeAdvisors = useMemo(() => getActiveAdvisorRows(candidates, performanceRecords), [candidates, performanceRecords]);
   const activePerformanceRecords = useMemo(
     () => (performanceRecords || []).filter((record) => activeAdvisors.some((advisor) => advisor.advisorCode === record.advisorCode || advisor.name === record.advisorName)),
     [activeAdvisors, performanceRecords]

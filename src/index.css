@@ -990,6 +990,37 @@ button.primary-btn:hover {
   justify-content:flex-end;
 }
 
+.edit-modal{
+  max-height:90vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.edit-modal .modal-header{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:#fff;
+  padding-bottom:12px;
+}
+
+.edit-modal .modal-grid,
+.edit-modal .modal-section{
+  overflow-y:auto;
+  flex:1;
+  min-height:0;
+}
+
+.edit-modal .modal-actions{
+  position:sticky;
+  bottom:0;
+  z-index:1;
+  background:#fff;
+  padding-top:12px;
+  border-top:1px solid #e2e8f0;
+}
+
 .detail-card{
   padding:24px;
 }

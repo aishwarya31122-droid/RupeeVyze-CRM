@@ -44,7 +44,8 @@ export default function ClientsList() {
 
   const summaryCards = useMemo(() => {
     const active = clients.filter((client) => (client.finalStatus || "Active Client") === "Active Client").length;
-    const newClients = clients.filter((client) => client.dateReceived && client.dateReceived.startsWith("2026-06")).length;
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const newClients = clients.filter((client) => client.dateReceived && client.dateReceived.startsWith(currentMonth)).length;
     const inactive = clients.filter((client) => (client.finalStatus || "Active Client") === "Lost" || (client.finalStatus || "Active Client") === "Follow-up Pending").length;
 
     return [

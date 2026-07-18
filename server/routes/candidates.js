@@ -6,6 +6,7 @@ const router = Router();
 router.get("/", ctrl.list);
 router.get("/export/csv", ctrl.exportCsv);
 router.get("/:id", ctrl.getById);
+router.post("/bulk", ctrl.bulkCreate);
 router.post("/", ctrl.create);
 router.put("/:id", ctrl.update);
 router.patch("/:id/stage", ctrl.updateStage);

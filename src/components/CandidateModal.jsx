@@ -1,12 +1,9 @@
 import React, { useState } from "react";
 import { useCrm } from "../crmContext.jsx";
-import { formatDate } from "../utils.js";
 import StageSelect from "./StageSelect.jsx";
 
-export default function CandidateModal({ candidate, stageOptions, stageColors, onClose, onStageUpdate, onNoteSave, onSave, pipelineStages: propPipelineStages, sources: propSources }) {
-  const { pipelineStages: contextStages, sources: contextSources } = useCrm();
-  const pipelineStages = propPipelineStages || contextStages;
-  const sources = propSources || contextSources;
+export default function CandidateModal({ candidate, onClose, onStageUpdate, onNoteSave, onSave }) {
+  const { pipelineStages, sources } = useCrm();
   const [form, setForm] = useState({
     name: candidate.name || "",
     mobile: candidate.mobile || candidate.phone || "",
@@ -20,6 +17,7 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
     notes: candidate.notes || ""
   });
   const [selectedStage, setSelectedStage] = useState(candidate.workflowStage || candidate.stage || pipelineStages[0]);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -51,7 +49,11 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
       onStageUpdate(candidate.id, selectedStage);
       onNoteSave(candidate.id, form.notes);
     }
-    onClose();
+    setSuccessMessage("Lead updated successfully!");
+    setTimeout(() => {
+      setSuccessMessage("");
+      onClose();
+    }, 1000);
   };
 
   return (
@@ -64,6 +66,12 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
           </div>
           <button onClick={onClose}>Close</button>
         </div>
+
+        {successMessage && (
+          <div style={{ margin: "0 1rem", padding: "0.75rem 1rem", background: "#dcfce7", color: "#166534", borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.875rem" }}>
+            {successMessage}
+          </div>
+        )}
 
         <div className="modal-grid">
           <label>
@@ -116,18 +124,6 @@ export default function CandidateModal({ candidate, stageOptions, stageColors, o
             <span>Notes</span>
             <textarea name="notes" value={form.notes} onChange={handleChange} />
           </label>
-        </div>
-
-        <div className="modal-section">
-          <h3>Timeline</h3>
-          <div className="timeline">
-            {stageOptions.map((stage) => (
-              <div key={stage} className={`timeline-step ${selectedStage === stage ? "active" : ""}`}>
-                <span className="timeline-dot" style={{ backgroundColor: stageColors[stage] }} />
-                <span>{stage}</span>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="modal-actions">

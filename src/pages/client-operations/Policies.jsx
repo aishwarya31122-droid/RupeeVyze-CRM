@@ -32,12 +32,12 @@ const statusColors = {
 };
 
 export default function Policies() {
-  const { clients } = useCrm();
+  const { clients, policies: contextPolicies } = useCrm();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
   const policies = useMemo(() => {
-    return (clients || []).flatMap((client) => (
+    const fromClients = (clients || []).flatMap((client) => (
       (client.policies || []).map((policy) => ({
         ...policy,
         clientName: client.name,
@@ -47,7 +47,23 @@ export default function Policies() {
         status: policy.status || "Active"
       }))
     ));
-  }, [clients]);
+    const fromContext = (contextPolicies || []).map((policy) => ({
+      ...policy,
+      clientName: policy.clientName || policy.client || "",
+      advisor: policy.advisor || policy.advisorName || "",
+      issueDate: policy.issueDate || policy.startDate || "",
+      renewalDate: policy.renewalDate || policy.endDate || "",
+      status: policy.status || "Active"
+    }));
+    const policyKeys = new Set(fromClients.map((p) => String(p.policyNumber || p.id || "").toLowerCase()));
+    const newFromContext = fromContext.filter((p) => {
+      const key = String(p.policyNumber || p.id || "").toLowerCase();
+      if (!key || policyKeys.has(key)) return false;
+      policyKeys.add(key);
+      return true;
+    });
+    return [...fromClients, ...newFromContext];
+  }, [clients, contextPolicies]);
 
   const filteredPolicies = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();

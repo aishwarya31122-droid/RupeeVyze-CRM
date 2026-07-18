@@ -47,14 +47,17 @@ function KPI({ label, value, icon: Icon, color }) {
   );
 }
 
-function LeadDashboard({ leads = [] }) {
+function LeadDashboard() {
   const navigate = useNavigate();
-  const { addCandidate } = useCrm();
+  const { candidates, addCandidate, advisorWorkflowStages, customerWorkflowStages } = useCrm();
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
+  const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
+  const advisorCandidates = useMemo(() => candidates.filter((c) => c.leadType === "Advisor Recruitment"), [candidates]);
+
   const totalLeads = leads.length;
-  const advisorLeads = leads.filter((l) => l.leadType === "Advisor Recruitment").length;
-  const customerLeads = leads.filter((l) => l.leadType === "Insurance Customer").length;
+  const advisorLeads = advisorCandidates.length;
+  const customerLeads = leads.length;
   const openLeads = leads.filter((l) => l.leadStatus === "Open").length;
   const assignedLeads = leads.filter((l) => l.leadStatus === "Assigned").length;
   const convertedLeads = leads.filter((l) => l.leadStatus === "Converted").length;
@@ -74,16 +77,12 @@ function LeadDashboard({ leads = [] }) {
   const priorityLeads = leads.filter((lead) => lead.priority === "High" || lead.followUp?.priority === "High").length;
 
   const advisorFunnelStages = useMemo(() => {
-    const advisorLeadsList = leads.filter((lead) => lead.leadType === "Advisor Recruitment");
-    const stages = ["New Lead", "First Contact", "Interested", "KYC Pending", "KYC Complete", "Training", "Exam", "Code Generation", "Activation", "Business Started"];
-    return stages.map((stage) => ({ stage, count: advisorLeadsList.filter((lead) => lead.workflowStage === stage).length }));
-  }, [leads]);
+    return advisorWorkflowStages.map((stage) => ({ stage, count: advisorCandidates.filter((lead) => lead.workflowStage === stage).length }));
+  }, [advisorCandidates, advisorWorkflowStages]);
 
   const customerFunnelStages = useMemo(() => {
-    const customerLeadsList = leads.filter((lead) => lead.leadType === "Insurance Customer");
-    const stages = ["New Lead", "Qualified", "Financial Need Analysis", "Product Recommendation", "Illustration Shared", "Proposal Submitted", "Medical", "Underwriting", "Policy Issued", "Premium Collected", "Active Client"];
-    return stages.map((stage) => ({ stage, count: customerLeadsList.filter((lead) => lead.workflowStage === stage).length }));
-  }, [leads]);
+    return customerWorkflowStages.map((stage) => ({ stage, count: leads.filter((lead) => lead.workflowStage === stage).length }));
+  }, [leads, customerWorkflowStages]);
 
   const conversionRate = totalLeads ? Math.round((convertedLeads / totalLeads) * 100) : 0;
 
@@ -141,6 +140,7 @@ function LeadDashboard({ leads = [] }) {
     addCandidate({
       ...lead,
       leadId: lead.leadId || `LD-${1000 + leads.length + 1}`,
+      leadType: "Insurance Customer",
       workflowStage: lead.workflowStage || "New Lead",
       leadStatus: lead.leadStatus || "Open",
       leadSource: lead.leadSource || lead.source || "Referral",
