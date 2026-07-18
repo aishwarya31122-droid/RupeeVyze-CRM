@@ -63,7 +63,7 @@ function Dashboard() {
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           <Chip label={formatDate(now.toISOString())} color="primary" variant="outlined" />
           <Chip label="Last updated: just now" color="default" />
-          <Chip label="3 alerts" color="warning" />
+          {overdueFollowUps.length > 0 && <Chip label={`${overdueFollowUps.length} alert${overdueFollowUps.length !== 1 ? "s" : ""}`} color="warning" />}
         </Stack>
       </Box>
 

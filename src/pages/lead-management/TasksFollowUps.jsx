@@ -376,47 +376,61 @@ function TasksFollowUps({ leads = [], onUpdateLead }) {
           <Typography variant="body2" color="text.secondary">Keep follow-up actions organized and ready for the next outreach.</Typography>
         </Box>
         <Grid container spacing={2}>
-          {followUpCards.map((leadItem) => (
-            <Grid item xs={12} md={6} lg={4} key={leadItem.id}>
-              <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", height: "100%" }}>
-                <CardContent>
-                  <Stack spacing={1.25}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{leadItem.name}</Typography>
-                      <Chip label={leadItem.priority} color={priorityColors[leadItem.priority] || "default"} size="small" />
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">{leadItem.currentStage}</Typography>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <PersonOutlineOutlinedIcon fontSize="small" color="action" />
-                      <Typography variant="body2">{leadItem.assignedRecruiter}</Typography>
-                    </Stack>
-                    <Typography variant="body2">Next follow-up: {formatDate(leadItem.nextFollowUp)}</Typography>
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                      <Button size="small" variant="outlined">Call</Button>
-                      <Button size="small" variant="outlined" onClick={() => handleFollowUpAction(leadItem, "mark-complete")}>Complete</Button>
-                      <Button size="small" variant="outlined" onClick={() => handleFollowUpAction(leadItem, "reschedule")}>Reschedule</Button>
-                    </Stack>
-                  </Stack>
-                </CardContent>
-              </Card>
+          {followUpCards.length === 0 ? (
+            <Grid item xs={12}>
+              <Box sx={{ textAlign: "center", py: 3, color: "#64748b" }}>
+                <Typography variant="body2">No follow-ups scheduled</Typography>
+              </Box>
             </Grid>
-          ))}
+          ) : (
+            followUpCards.map((leadItem) => (
+              <Grid item xs={12} md={6} lg={4} key={leadItem.id}>
+                <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", height: "100%" }}>
+                  <CardContent>
+                    <Stack spacing={1.25}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{leadItem.name}</Typography>
+                        <Chip label={leadItem.priority} color={priorityColors[leadItem.priority] || "default"} size="small" />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">{leadItem.currentStage}</Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <PersonOutlineOutlinedIcon fontSize="small" color="action" />
+                        <Typography variant="body2">{leadItem.assignedRecruiter}</Typography>
+                      </Stack>
+                      <Typography variant="body2">Next follow-up: {formatDate(leadItem.nextFollowUp)}</Typography>
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                        <Button size="small" variant="outlined">Call</Button>
+                        <Button size="small" variant="outlined" onClick={() => handleFollowUpAction(leadItem, "mark-complete")}>Complete</Button>
+                        <Button size="small" variant="outlined" onClick={() => handleFollowUpAction(leadItem, "reschedule")}>Reschedule</Button>
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          )}
         </Grid>
       </Paper>
 
       <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Recent Follow-up Activity</Typography>
         <Stack spacing={1.5}>
-          {recentActivity.map((item) => (
-            <Box key={`${item.leadName}-${item.date}-${item.activity}`} sx={{ p: 1.5, borderRadius: 2, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>{item.leadName}</Typography>
-                <Typography variant="caption" color="text.secondary">{formatDate(item.date)} · {item.time}</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">{item.activity}</Typography>
-              <Typography variant="caption" color="text.secondary">Recruiter: {item.recruiter}</Typography>
+          {recentActivity.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 2, color: "#64748b" }}>
+              <Typography variant="body2">No follow-ups scheduled</Typography>
             </Box>
-          ))}
+          ) : (
+            recentActivity.map((item) => (
+              <Box key={`${item.leadName}-${item.date}-${item.activity}`} sx={{ p: 1.5, borderRadius: 2, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{item.leadName}</Typography>
+                  <Typography variant="caption" color="text.secondary">{formatDate(item.date)} · {item.time}</Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">{item.activity}</Typography>
+                <Typography variant="caption" color="text.secondary">Recruiter: {item.recruiter}</Typography>
+              </Box>
+            ))
+          )}
         </Stack>
       </Paper>
 

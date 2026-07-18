@@ -31,21 +31,27 @@ export default function BIDashboard() {
     };
   }, [candidates, clients]);
 
-  const monthlyTrend = useMemo(() => [
-    { month: "Jan", revenue: 980000, policies: 18, clients: 12 },
-    { month: "Feb", revenue: 1120000, policies: 21, clients: 15 },
-    { month: "Mar", revenue: 1260000, policies: 24, clients: 17 },
-    { month: "Apr", revenue: 1450000, policies: 27, clients: 21 },
-    { month: "May", revenue: 1620000, policies: 31, clients: 24 },
-    { month: "Jun", revenue: 1880000, policies: 35, clients: 28 }
-  ], []);
+  const monthlyTrend = useMemo(() => {
+    const grouped = (clients || []).reduce((acc, client) => {
+      const month = (client.dateReceived || "").slice(0, 7);
+      if (!month) return acc;
+      if (!acc[month]) acc[month] = { month, revenue: 0, policies: 0, clients: 0 };
+      acc[month].revenue += Number(client.annualPremiumBudget?.replace(/[^0-9]/g, "") || 0);
+      acc[month].policies += (client.policies || []).length;
+      acc[month].clients += 1;
+      return acc;
+    }, {});
+    return Object.values(grouped).sort((a, b) => a.month.localeCompare(b.month));
+  }, [clients]);
 
-  const sourceData = useMemo(() => [
-    { name: "Website", value: 14 },
-    { name: "Referral", value: 9 },
-    { name: "Social Media", value: 6 },
-    { name: "Call Center", value: 4 }
-  ], []);
+  const sourceData = useMemo(() => {
+    const counts = candidates.reduce((acc, candidate) => {
+      const source = candidate.leadSource || candidate.source || "Unknown";
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [candidates]);
 
   const cards = [
     { label: "Revenue", value: `₹${metrics.revenue.toLocaleString("en-IN")}`, icon: AttachMoneyIcon, color: "#2563eb" },
@@ -91,17 +97,23 @@ export default function BIDashboard() {
           <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Monthly Trends</Typography>
             <Box sx={{ height: 280 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value, name) => name === "Revenue" ? `₹${Number(value).toLocaleString("en-IN")}` : value} />
-                  <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} name="Revenue" />
-                  <Line type="monotone" dataKey="policies" stroke="#16a34a" strokeWidth={2} name="Policies" />
-                </LineChart>
-              </ResponsiveContainer>
+              {monthlyTrend.length === 0 ? (
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">No data available</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value, name) => name === "Revenue" ? `₹${Number(value).toLocaleString("en-IN")}` : value} />
+                    <Legend />
+                    <Line type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} name="Revenue" />
+                    <Line type="monotone" dataKey="policies" stroke="#16a34a" strokeWidth={2} name="Policies" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </Box>
           </Paper>
         </Grid>
@@ -109,15 +121,21 @@ export default function BIDashboard() {
           <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Lead Source Analysis</Typography>
             <Box sx={{ height: 280 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={sourceData} dataKey="value" nameKey="name" outerRadius={90} label>
-                    {sourceData.map((entry, index) => (<Cell key={`${entry.name}-${index}`} fill={colors[index % colors.length]} />))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {sourceData.length === 0 ? (
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">No data available</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={sourceData} dataKey="value" nameKey="name" outerRadius={90} label>
+                      {sourceData.map((entry, index) => (<Cell key={`${entry.name}-${index}`} fill={colors[index % colors.length]} />))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </Box>
           </Paper>
         </Grid>

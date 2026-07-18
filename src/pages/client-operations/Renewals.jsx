@@ -122,16 +122,22 @@ export default function Renewals() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredRenewals.map((renewal) => (
-                <TableRow key={`${renewal.policyNumber}-${renewal.clientName}`} hover>
-                  <TableCell>{renewal.policyNumber}</TableCell>
-                  <TableCell>{renewal.clientName}</TableCell>
-                  <TableCell>₹{Number(renewal.premium || 0).toLocaleString("en-IN")}</TableCell>
-                  <TableCell>{renewal.dueDate || "—"}</TableCell>
-                  <TableCell>{renewal.advisor}</TableCell>
-                  <TableCell><Chip label={renewal.status} size="small" color={statusColors[renewal.status] || "default"} /></TableCell>
+              {filteredRenewals.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ textAlign: "center", py: 4, color: "#64748b" }}>No records found</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredRenewals.map((renewal) => (
+                  <TableRow key={`${renewal.policyNumber}-${renewal.clientName}`} hover>
+                    <TableCell>{renewal.policyNumber}</TableCell>
+                    <TableCell>{renewal.clientName}</TableCell>
+                    <TableCell>₹{Number(renewal.premium || 0).toLocaleString("en-IN")}</TableCell>
+                    <TableCell>{renewal.dueDate || "—"}</TableCell>
+                    <TableCell>{renewal.advisor}</TableCell>
+                    <TableCell><Chip label={renewal.status} size="small" color={statusColors[renewal.status] || "default"} /></TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

@@ -125,17 +125,23 @@ export default function Claims() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredClaims.map((claim) => (
-                <TableRow key={claim.claimId} hover>
-                  <TableCell>{claim.claimId}</TableCell>
-                  <TableCell>{claim.policyNumber}</TableCell>
-                  <TableCell>{claim.clientName}</TableCell>
-                  <TableCell>₹{Number(claim.amount || 0).toLocaleString("en-IN")}</TableCell>
-                  <TableCell>{claim.settlementDate || "—"}</TableCell>
-                  <TableCell><Chip label={claim.status} size="small" color={statusColors[claim.status] || "default"} /></TableCell>
-                  <TableCell>{claim.remarks || "—"}</TableCell>
+              {filteredClaims.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ textAlign: "center", py: 4, color: "#64748b" }}>No records found</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredClaims.map((claim) => (
+                  <TableRow key={claim.claimId} hover>
+                    <TableCell>{claim.claimId}</TableCell>
+                    <TableCell>{claim.policyNumber}</TableCell>
+                    <TableCell>{claim.clientName}</TableCell>
+                    <TableCell>₹{Number(claim.amount || 0).toLocaleString("en-IN")}</TableCell>
+                    <TableCell>{claim.settlementDate || "—"}</TableCell>
+                    <TableCell><Chip label={claim.status} size="small" color={statusColors[claim.status] || "default"} /></TableCell>
+                    <TableCell>{claim.remarks || "—"}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

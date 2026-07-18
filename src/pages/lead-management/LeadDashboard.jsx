@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Box, Card, CardContent, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, Paper, Stack, Typography } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import FunnelChart from "../../components/FunnelChart.jsx";
 import CandidateForm from "../../components/CandidateForm.jsx";
@@ -151,12 +151,14 @@ function LeadDashboard({ leads = [] }) {
 
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <h1>Lead Management Dashboard</h1>
-          <p>Overview of insurance prospecting, recruitment, and sales activity.</p>
-        </div>
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>Lead Management Dashboard</Typography>
+          <Typography variant="body1" sx={{ color: "#475569" }}>
+            Overview of insurance prospecting, recruitment, and sales activity.
+          </Typography>
+        </Box>
+      </Box>
 
       <div className="dashboard-grid">
         {kpiCards.map((card) => (
@@ -165,64 +167,72 @@ function LeadDashboard({ leads = [] }) {
       </div>
 
       <div className="grid-2-columns">
-        <div className="card">
-          <h3>Quick Actions</h3>
+        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Quick Actions</Typography>
           <div className="action-grid">
-            <button type="button" className="button secondary" onClick={() => handleQuickAction("add")}>Add New Lead</button>
-            <button type="button" className="button secondary" onClick={() => handleQuickAction("pipeline")}>Open Pipeline</button>
-            <button type="button" className="button secondary" onClick={() => handleQuickAction("tasks")}>Review Tasks</button>
-            <button type="button" className="button secondary" onClick={() => handleQuickAction("all")}>View All Leads</button>
+            <Button variant="outlined" size="small" onClick={() => handleQuickAction("add")}>Add New Lead</Button>
+            <Button variant="outlined" size="small" onClick={() => handleQuickAction("pipeline")}>Open Pipeline</Button>
+            <Button variant="outlined" size="small" onClick={() => handleQuickAction("tasks")}>Review Tasks</Button>
+            <Button variant="outlined" size="small" onClick={() => handleQuickAction("all")}>View All Leads</Button>
           </div>
-        </div>
+        </Paper>
       </div>
 
       <div className="grid-2-columns">
-        <div className="card">
-          <h3>Recruitment Funnel</h3>
+        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Recruitment Funnel</Typography>
           <FunnelChart stages={advisorFunnelStages} />
-        </div>
-        <div className="card">
-          <h3>Sales Funnel</h3>
+        </Paper>
+        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Sales Funnel</Typography>
           <FunnelChart stages={customerFunnelStages} />
-        </div>
+        </Paper>
       </div>
 
       <div className="grid-2-columns">
-        <div className="card">
-          <h3>Recent Assigned Leads</h3>
+        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Recent Assigned Leads</Typography>
           <div className="recent-list">
-            {recentAssignedLeads.map((lead) => (
-              <div key={lead.id} className="recent-item">
-                <div>
-                  <strong>{lead.leadId}</strong>
-                  <p>{lead.name}</p>
+            {recentAssignedLeads.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "1.5rem", color: "#64748b" }}>No records found</div>
+            ) : (
+              recentAssignedLeads.map((lead) => (
+                <div key={lead.id} className="recent-item">
+                  <div>
+                    <strong>{lead.leadId}</strong>
+                    <p>{lead.name}</p>
+                  </div>
+                  <span>{lead.assignedTo}</span>
                 </div>
-                <span>{lead.assignedTo}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-        </div>
+        </Paper>
 
-        <div className="card">
-          <h3>Recent Activities</h3>
+        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Recent Activities</Typography>
           <div className="activity-list">
-            {recentActivities.map((item, index) => (
-              <Link
-                key={`${item.lead.id}-${index}`}
-                className="activity-item"
-                to={`/adviser/lead-management/lead/${item.lead.id}`}
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                <div className="activity-dot" style={{ background: "#2563eb" }} />
-                <div>
-                  <strong>{item.lead.name}</strong>
-                  <p>{item.text}</p>
-                </div>
-                <span>{formatDate(item.date)}</span>
-              </Link>
-            ))}
+            {recentActivities.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "1.5rem", color: "#64748b" }}>No follow-ups scheduled</div>
+            ) : (
+              recentActivities.map((item, index) => (
+                <Link
+                  key={`${item.lead.id}-${index}`}
+                  className="activity-item"
+                  to={`/adviser/lead-management/lead/${item.lead.id}`}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  <div className="activity-dot" style={{ background: "#2563eb" }} />
+                  <div>
+                    <strong>{item.lead.name}</strong>
+                    <p>{item.text}</p>
+                  </div>
+                  <span>{formatDate(item.date)}</span>
+                </Link>
+              ))
+            )}
           </div>
-        </div>
+        </Paper>
       </div>
 
       <CandidateForm open={addLeadOpen} onClose={() => setAddLeadOpen(false)} onAdd={handleAddLead} />

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Box, Button, Paper, Typography } from "@mui/material";
 import { useCrm } from "../crmContext.jsx";
 import CandidateCard from "../components/CandidateCard.jsx";
 import CandidateModal from "../components/CandidateModal.jsx";
@@ -76,22 +77,24 @@ function Pipeline({
 
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <h1>Lead Pipeline</h1>
-          <p>Manage lead stages, follow-ups, and recruiter assignments.</p>
-        </div>
-        <div className="page-actions">
-          <button type="button" className="secondary-btn" onClick={exportCsv}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>Lead Pipeline</Typography>
+          <Typography variant="body1" sx={{ color: "#475569" }}>
+            Manage lead stages, follow-ups, and recruiter assignments.
+          </Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 1.5 }}>
+          <Button variant="outlined" size="small" onClick={exportCsv}>
             Export CSV
-          </button>
-          <button type="button" className="primary-btn" onClick={() => setFormOpen(true)}>
+          </Button>
+          <Button variant="contained" size="small" onClick={() => setFormOpen(true)}>
             + Add Lead
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Box>
 
-      <div className="filters-card">
+      <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2, mb: 2.5 }}>
         <div className="filters-row">
           <input
             type="text"
@@ -125,18 +128,24 @@ function Pipeline({
             ))}
           </select>
         </div>
-      </div>
+      </Paper>
 
       <div className="pipeline-grid">
-        {filteredCandidates.map((candidate) => (
-          <CandidateCard
-            key={candidate.id}
-            candidate={candidate}
-            onOpen={setActiveCandidate}
-            stageColor={stageBadge[candidate.workflowStage] || "#64748b"}
-            detailsPrefix={detailsPathPrefix}
-          />
-        ))}
+        {filteredCandidates.length === 0 ? (
+          <div className="empty-state" style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem", color: "#64748b" }}>
+            No records found
+          </div>
+        ) : (
+          filteredCandidates.map((candidate) => (
+            <CandidateCard
+              key={candidate.id}
+              candidate={candidate}
+              onOpen={setActiveCandidate}
+              stageColor={stageBadge[candidate.workflowStage] || "#64748b"}
+              detailsPrefix={detailsPathPrefix}
+            />
+          ))
+        )}
       </div>
 
       {activeCandidate && (

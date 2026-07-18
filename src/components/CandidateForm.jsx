@@ -8,7 +8,6 @@ import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Alert from "@mui/material/Alert";
 import { useCrm } from "../crmContext.jsx";
-import { sources as configSources } from "../config";
 
 const createEmptyForm = (leadType = "Insurance Customer", workflowStage = "New Lead") => ({
   name: "",
@@ -24,7 +23,7 @@ const createEmptyForm = (leadType = "Insurance Customer", workflowStage = "New L
 
 export default function CandidateForm({ open, onClose, onAdd, pipelineStages: propPipelineStages, sources: propSources }) {
   const { advisorWorkflowStages, customerWorkflowStages, leadTypes, sources: contextSources } = useCrm();
-  const sources = propSources || contextSources || configSources;
+  const sources = propSources || contextSources;
   const [form, setForm] = useState(() => createEmptyForm(leadTypes?.[0] || "Insurance Customer", "New Lead"));
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");

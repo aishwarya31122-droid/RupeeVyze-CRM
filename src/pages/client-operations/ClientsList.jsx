@@ -119,21 +119,27 @@ export default function ClientsList() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow key={client.clientId || client.id} hover>
-                  <TableCell>{client.clientId || client.id}</TableCell>
-                  <TableCell>{client.name}</TableCell>
-                  <TableCell>{client.mobile}</TableCell>
-                  <TableCell>{client.city}</TableCell>
-                  <TableCell>{client.advisorAssigned}</TableCell>
-                  <TableCell>
-                    <Chip label={client.finalStatus || "Active Client"} size="small" color={client.finalStatus === "Active Client" ? "success" : client.finalStatus === "Lost" ? "error" : "info"} />
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="outlined" size="small" onClick={() => navigate(`/adviser/client-operations/clients/${client.clientId || client.id}`)}>View</Button>
-                  </TableCell>
+              {filteredClients.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ textAlign: "center", py: 4, color: "#64748b" }}>No records found</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredClients.map((client) => (
+                  <TableRow key={client.clientId || client.id} hover>
+                    <TableCell>{client.clientId || client.id}</TableCell>
+                    <TableCell>{client.name}</TableCell>
+                    <TableCell>{client.mobile}</TableCell>
+                    <TableCell>{client.city}</TableCell>
+                    <TableCell>{client.advisorAssigned}</TableCell>
+                    <TableCell>
+                      <Chip label={client.finalStatus || "Active Client"} size="small" color={client.finalStatus === "Active Client" ? "success" : client.finalStatus === "Lost" ? "error" : "info"} />
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="outlined" size="small" onClick={() => navigate(`/adviser/client-operations/clients/${client.clientId || client.id}`)}>View</Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

@@ -129,19 +129,25 @@ export default function Policies() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredPolicies.map((policy) => (
-                <TableRow key={policy.policyNumber} hover>
-                  <TableCell>{policy.policyNumber}</TableCell>
-                  <TableCell>{policy.clientName}</TableCell>
-                  <TableCell>{policy.advisor}</TableCell>
-                  <TableCell>{policy.policyType}</TableCell>
-                  <TableCell>{policy.sumAssured}</TableCell>
-                  <TableCell>₹{Number(policy.premium || 0).toLocaleString("en-IN")}</TableCell>
-                  <TableCell>{policy.issueDate}</TableCell>
-                  <TableCell>{policy.renewalDate}</TableCell>
-                  <TableCell><Chip label={policy.status} size="small" color={statusColors[policy.status] || "default"} /></TableCell>
+              {filteredPolicies.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} sx={{ textAlign: "center", py: 4, color: "#64748b" }}>No records found</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredPolicies.map((policy) => (
+                  <TableRow key={policy.policyNumber} hover>
+                    <TableCell>{policy.policyNumber}</TableCell>
+                    <TableCell>{policy.clientName}</TableCell>
+                    <TableCell>{policy.advisor}</TableCell>
+                    <TableCell>{policy.policyType}</TableCell>
+                    <TableCell>{policy.sumAssured}</TableCell>
+                    <TableCell>₹{Number(policy.premium || 0).toLocaleString("en-IN")}</TableCell>
+                    <TableCell>{policy.issueDate}</TableCell>
+                    <TableCell>{policy.renewalDate}</TableCell>
+                    <TableCell><Chip label={policy.status} size="small" color={statusColors[policy.status] || "default"} /></TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

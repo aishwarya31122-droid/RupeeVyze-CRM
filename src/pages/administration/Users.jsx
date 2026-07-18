@@ -63,20 +63,26 @@ export default function Users() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredUsers.map((member) => (
-                <TableRow key={member.id} hover>
-                  <TableCell>{member.name}</TableCell>
-                  <TableCell>{member.role}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell><Chip label={member.status || "Active"} size="small" color="success" /></TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={1}>
-                      <Button size="small" variant="outlined">Edit</Button>
-                      <Button size="small" variant="text" color="error">Deactivate</Button>
-                    </Stack>
-                  </TableCell>
+              {filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ textAlign: "center", py: 4, color: "#64748b" }}>No records found</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredUsers.map((member) => (
+                  <TableRow key={member.id} hover>
+                    <TableCell>{member.name}</TableCell>
+                    <TableCell>{member.role}</TableCell>
+                    <TableCell>{member.email}</TableCell>
+                    <TableCell><Chip label={member.status || "Active"} size="small" color="success" /></TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1}>
+                        <Button size="small" variant="outlined">Edit</Button>
+                        <Button size="small" variant="text" color="error">Deactivate</Button>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

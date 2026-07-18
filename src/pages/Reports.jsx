@@ -72,14 +72,19 @@ function Reports() {
     [candidates, pipelineStages]
   );
 
-  const monthlyTrend = [
-    { month: "Jan", recruited: 12, activated: 3 },
-    { month: "Feb", recruited: 18, activated: 5 },
-    { month: "Mar", recruited: 15, activated: 4 },
-    { month: "Apr", recruited: 22, activated: 8 },
-    { month: "May", recruited: 28, activated: 10 },
-    { month: "Jun", recruited: 32, activated: 12 }
-  ];
+  const monthlyTrend = useMemo(() => {
+    const grouped = candidates.reduce((acc, candidate) => {
+      const month = (candidate.createdDate || "").slice(0, 7);
+      if (!month) return acc;
+      if (!acc[month]) acc[month] = { month, recruited: 0, activated: 0 };
+      acc[month].recruited += 1;
+      if (candidate.leadStatus === "Converted" || candidate.workflowStage === "Active Client") {
+        acc[month].activated += 1;
+      }
+      return acc;
+    }, {});
+    return Object.values(grouped).sort((a, b) => a.month.localeCompare(b.month));
+  }, [candidates]);
 
   const bestSource = sourceAnalysis.length > 0
     ? sourceAnalysis.reduce((max, item) => (item.value > max.value ? item : max))
@@ -142,16 +147,22 @@ function Reports() {
           <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3, height: "100%" }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Source Analysis</Typography>
             <Box sx={{ height: 280 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={sourceAnalysis} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
-                    {sourceAnalysis.map((entry, index) => (
-                      <Cell key={`${entry.name}-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => `${value} candidates`} />
-                </PieChart>
-              </ResponsiveContainer>
+              {sourceAnalysis.length === 0 ? (
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">No data available</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={sourceAnalysis} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                      {sourceAnalysis.map((entry, index) => (
+                        <Cell key={`${entry.name}-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value} candidates`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </Box>
           </Paper>
         </Grid>
@@ -159,15 +170,21 @@ function Reports() {
           <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3, height: "100%" }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Stage Distribution</Typography>
             <Box sx={{ height: 280 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="stage" type="category" width={120} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill={BAR_COLOR} radius={[0, 8, 8, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {stageDistribution.length === 0 ? (
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">No data available</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="stage" type="category" width={120} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill={BAR_COLOR} radius={[0, 8, 8, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </Box>
           </Paper>
         </Grid>
@@ -178,14 +195,20 @@ function Reports() {
           <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3, height: "100%" }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Recruitment Funnel</Typography>
             <Box sx={{ height: 320 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <FunnelChart>
-                  <Tooltip formatter={(value) => `${value} candidates`} />
-                  <Funnel data={funnelData} dataKey="value" stroke={FUNNEL_COLOR} fill={FUNNEL_COLOR} name="Candidates">
-                    <LabelList dataKey="value" position="right" />
-                  </Funnel>
-                </FunnelChart>
-              </ResponsiveContainer>
+              {funnelData.length === 0 ? (
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">No data available</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <FunnelChart>
+                    <Tooltip formatter={(value) => `${value} candidates`} />
+                    <Funnel data={funnelData} dataKey="value" stroke={FUNNEL_COLOR} fill={FUNNEL_COLOR} name="Candidates">
+                      <LabelList dataKey="value" position="right" />
+                    </Funnel>
+                  </FunnelChart>
+                </ResponsiveContainer>
+              )}
             </Box>
           </Paper>
         </Grid>
@@ -193,17 +216,23 @@ function Reports() {
           <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3, height: "100%" }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Monthly Recruitment Trend</Typography>
             <Box sx={{ height: 320 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="recruited" stroke={LINE_RECRUITED} strokeWidth={2} dot={{ fill: LINE_RECRUITED, r: 5 }} name="Recruited" />
-                  <Line type="monotone" dataKey="activated" stroke={LINE_ACTIVATED} strokeWidth={2} dot={{ fill: LINE_ACTIVATED, r: 5 }} name="Activated" />
-                </LineChart>
-              </ResponsiveContainer>
+              {monthlyTrend.length === 0 ? (
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">No data available</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="recruited" stroke={LINE_RECRUITED} strokeWidth={2} dot={{ fill: LINE_RECRUITED, r: 5 }} name="Recruited" />
+                    <Line type="monotone" dataKey="activated" stroke={LINE_ACTIVATED} strokeWidth={2} dot={{ fill: LINE_ACTIVATED, r: 5 }} name="Activated" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </Box>
           </Paper>
         </Grid>

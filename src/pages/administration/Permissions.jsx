@@ -2,12 +2,7 @@ import { useMemo, useState } from "react";
 import { Box, Card, CardContent, Chip, Grid, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
 
-const permissions = [
-  { feature: "Lead Management", role: "Admin", access: "Full" },
-  { feature: "Advisor Operations", role: "Recruiter", access: "Read/Write" },
-  { feature: "Client Operations", role: "Advisor", access: "Read/Write" },
-  { feature: "Business Intelligence", role: "Manager", access: "Read" }
-];
+const permissions = [];
 
 export default function Permissions() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,13 +45,19 @@ export default function Permissions() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredPermissions.map((permission) => (
-                <TableRow key={`${permission.feature}-${permission.role}`} hover>
-                  <TableCell>{permission.feature}</TableCell>
-                  <TableCell>{permission.role}</TableCell>
-                  <TableCell><Chip label={permission.access} size="small" color="info" /></TableCell>
+              {filteredPermissions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} sx={{ textAlign: "center", py: 4, color: "#64748b" }}>No records found</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredPermissions.map((permission) => (
+                  <TableRow key={`${permission.feature}-${permission.role}`} hover>
+                    <TableCell>{permission.feature}</TableCell>
+                    <TableCell>{permission.role}</TableCell>
+                    <TableCell><Chip label={permission.access} size="small" color="info" /></TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

@@ -2,12 +2,7 @@ import { useMemo, useState } from "react";
 import { Box, Card, CardContent, Chip, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import SecurityIcon from "@mui/icons-material/Security";
 
-const roles = [
-  { name: "Admin", scope: "Full access", team: "Executive", status: "Active" },
-  { name: "Recruiter", scope: "Lead management", team: "Sales", status: "Active" },
-  { name: "Manager", scope: "Team oversight", team: "Operations", status: "Active" },
-  { name: "Advisor", scope: "Client servicing", team: "Field", status: "Active" }
-];
+const roles = [];
 
 export default function Roles() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,14 +46,20 @@ export default function Roles() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredRoles.map((role) => (
-                <TableRow key={role.name} hover>
-                  <TableCell>{role.name}</TableCell>
-                  <TableCell>{role.scope}</TableCell>
-                  <TableCell>{role.team}</TableCell>
-                  <TableCell><Chip label={role.status} size="small" color="success" /></TableCell>
+              {filteredRoles.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} sx={{ textAlign: "center", py: 4, color: "#64748b" }}>No records found</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredRoles.map((role) => (
+                  <TableRow key={role.name} hover>
+                    <TableCell>{role.name}</TableCell>
+                    <TableCell>{role.scope}</TableCell>
+                    <TableCell>{role.team}</TableCell>
+                    <TableCell><Chip label={role.status} size="small" color="success" /></TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

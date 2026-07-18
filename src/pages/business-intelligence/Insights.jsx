@@ -99,14 +99,20 @@ export default function Insights() {
       <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Recommended Actions</Typography>
         <Stack spacing={1.5}>
-          {[
-            "Prioritize overdue follow-ups for warm leads.",
-            "Escalate pending policy reviews for active clients.",
-            "Re-engage inactive prospects with renewal offers.",
-            "Use top-performing recruiters for the next campaign."
-          ].map((item) => (
-            <Box key={item} sx={{ p: 1.25, borderRadius: 2, bgcolor: "#f8fafc" }}>{item}</Box>
-          ))}
+          {candidates.length === 0 && clients.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 2, color: "#64748b" }}>
+              <Typography variant="body2">No recommendations yet. Add data to see actionable insights.</Typography>
+            </Box>
+          ) : (
+            [
+              candidates.some((c) => c.followUp?.status === "Pending" && !["Converted", "Lost"].includes(c.leadStatus)) ? "Prioritize overdue follow-ups for warm leads." : null,
+              clients.some((c) => c.finalStatus === "Active Client") ? "Escalate pending policy reviews for active clients." : null,
+              clients.some((c) => c.leadQuality === "Hot") ? "Re-engage inactive prospects with renewal offers." : null,
+              candidates.length > 0 ? "Use top-performing recruiters for the next campaign." : null
+            ].filter(Boolean).map((item) => (
+              <Box key={item} sx={{ p: 1.25, borderRadius: 2, bgcolor: "#f8fafc" }}>{item}</Box>
+            ))
+          )}
         </Stack>
       </Paper>
     </Box>

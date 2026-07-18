@@ -1,4 +1,12 @@
 export default function FunnelChart({ stages }) {
+  if (!stages || stages.length === 0) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#64748b", padding: "2rem" }}>
+        No data available
+      </div>
+    );
+  }
+
   const maxCount = Math.max(...stages.map((s) => s.count), 1);
 
   return (
