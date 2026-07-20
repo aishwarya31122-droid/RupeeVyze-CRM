@@ -53,7 +53,7 @@ const formatMonth = (value) => {
 function Business() {
   const { candidates, performanceRecords, activeAdvisors } = useCrm();
 
-  const advisorLeads = useMemo(() => candidates.filter((candidate) => candidate.leadType === "Advisor Recruitment"), [candidates]);
+  const advisorLeads = useMemo(() => candidates.filter((candidate) => candidate.leadType === "Recruitment"), [candidates]);
   const activePerformanceRecords = useMemo(
     () => (performanceRecords || []).filter((record) => activeAdvisors.some((advisor) => advisor.advisorCode === record.advisorCode || advisor.name === record.advisorName)),
     [activeAdvisors, performanceRecords]

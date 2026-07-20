@@ -59,7 +59,7 @@ function CandidateDetails() {
   const nextLead = currentIndex >= 0 && currentIndex < candidates.length - 1 ? candidates[currentIndex + 1] : null;
 
   const availableDocumentTypes = useMemo(() => {
-    if (candidate?.leadType === "Advisor Recruitment") {
+    if (candidate?.leadType === "Recruitment") {
       return [
         "Aadhaar Card",
         "PAN Card",

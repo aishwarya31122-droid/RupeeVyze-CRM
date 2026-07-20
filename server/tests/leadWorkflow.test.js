@@ -7,7 +7,7 @@ test("advisor activation creates activation events and performance payload", () 
     id: 10,
     leadId: "LD-1010",
     name: "Riya Shah",
-    leadType: "Advisor Recruitment",
+    leadType: "Recruitment",
     workflowStage: "Exam",
     leadStatus: "Open",
     assignedTo: "Aishwarya",

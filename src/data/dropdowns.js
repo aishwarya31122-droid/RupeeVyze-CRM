@@ -18,7 +18,7 @@ export const pipelineStages = [
   "Lost"
 ];
 
-export const leadTypes = ["Advisor Recruitment", "Insurance Customer"];
+export const leadTypes = ["Recruitment", "Insurance Customer"];
 
 export const leadStatuses = ["Open", "Assigned", "Converted", "Lost"];
 

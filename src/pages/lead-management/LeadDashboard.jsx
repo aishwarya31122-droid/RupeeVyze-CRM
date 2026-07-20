@@ -53,7 +53,7 @@ function LeadDashboard() {
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
   const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
-  const advisorCandidates = useMemo(() => candidates.filter((c) => c.leadType === "Advisor Recruitment"), [candidates]);
+  const advisorCandidates = useMemo(() => candidates.filter((c) => c.leadType === "Recruitment"), [candidates]);
 
   const totalLeads = leads.length;
   const advisorLeads = advisorCandidates.length;
@@ -137,17 +137,20 @@ function LeadDashboard() {
   };
 
   const handleAddLead = async (lead) => {
-    await addCandidate({
-      ...lead,
-      leadId: lead.leadId || `LD-${1000 + leads.length + 1}`,
-      leadType: "Insurance Customer",
-      workflowStage: lead.workflowStage || "New Lead",
-      leadStatus: lead.leadStatus || "Open",
-      leadSource: lead.leadSource || lead.source || "Referral",
-      source: lead.source || lead.leadSource || "Referral",
-      nextFollowUp: lead.nextFollowUp || ""
-    });
-    setAddLeadOpen(false);
+    try {
+      await addCandidate({
+        ...lead,
+        leadId: lead.leadId || `LD-${1000 + leads.length + 1}`,
+        leadType: "Insurance Customer",
+        workflowStage: lead.workflowStage || "New Lead",
+        leadStatus: lead.leadStatus || "Open",
+        leadSource: lead.leadSource || lead.source || "Referral",
+        source: lead.source || lead.leadSource || "Referral",
+        nextFollowUp: lead.nextFollowUp || ""
+      });
+      setAddLeadOpen(false);
+    } catch {
+    }
   };
 
   return (

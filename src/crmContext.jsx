@@ -322,7 +322,27 @@ export function CrmProvider({ children }) {
     }
   }, [refreshCrmData]);
 
+  const findDuplicate = useCallback((records, candidate) => {
+    const normalize = (s) => (s || "").trim().toLowerCase();
+    const name = normalize(candidate.name);
+    const phone = normalize(candidate.mobile || candidate.phone);
+    const qualification = normalize(candidate.qualification);
+    const stage = normalize(candidate.workflowStage);
+    if (!name || !phone) return null;
+    return records.find((r) =>
+      normalize(r.name) === name &&
+      normalize(r.mobile || r.phone) === phone &&
+      normalize(r.qualification) === qualification &&
+      normalize(r.workflowStage) === stage
+    ) || null;
+  }, []);
+
   const addCandidate = useCallback(async (candidate) => {
+    const local = loadLocalCandidates();
+    const dup = findDuplicate(local, candidate);
+    if (dup) {
+      throw new Error("This record already exists.");
+    }
     const payload = {
       ...candidate,
       leadType: candidate.leadType || leadTypes[0],
@@ -334,7 +354,6 @@ export function CrmProvider({ children }) {
       createdDate: candidate.createdDate || new Date().toISOString().slice(0, 10),
       nextFollowUp: candidate.nextFollowUp || candidate.followUpDate || ""
     };
-    const local = loadLocalCandidates();
     const record = normalizeLocalRecord(payload, 0, local.length);
     const updated = [...local, record];
     saveLocalCandidates(updated);
@@ -372,6 +391,28 @@ export function CrmProvider({ children }) {
       return { imported: imported.length, skipped: records.length - imported.length, importId };
     }
   }, [refreshCrmData]);
+
+  const removeDuplicates = useCallback(() => {
+    const local = loadLocalCandidates();
+    const seen = new Set();
+    const normalize = (s) => (s || "").trim().toLowerCase();
+    const deduped = local.filter((r) => {
+      const key = [
+        normalize(r.name),
+        normalize(r.mobile || r.phone),
+        normalize(r.qualification),
+        normalize(r.workflowStage)
+      ].join("::");
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (deduped.length < local.length) {
+      saveLocalCandidates(deduped);
+      setCandidates(deduped);
+    }
+    return local.length - deduped.length;
+  }, []);
 
   const updateCandidate = useCallback(async (candidateId, updates) => {
     const local = loadLocalCandidates();
@@ -814,6 +855,8 @@ export function CrmProvider({ children }) {
   const value = useMemo(() => ({
     candidates,
     clients,
+    findDuplicate,
+    removeDuplicates,
     settings,
     selectedConfig,
     selectedConfigId,

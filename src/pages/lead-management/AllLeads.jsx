@@ -1,11 +1,22 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Box, Paper, Typography } from "@mui/material";
+import { Alert, Box, Button, Paper, Snackbar, Typography } from "@mui/material";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import { useCrm } from "../../crmContext.jsx";
 
 function AllLeads() {
-  const { candidates } = useCrm();
+  const { candidates, removeDuplicates } = useCrm();
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
+
+  const handleRemoveDuplicates = useCallback(() => {
+    if (leads.length === 0) return;
+    const result = window.confirm("Remove duplicate lead records? This cannot be undone.");
+    if (!result) return;
+    const removed = removeDuplicates();
+    setSnackbar({ open: true, message: `${removed} duplicate(s) removed successfully.`, severity: "success" });
+  }, [leads, removeDuplicates]);
+
   return (
     <div>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, mb: 3 }}>
@@ -15,6 +26,9 @@ function AllLeads() {
             Table of all insurance customer leads.
           </Typography>
         </Box>
+        <Button variant="outlined" startIcon={<DeleteSweepIcon />} onClick={handleRemoveDuplicates}>
+          Remove Duplicates
+        </Button>
       </Box>
 
       <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", overflow: "hidden" }}>
@@ -61,6 +75,11 @@ function AllLeads() {
           </table>
         </div>
       </Paper>
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }

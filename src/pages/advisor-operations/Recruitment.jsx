@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Alert,
   Box,
@@ -18,6 +18,7 @@ import {
   ListItemText,
   MenuItem,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   Typography
@@ -34,6 +35,7 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import InboxIcon from "@mui/icons-material/Inbox";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import { useCrm } from "../../crmContext.jsx";
 import { useNavigate } from "react-router-dom";
 import FunnelChart from "../../components/FunnelChart.jsx";
@@ -51,10 +53,19 @@ function EmptyState({ icon: Icon, title, description }) {
 }
 
 function Recruitment() {
-  const { candidates, addCandidate, performanceRecords, activeAdvisors, stageBadge, advisorWorkflowStages, sources } = useCrm();
+  const { candidates, addCandidate, removeDuplicates, performanceRecords, activeAdvisors, stageBadge, advisorWorkflowStages, sources } = useCrm();
   const navigate = useNavigate();
   const [addLeadOpen, setAddLeadOpen] = useState(false);
   const [advisorErrors, setAdvisorErrors] = useState({});
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+
+  const handleRemoveDuplicates = useCallback(() => {
+    if (candidates.filter((c) => c.leadType === "Recruitment").length === 0) return;
+    const result = window.confirm("Remove duplicate recruitment records? This cannot be undone.");
+    if (!result) return;
+    const removed = removeDuplicates();
+    setSnackbar({ open: true, message: `${removed} duplicate(s) removed successfully.`, severity: "success" });
+  }, [candidates, removeDuplicates]);
 
   const emptyAdvisorForm = () => ({
     name: "",
@@ -135,9 +146,11 @@ function Recruitment() {
     const errs = {};
     if (!advisorForm.name.trim()) errs.name = "Full Name is required";
     if (!advisorForm.mobile.trim()) errs.mobile = "Mobile Number is required";
+    else if (!/^\d{10}$/.test(advisorForm.mobile.trim())) errs.mobile = "Enter a valid 10-digit phone number.";
     if (!advisorForm.email.trim()) errs.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(advisorForm.email)) errs.email = "Invalid email";
     if (!advisorForm.city.trim()) errs.city = "City is required";
+    if (!advisorForm.qualification.trim()) errs.qualification = "Qualification is required.";
     if (!advisorForm.source) errs.source = "Source is required";
     if (!advisorForm.workflowStage) errs.workflowStage = "Workflow Stage is required";
     setAdvisorErrors(errs);
@@ -145,7 +158,7 @@ function Recruitment() {
 
     handleAddLead({
       ...advisorForm,
-      leadType: "Advisor Recruitment",
+      leadType: "Recruitment",
       leadId: `LD-${1000 + candidates.length + 1}`,
       leadStatus: "Open",
       leadSource: advisorForm.source,
@@ -153,7 +166,7 @@ function Recruitment() {
   };
 
   const advisorLeads = useMemo(
-    () => candidates.filter((candidate) => candidate.leadType === "Advisor Recruitment"),
+    () => candidates.filter((candidate) => candidate.leadType === "Recruitment"),
     [candidates]
   );
 
@@ -224,17 +237,21 @@ function Recruitment() {
     [advisorLeads]
   );
 
-  const handleAddLead = (lead) => {
-    addCandidate({
-      ...lead,
-      leadId: lead.leadId || `LD-${1000 + candidates.length + 1}`,
-      workflowStage: lead.workflowStage || "Interview",
-      leadStatus: lead.leadStatus || "Open",
-      leadType: lead.leadType || "Advisor Recruitment",
-      leadSource: lead.leadSource || lead.source || "Referral",
-      source: lead.source || lead.leadSource || "Referral"
-    });
-    setAddLeadOpen(false);
+  const handleAddLead = async (lead) => {
+    try {
+      await addCandidate({
+        ...lead,
+        leadId: lead.leadId || `LD-${1000 + candidates.length + 1}`,
+        workflowStage: lead.workflowStage || "Interview",
+        leadStatus: lead.leadStatus || "Open",
+        leadType: lead.leadType || "Recruitment",
+        leadSource: lead.leadSource || lead.source || "Referral",
+        source: lead.source || lead.leadSource || "Referral"
+      });
+      setAddLeadOpen(false);
+    } catch (err) {
+      setAdvisorErrors((prev) => ({ ...prev, name: err.message }));
+    }
   };
 
   return (
@@ -246,9 +263,14 @@ function Recruitment() {
             Track advisor sourcing, onboarding readiness, and activation progress from the live recruitment pipeline.
           </Typography>
         </Box>
-        <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setAddLeadOpen(true)}>
-          Add Advisor
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button variant="outlined" startIcon={<DeleteSweepIcon />} onClick={handleRemoveDuplicates}>
+            Remove Duplicates
+          </Button>
+          <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setAddLeadOpen(true)}>
+            Add Advisor
+          </Button>
+        </Box>
       </Box>
 
       <Grid container spacing={2}>
@@ -391,7 +413,7 @@ function Recruitment() {
           <TextField fullWidth margin="dense" label="Mobile Number" name="mobile" value={advisorForm.mobile} onChange={handleAdvisorField} error={!!advisorErrors.mobile} helperText={advisorErrors.mobile} />
           <TextField fullWidth margin="dense" label="Email" name="email" type="email" value={advisorForm.email} onChange={handleAdvisorField} error={!!advisorErrors.email} helperText={advisorErrors.email} />
           <TextField fullWidth margin="dense" label="City" name="city" value={advisorForm.city} onChange={handleAdvisorField} error={!!advisorErrors.city} helperText={advisorErrors.city} />
-          <TextField fullWidth margin="dense" label="Qualification" name="qualification" value={advisorForm.qualification} onChange={handleAdvisorField} />
+          <TextField fullWidth margin="dense" label="Qualification" name="qualification" value={advisorForm.qualification} onChange={handleAdvisorField} error={!!advisorErrors.qualification} helperText={advisorErrors.qualification} />
           <TextField select fullWidth margin="dense" label="Recruitment Source" name="source" value={advisorForm.source} onChange={handleAdvisorField} error={!!advisorErrors.source} helperText={advisorErrors.source}>
             {sources.map((option) => (
               <MenuItem key={option} value={option}>{option}</MenuItem>
@@ -474,6 +496,11 @@ function Recruitment() {
           <Button variant="contained" onClick={submitAdvisor}>Save Advisor</Button>
         </DialogActions>
       </Dialog>
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

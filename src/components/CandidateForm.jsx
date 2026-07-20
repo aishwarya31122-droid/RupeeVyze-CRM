@@ -15,6 +15,7 @@ const createEmptyForm = (workflowStage = "New Lead") => ({
   email: "",
   city: "",
   source: "",
+  qualification: "",
   leadType: "Insurance Customer",
   workflowStage,
   followUpDate: "",
@@ -50,9 +51,11 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
     const newErrors = {};
     if (!form.name.trim()) newErrors.name = "Full Name is required";
     if (!form.mobile.trim()) newErrors.mobile = "Mobile Number is required";
+    else if (!/^\d{10}$/.test(form.mobile.trim())) newErrors.mobile = "Enter a valid 10-digit phone number.";
     if (!form.email.trim()) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = "Invalid email";
     if (!form.city.trim()) newErrors.city = "City is required";
+    if (!form.qualification.trim()) newErrors.qualification = "Qualification is required.";
     if (!form.source) newErrors.source = "Source is required";
     if (!form.workflowStage) newErrors.workflowStage = "Insurance Stage is required";
     
@@ -63,18 +66,22 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
   const submit = async () => {
     if (!validate()) return;
 
-    await onAdd({
-      ...form,
-      leadType: "Insurance Customer",
-      workflowStage: form.workflowStage || "New Lead",
-      source: form.source || "Referral",
-      nextFollowUp: showFollowUp ? (form.followUpDate || "") : ""
-    });
+    try {
+      await onAdd({
+        ...form,
+        leadType: "Insurance Customer",
+        workflowStage: form.workflowStage || "New Lead",
+        source: form.source || "Referral",
+        nextFollowUp: showFollowUp ? (form.followUpDate || "") : ""
+      });
 
-    setSuccessMessage("Lead added successfully!");
-    setForm(createEmptyForm("New Lead"));
-    setErrors({});
-    onClose();
+      setSuccessMessage("Lead added successfully!");
+      setForm(createEmptyForm("New Lead"));
+      setErrors({});
+      onClose();
+    } catch {
+      setErrors((prev) => ({ ...prev, name: "This record already exists." }));
+    }
   };
 
   return (
@@ -130,6 +137,17 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           onChange={handle}
           error={!!errors.city}
           helperText={errors.city}
+        />
+        
+        <TextField
+          fullWidth
+          margin="dense"
+          label="Qualification"
+          name="qualification"
+          value={form.qualification}
+          onChange={handle}
+          error={!!errors.qualification}
+          helperText={errors.qualification}
         />
         
         <TextField
