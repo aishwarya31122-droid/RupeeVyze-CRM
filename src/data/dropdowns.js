@@ -1,15 +1,21 @@
 export const pipelineStages = [
   "New Lead",
+  "Contacted",
+  "Follow-up",
   "Qualified",
   "Financial Need Analysis",
+  "Need Analysis",
   "Product Recommendation",
   "Illustration Shared",
+  "Proposal Shared",
   "Proposal Submitted",
+  "Policy Discussion",
   "Medical",
   "Underwriting",
   "Policy Issued",
   "Premium Collected",
-  "Active Client"
+  "Active Client",
+  "Lost"
 ];
 
 export const leadTypes = ["Advisor Recruitment", "Insurance Customer"];
@@ -29,17 +35,37 @@ export const advisorWorkflowStages = [
 
 export const customerWorkflowStages = [
   "New Lead",
+  "Contacted",
+  "Follow-up",
   "Qualified",
   "Financial Need Analysis",
+  "Need Analysis",
   "Product Recommendation",
   "Illustration Shared",
+  "Proposal Shared",
   "Proposal Submitted",
+  "Policy Discussion",
   "Medical",
   "Underwriting",
   "Policy Issued",
   "Premium Collected",
-  "Active Client"
+  "Active Client",
+  "Lost"
 ];
+
+export const followUpRequiredStages = new Set([
+  "New Lead",
+  "Contacted",
+  "Follow-up",
+  "Qualified",
+  "Financial Need Analysis",
+  "Need Analysis",
+  "Product Recommendation",
+  "Illustration Shared",
+  "Proposal Shared",
+  "Proposal Submitted",
+  "Policy Discussion"
+]);
 
 export const sources = ["Referral", "LinkedIn", "Walk-in", "Facebook", "Job Portal", "Website"];
 
@@ -53,13 +79,18 @@ export const adviserStatuses = ["Lead", "Prospect", "Activated", "Dropped"];
 
 export const stageBadge = {
   "New Lead": "#4f46e5",
+  "Contacted": "#0ea5e9",
+  "Follow-up": "#f59e0b",
   "First Contact": "#0ea5e9",
   "Interested": "#f59e0b",
   "Qualified": "#f97316",
   "Financial Need Analysis": "#10b981",
+  "Need Analysis": "#10b981",
   "Product Recommendation": "#8b5cf6",
   "Illustration Shared": "#22c55e",
+  "Proposal Shared": "#22c55e",
   "Proposal Submitted": "#0f766e",
+  "Policy Discussion": "#0f766e",
   "Medical": "#ec4899",
   "Underwriting": "#7c3aed",
   "Policy Issued": "#0f766e",

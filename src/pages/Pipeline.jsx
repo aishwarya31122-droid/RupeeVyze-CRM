@@ -156,8 +156,8 @@ function Pipeline({ detailsPrefix }) {
       <CandidateForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        onAdd={(candidateData) => {
-          addCandidate(candidateData);
+        onAdd={async (candidateData) => {
+          await addCandidate(candidateData);
           setFormOpen(false);
         }}
         pipelineStages={pipelineStages}

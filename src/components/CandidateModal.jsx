@@ -3,7 +3,7 @@ import { useCrm } from "../crmContext.jsx";
 import StageSelect from "./StageSelect.jsx";
 
 export default function CandidateModal({ candidate, onClose, onStageUpdate, onNoteSave, onSave }) {
-  const { pipelineStages, sources } = useCrm();
+  const { pipelineStages, sources, followUpRequiredStages } = useCrm();
   const [form, setForm] = useState({
     name: candidate.name || "",
     mobile: candidate.mobile || candidate.phone || "",
@@ -25,6 +25,8 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   };
 
   const handleSave = () => {
+    const stageForFollowUp = selectedStage || form.workflowStage;
+    const showFollowUp = followUpRequiredStages.has(stageForFollowUp);
     const payload = {
       ...form,
       mobile: form.mobile || candidate.mobile || candidate.phone || "",
@@ -34,7 +36,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
       source: form.leadSource || candidate.leadSource || candidate.source || "",
       leadStatus: form.leadStatus || candidate.leadStatus || "Open",
       assignedTo: form.assignedTo || candidate.assignedTo || "",
-      nextFollowUp: form.followUpDate || candidate.nextFollowUp || candidate.followUpDate || "",
+      nextFollowUp: showFollowUp ? (form.followUpDate || candidate.nextFollowUp || candidate.followUpDate || "") : "",
       followUp: {
         ...candidate.followUp,
         type: candidate.followUp?.type || "Phone Call",
@@ -55,6 +57,8 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
       onClose();
     }, 1000);
   };
+
+  const showFollowUp = followUpRequiredStages.has(selectedStage);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -99,7 +103,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
             </select>
           </label>
           <label>
-            <span>Workflow Stage</span>
+            <span>Insurance Stage</span>
             <StageSelect stage={selectedStage} leadType={candidate.leadType} onChange={(value) => setSelectedStage(value)} />
           </label>
           <label>
@@ -116,10 +120,12 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
             <span>Assigned To</span>
             <input name="assignedTo" value={form.assignedTo} onChange={handleChange} />
           </label>
-          <label>
-            <span>Follow-up Date</span>
-            <input type="date" name="followUpDate" value={form.followUpDate} onChange={handleChange} />
-          </label>
+          {showFollowUp && (
+            <label>
+              <span>Follow-up Date</span>
+              <input type="date" name="followUpDate" value={form.followUpDate} onChange={handleChange} />
+            </label>
+          )}
           <label className="full-width">
             <span>Notes</span>
             <textarea name="notes" value={form.notes} onChange={handleChange} />

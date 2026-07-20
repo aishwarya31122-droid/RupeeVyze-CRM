@@ -136,15 +136,16 @@ function LeadDashboard() {
     }
   };
 
-  const handleAddLead = (lead) => {
-    addCandidate({
+  const handleAddLead = async (lead) => {
+    await addCandidate({
       ...lead,
       leadId: lead.leadId || `LD-${1000 + leads.length + 1}`,
       leadType: "Insurance Customer",
       workflowStage: lead.workflowStage || "New Lead",
       leadStatus: lead.leadStatus || "Open",
       leadSource: lead.leadSource || lead.source || "Referral",
-      source: lead.source || lead.leadSource || "Referral"
+      source: lead.source || lead.leadSource || "Referral",
+      nextFollowUp: lead.nextFollowUp || ""
     });
     setAddLeadOpen(false);
   };

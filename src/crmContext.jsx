@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { candidatesApi, clientsApi, settingsApi, teamMembersApi, performanceApi, overridePayoutsApi } from "./api/endpoints.js";
-import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, sources, recruiterNames, stageBadge } from "./data/dropdowns.js";
+import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, followUpRequiredStages, sources, recruiterNames, stageBadge } from "./data/dropdowns.js";
 import { businessConfigs, defaultBusinessSettings } from "./data/config.js";
 import { getActiveAdvisorRows, getPerformanceSummary, getOverrideRecords } from "./pages/advisor-operations/advisorOperationsData.js";
 
@@ -205,42 +205,58 @@ export function CrmProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const refreshCrmData = useCallback(async () => {
-    try {
-      const [cands, clts, sets, team, perf, overrides] = await Promise.all([
-        candidatesApi.list(),
-        clientsApi.list(),
-        settingsApi.get(),
-        teamMembersApi.list(),
-        performanceApi.list(),
-        overridePayoutsApi.list()
-      ]);
-      setCandidates(cands);
-      setClients(clts);
-      setSettingsState(sets);
-      setSelectedConfigId(sets.selectedConfigId || "standard");
-      setTeamMembers(team);
-      setPerformanceRecords(perf);
-      setOverridePayoutRecords(overrides);
-    } catch (err) {
-      console.warn("API unavailable, starting fresh:", err.message);
-      DATA_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
-      setCandidates([]);
-      setClients([]);
+    const settled = await Promise.allSettled([
+      candidatesApi.list(),
+      clientsApi.list(),
+      settingsApi.get(),
+      teamMembersApi.list(),
+      performanceApi.list(),
+      overridePayoutsApi.list()
+    ]);
+    const [candsResult, cltsResult, setsResult, teamResult, perfResult, overridesResult] = settled;
+
+    if (candsResult.status === "fulfilled") {
+      setCandidates(candsResult.value);
+      saveLocalCandidates(candsResult.value);
+    }
+    if (cltsResult.status === "fulfilled") {
+      setClients(cltsResult.value);
+      saveLocalClients(cltsResult.value);
+    }
+    if (setsResult.status === "fulfilled") {
+      setSettingsState(setsResult.value);
+      setSelectedConfigId(setsResult.value.selectedConfigId || "standard");
+      saveLocalSettings(setsResult.value);
+    }
+    if (teamResult.status === "fulfilled") {
+      setTeamMembers(teamResult.value);
+      saveLocalTeamMembers(teamResult.value);
+    }
+    if (perfResult.status === "fulfilled") {
+      setPerformanceRecords(perfResult.value);
+      saveLocalPerformance(perfResult.value);
+    }
+    if (overridesResult.status === "fulfilled") {
+      setOverridePayoutRecords(overridesResult.value);
+      saveLocalOverrides(overridesResult.value);
+    }
+
+    const allFailed = settled.every((r) => r.status === "rejected");
+    if (allFailed) {
+      console.warn("All API calls failed, using local storage fallback");
+      const localCands = loadLocalCandidates();
+      const localClts = loadLocalClients();
       const localSettings = loadLocalSettings();
+      const localTeam = loadLocalTeamMembers();
+      const localPerf = loadLocalPerformance();
+      const localOverrides = loadLocalOverrides();
+      setCandidates(localCands);
+      setClients(localClts);
       setSettingsState(localSettings || defaultBusinessSettings);
       setSelectedConfigId((localSettings || defaultBusinessSettings).selectedConfigId || "standard");
-      setTeamMembers([]);
-      setPerformanceRecords([]);
-      setOverridePayoutRecords([]);
-      setPolicies([]);
-      setClaims([]);
-      setServiceRequests([]);
-      setRoles([]);
-      setPermissions([]);
-      setRewards([]);
-      setImportHistory([]);
-    } finally {
-      setLoading(false);
+      setTeamMembers(localTeam);
+      setPerformanceRecords(localPerf);
+      setOverridePayoutRecords(localOverrides);
     }
   }, []);
 
@@ -267,19 +283,12 @@ export function CrmProvider({ children }) {
   const updateCandidateStage = useCallback(async (candidateId, stage) => {
     const validStages = new Set([...advisorWorkflowStages, ...customerWorkflowStages]);
     if (!validStages.has(stage)) return;
-    try {
-      await candidatesApi.updateStage(candidateId, { stage });
-      await refreshCrmData();
-    } catch (err) {
-      console.warn("API unavailable, updating stage locally:", err.message);
-      const local = loadLocalCandidates();
-      const updated = local.map((c) => String(c.id) === String(candidateId) ? { ...c, workflowStage: stage } : c);
-      saveLocalCandidates(updated);
-      setCandidates(updated);
-    }
+    const local = loadLocalCandidates();
+    const updated = local.map((c) => String(c.id) === String(candidateId) ? { ...c, workflowStage: stage } : c);
+    saveLocalCandidates(updated);
+    setCandidates(updated);
     if (stage === "Policy Issued" || stage === "Active Client" || stage === "Policy Purchased" || stage === "Premium Collected") {
-      const local = loadLocalCandidates();
-      const cand = local.find((c) => String(c.id) === String(candidateId));
+      const cand = updated.find((c) => String(c.id) === String(candidateId));
       if (cand && cand.leadType === "Insurance Customer") {
         const localClients = loadLocalClients();
         const alreadyClient = localClients.some((cl) => cl.candidateId === String(cand.id));
@@ -305,6 +314,12 @@ export function CrmProvider({ children }) {
         }
       }
     }
+    try {
+      await candidatesApi.updateStage(candidateId, { stage });
+      await refreshCrmData();
+    } catch (err) {
+      console.warn("API unavailable, stage updated locally:", err.message);
+    }
   }, [refreshCrmData]);
 
   const addCandidate = useCallback(async (candidate) => {
@@ -319,16 +334,16 @@ export function CrmProvider({ children }) {
       createdDate: candidate.createdDate || new Date().toISOString().slice(0, 10),
       nextFollowUp: candidate.nextFollowUp || candidate.followUpDate || ""
     };
+    const local = loadLocalCandidates();
+    const record = normalizeLocalRecord(payload, 0, local.length);
+    const updated = [...local, record];
+    saveLocalCandidates(updated);
+    setCandidates(updated);
     try {
       await candidatesApi.create(payload);
       await refreshCrmData();
     } catch (err) {
-      console.warn("API unavailable, adding candidate locally:", err.message);
-      const local = loadLocalCandidates();
-      const record = normalizeLocalRecord(payload, 0, local.length);
-      const updated = [...local, record];
-      saveLocalCandidates(updated);
-      setCandidates(updated);
+      console.warn("API unavailable, candidate added locally:", err.message);
     }
   }, [refreshCrmData, selectedConfig]);
 
@@ -359,94 +374,94 @@ export function CrmProvider({ children }) {
   }, [refreshCrmData]);
 
   const updateCandidate = useCallback(async (candidateId, updates) => {
+    const local = loadLocalCandidates();
+    const updated = local.map((c) => {
+      if (String(c.id) !== String(candidateId)) return c;
+      const merged = { ...c, ...updates };
+      if (updates.mobile) merged.phone = updates.mobile;
+      if (updates.phone) merged.mobile = updates.phone;
+      if (updates.source) merged.leadSource = updates.source;
+      if (updates.leadSource) merged.source = updates.leadSource;
+      if (updates.followUpDate) merged.nextFollowUp = updates.followUpDate;
+      return merged;
+    });
+    saveLocalCandidates(updated);
+    setCandidates(updated);
+    if (updates.leadStatus === "Policy Purchased" || updates.workflowStage === "Policy Purchased") {
+      const cand = updated.find((c) => String(c.id) === String(candidateId));
+      if (cand && cand.leadType === "Insurance Customer") {
+        const localClients = loadLocalClients();
+        const alreadyClient = localClients.some((cl) => cl.candidateId === String(cand.id));
+        if (!alreadyClient) {
+          const clientRecord = {
+            id: localClients.length + 1,
+            clientId: `CL-${1000 + localClients.length + 1}`,
+            candidateId: String(cand.id),
+            name: cand.name,
+            email: cand.email || "",
+            phone: cand.mobile || cand.phone || "",
+            city: cand.city || "",
+            mobile: cand.mobile || cand.phone || "",
+            policyNumber: cand.policyNumber || "",
+            advisorAssigned: cand.assignedTo || "",
+            dateReceived: new Date().toISOString().slice(0, 10),
+            finalStatus: "Active Client",
+            interestLevel: cand.priority || "Medium",
+            leadSource: cand.leadSource || cand.source || ""
+          };
+          const updatedClients = [...localClients, clientRecord];
+          saveLocalClients(updatedClients);
+          setClients(updatedClients);
+        }
+      }
+    }
     try {
       await candidatesApi.update(candidateId, updates);
       await refreshCrmData();
     } catch (err) {
-      console.warn("API unavailable, updating candidate locally:", err.message);
-      const local = loadLocalCandidates();
-      const updated = local.map((c) => {
-        if (String(c.id) !== String(candidateId)) return c;
-        const merged = { ...c, ...updates };
-        if (updates.mobile) merged.phone = updates.mobile;
-        if (updates.phone) merged.mobile = updates.phone;
-        if (updates.source) merged.leadSource = updates.source;
-        if (updates.leadSource) merged.source = updates.leadSource;
-        if (updates.followUpDate) merged.nextFollowUp = updates.followUpDate;
-        return merged;
-      });
-      saveLocalCandidates(updated);
-      setCandidates(updated);
-      if (updates.leadStatus === "Policy Purchased" || updates.workflowStage === "Policy Purchased") {
-        const cand = updated.find((c) => String(c.id) === String(candidateId));
-        if (cand && cand.leadType === "Insurance Customer") {
-          const localClients = loadLocalClients();
-          const alreadyClient = localClients.some((cl) => cl.candidateId === String(cand.id));
-          if (!alreadyClient) {
-            const clientRecord = {
-              id: localClients.length + 1,
-              clientId: `CL-${1000 + localClients.length + 1}`,
-              candidateId: String(cand.id),
-              name: cand.name,
-              email: cand.email || "",
-              phone: cand.mobile || cand.phone || "",
-              city: cand.city || "",
-              mobile: cand.mobile || cand.phone || "",
-              policyNumber: cand.policyNumber || "",
-              advisorAssigned: cand.assignedTo || "",
-              dateReceived: new Date().toISOString().slice(0, 10),
-              finalStatus: "Active Client",
-              interestLevel: cand.priority || "Medium",
-              leadSource: cand.leadSource || cand.source || ""
-            };
-            const updatedClients = [...localClients, clientRecord];
-            saveLocalClients(updatedClients);
-            setClients(updatedClients);
-          }
-        }
-      }
+      console.warn("API unavailable, candidate updated locally:", err.message);
     }
   }, [refreshCrmData]);
 
   const updateCandidateNote = useCallback(async (candidateId, note) => {
+    const local = loadLocalCandidates();
+    const updated = local.map((c) => String(c.id) === String(candidateId) ? { ...c, notes: note } : c);
+    saveLocalCandidates(updated);
+    setCandidates(updated);
     try {
       await candidatesApi.updateNote(candidateId, { note });
       await refreshCrmData();
     } catch (err) {
-      console.warn("API unavailable, updating note locally:", err.message);
-      const local = loadLocalCandidates();
-      const updated = local.map((c) => String(c.id) === String(candidateId) ? { ...c, notes: note } : c);
-      saveLocalCandidates(updated);
-      setCandidates(updated);
+      console.warn("API unavailable, note updated locally:", err.message);
     }
   }, [refreshCrmData]);
 
   const markFollowUpDone = useCallback(async (candidateId) => {
+    const local = loadLocalCandidates();
+    const updated = local.map((c) => String(c.id) === String(candidateId)
+      ? { ...c, followUp: { ...(c.followUp || {}), status: "Done" } }
+      : c
+    );
+    saveLocalCandidates(updated);
+    setCandidates(updated);
     try {
       await candidatesApi.updateFollowUp(candidateId, { status: "Done" });
       await refreshCrmData();
     } catch (err) {
-      console.warn("API unavailable, marking follow-up done locally:", err.message);
-      const local = loadLocalCandidates();
-      const updated = local.map((c) => String(c.id) === String(candidateId)
-        ? { ...c, followUp: { ...(c.followUp || {}), status: "Done" } }
-        : c
-      );
-      saveLocalCandidates(updated);
-      setCandidates(updated);
+      console.warn("API unavailable, follow-up marked done locally:", err.message);
     }
   }, [refreshCrmData]);
 
   const deleteCandidate = useCallback(async (candidateId) => {
+    const local = loadLocalCandidates();
+    const updated = local.filter((c) => String(c.id) !== String(candidateId));
+    saveLocalCandidates(updated);
+    setCandidates(updated);
     try {
       await candidatesApi.remove(candidateId);
       await refreshCrmData();
     } catch (err) {
-      console.warn("API unavailable, deleting candidate locally:", err.message);
-      const local = loadLocalCandidates();
-      const updated = local.filter((c) => String(c.id) !== String(candidateId));
-      saveLocalCandidates(updated);
-      setCandidates(updated);
+      console.warn("API unavailable, candidate deleted locally:", err.message);
     }
   }, [refreshCrmData]);
 
@@ -845,6 +860,7 @@ export function CrmProvider({ children }) {
     leadStatuses,
     advisorWorkflowStages,
     customerWorkflowStages,
+    followUpRequiredStages,
     sources,
     recruiterNames: derivedRecruiterNames,
     teamMembers,

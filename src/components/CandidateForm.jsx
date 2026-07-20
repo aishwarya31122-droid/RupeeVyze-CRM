@@ -9,41 +9,42 @@ import MenuItem from "@mui/material/MenuItem";
 import Alert from "@mui/material/Alert";
 import { useCrm } from "../crmContext.jsx";
 
-const createEmptyForm = (leadType = "Insurance Customer", workflowStage = "New Lead") => ({
+const createEmptyForm = (workflowStage = "New Lead") => ({
   name: "",
   mobile: "",
   email: "",
   city: "",
   source: "",
-  leadType,
+  leadType: "Insurance Customer",
   workflowStage,
   followUpDate: "",
   notes: ""
 });
 
 export default function CandidateForm({ open, onClose, onAdd, pipelineStages: propPipelineStages, sources: propSources }) {
-  const { advisorWorkflowStages, customerWorkflowStages, leadTypes, sources: contextSources } = useCrm();
+  const { customerWorkflowStages, followUpRequiredStages, sources: contextSources } = useCrm();
   const sources = propSources || contextSources;
-  const [form, setForm] = useState(() => createEmptyForm(leadTypes?.[0] || "Insurance Customer", "New Lead"));
+  const [form, setForm] = useState(() => createEmptyForm("New Lead"));
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (!open) {
-      setForm(createEmptyForm(leadTypes?.[0] || "Insurance Customer", "New Lead"));
+      setForm(createEmptyForm("New Lead"));
       setErrors({});
       setSuccessMessage("");
     }
-  }, [open, leadTypes]);
+  }, [open]);
 
   const handle = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
     }
   };
+
+  const showFollowUp = followUpRequiredStages.has(form.workflowStage);
 
   const validate = () => {
     const newErrors = {};
@@ -53,23 +54,25 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = "Invalid email";
     if (!form.city.trim()) newErrors.city = "City is required";
     if (!form.source) newErrors.source = "Source is required";
-    if (!form.workflowStage) newErrors.workflowStage = "Workflow Stage is required";
+    if (!form.workflowStage) newErrors.workflowStage = "Insurance Stage is required";
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!validate()) return;
 
-    onAdd({
+    await onAdd({
       ...form,
+      leadType: "Insurance Customer",
       workflowStage: form.workflowStage || "New Lead",
-      source: form.source || "Referral"
+      source: form.source || "Referral",
+      nextFollowUp: showFollowUp ? (form.followUpDate || "") : ""
     });
 
     setSuccessMessage("Lead added successfully!");
-    setForm(createEmptyForm(leadTypes?.[0] || "Insurance Customer", "New Lead"));
+    setForm(createEmptyForm("New Lead"));
     setErrors({});
     onClose();
   };
@@ -151,46 +154,32 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           select
           fullWidth
           margin="dense"
-          label="Lead Type"
-          name="leadType"
-          value={form.leadType}
-          onChange={(e) => setForm((prev) => ({ ...prev, leadType: e.target.value, workflowStage: "New Lead" }))}
-        >
-          {leadTypes?.map((option) => (
-            <MenuItem key={option} value={option}>
-              {option}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          select
-          fullWidth
-          margin="dense"
-          label="Workflow Stage"
+          label="Insurance Stage"
           name="workflowStage"
           value={form.workflowStage}
           onChange={(e) => setForm((prev) => ({ ...prev, workflowStage: e.target.value }))}
           error={!!errors.workflowStage}
           helperText={errors.workflowStage}
         >
-          {(form.leadType === "Advisor Recruitment" ? advisorWorkflowStages : customerWorkflowStages).map((option) => (
+          {customerWorkflowStages.map((option) => (
             <MenuItem key={option} value={option}>
               {option}
             </MenuItem>
           ))}
         </TextField>
 
-        <TextField
-          fullWidth
-          margin="dense"
-          label="Follow-up Date"
-          name="followUpDate"
-          type="date"
-          value={form.followUpDate}
-          onChange={handle}
-          InputLabelProps={{ shrink: true }}
-        />
+        {showFollowUp && (
+          <TextField
+            fullWidth
+            margin="dense"
+            label="Follow-up Date"
+            name="followUpDate"
+            type="date"
+            value={form.followUpDate}
+            onChange={handle}
+            InputLabelProps={{ shrink: true }}
+          />
+        )}
 
         <TextField
           fullWidth
