@@ -18,6 +18,9 @@ import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurned
 import PriorityHighOutlinedIcon from "@mui/icons-material/PriorityHighOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 
+const insuranceFunnelStages = ["New Lead", "Contacted", "Follow-up", "Need Analysis", "Proposal Shared", "Policy Discussion", "Policy Issued", "Lost"];
+const advisorFunnelStages = ["Interview", "Documents", "NAAF Generation", "Training", "Exam", "Code Generation", "Activation", "Dropped"];
+
 function KPI({ label, value, icon: Icon, color }) {
   return (
     <Card
@@ -49,11 +52,11 @@ function KPI({ label, value, icon: Icon, color }) {
 
 function LeadDashboard() {
   const navigate = useNavigate();
-  const { candidates, addCandidate, advisorWorkflowStages, customerWorkflowStages } = useCrm();
+  const { candidates, addCandidate } = useCrm();
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
   const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
-  const advisorCandidates = useMemo(() => candidates.filter((c) => c.leadType === "Recruitment"), [candidates]);
+  const advisorCandidates = useMemo(() => candidates.filter((c) => c.leadType === "Advisor"), [candidates]);
 
   const totalLeads = leads.length;
   const advisorLeads = advisorCandidates.length;
@@ -76,13 +79,13 @@ function LeadDashboard() {
 
   const priorityLeads = leads.filter((lead) => lead.priority === "High" || lead.followUp?.priority === "High").length;
 
-  const advisorFunnelStages = useMemo(() => {
-    return advisorWorkflowStages.map((stage) => ({ stage, count: advisorCandidates.filter((lead) => lead.workflowStage === stage).length }));
-  }, [advisorCandidates, advisorWorkflowStages]);
+  const advisorFunnelData = useMemo(() => {
+    return advisorFunnelStages.map((stage) => ({ stage, count: advisorCandidates.filter((lead) => lead.workflowStage === stage).length }));
+  }, [advisorCandidates]);
 
-  const customerFunnelStages = useMemo(() => {
-    return customerWorkflowStages.map((stage) => ({ stage, count: leads.filter((lead) => lead.workflowStage === stage).length }));
-  }, [leads, customerWorkflowStages]);
+  const insuranceFunnelData = useMemo(() => {
+    return insuranceFunnelStages.map((stage) => ({ stage, count: leads.filter((lead) => lead.workflowStage === stage).length }));
+  }, [leads]);
 
   const conversionRate = totalLeads ? Math.round((convertedLeads / totalLeads) * 100) : 0;
 
@@ -185,11 +188,11 @@ function LeadDashboard() {
       <div className="grid-2-columns">
         <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Recruitment Funnel</Typography>
-          <FunnelChart stages={advisorFunnelStages} />
+          <FunnelChart stages={advisorFunnelData} />
         </Paper>
         <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Sales Funnel</Typography>
-          <FunnelChart stages={customerFunnelStages} />
+          <FunnelChart stages={insuranceFunnelData} />
         </Paper>
       </div>
 

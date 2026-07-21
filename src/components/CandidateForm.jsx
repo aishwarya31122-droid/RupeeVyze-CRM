@@ -8,30 +8,40 @@ import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Alert from "@mui/material/Alert";
 import { useCrm } from "../crmContext.jsx";
+import StageForm, { getStageDefaultValues, clearHiddenStageFields } from "./StageForm.jsx";
+import { insuranceCustomerStageFields, advisorStageFields, insuranceCustomerStages, advisorRecruitmentStages } from "../data/stageConfig.js";
 
-const createEmptyForm = (workflowStage = "New Lead") => ({
+const baseFields = {
   name: "",
   mobile: "",
   email: "",
   city: "",
-  source: "",
   qualification: "",
   leadType: "Insurance Customer",
-  workflowStage,
-  followUpDate: "",
+  workflowStage: "New Lead",
   notes: ""
-});
+};
+
+const createEmptyForm = () => {
+  const customerDefaults = getStageDefaultValues(insuranceCustomerStageFields, "New Lead");
+  const advisorDefaults = getStageDefaultValues(advisorStageFields, "New Recruitment Lead");
+  return {
+    ...baseFields,
+    ...customerDefaults,
+    ...advisorDefaults,
+    leadType: "Insurance Customer",
+    workflowStage: "New Lead"
+  };
+};
 
 export default function CandidateForm({ open, onClose, onAdd, pipelineStages: propPipelineStages, sources: propSources }) {
-  const { customerWorkflowStages, followUpRequiredStages, sources: contextSources } = useCrm();
-  const sources = propSources || contextSources;
-  const [form, setForm] = useState(() => createEmptyForm("New Lead"));
+  const [form, setForm] = useState(createEmptyForm);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (!open) {
-      setForm(createEmptyForm("New Lead"));
+      setForm(createEmptyForm());
       setErrors({});
       setSuccessMessage("");
     }
@@ -39,13 +49,34 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
 
   const handle = (e) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
-  const showFollowUp = followUpRequiredStages.has(form.workflowStage);
+  const handleLeadTypeChange = (e) => {
+    const value = e.target.value;
+    const base = { ...baseFields, leadType: value, notes: form.notes };
+    if (value === "Insurance Customer") {
+      setForm({ ...base, workflowStage: "New Lead", ...getStageDefaultValues(insuranceCustomerStageFields, "New Lead") });
+    } else {
+      setForm({ ...base, workflowStage: "New Recruitment Lead", ...getStageDefaultValues(advisorStageFields, "New Recruitment Lead") });
+    }
+  };
+
+  const handleStageChange = (e) => {
+    const value = e.target.value;
+    const stageConfig = form.leadType === "Insurance Customer" ? insuranceCustomerStageFields : advisorStageFields;
+    setForm((prev) => {
+      const withDefaults = { ...prev, workflowStage: value, ...getStageDefaultValues(stageConfig, value) };
+      return clearHiddenStageFields(withDefaults, stageConfig, value);
+    });
+  };
+
+  const isInsuranceCustomer = form.leadType === "Insurance Customer";
+  const stageConfig = isInsuranceCustomer ? insuranceCustomerStageFields : advisorStageFields;
+  const currentStages = isInsuranceCustomer ? insuranceCustomerStages : advisorRecruitmentStages;
 
   const validate = () => {
     const newErrors = {};
@@ -56,9 +87,8 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = "Invalid email";
     if (!form.city.trim()) newErrors.city = "City is required";
     if (!form.qualification.trim()) newErrors.qualification = "Qualification is required.";
-    if (!form.source) newErrors.source = "Source is required";
-    if (!form.workflowStage) newErrors.workflowStage = "Insurance Stage is required";
-    
+    if (!form.workflowStage) newErrors.workflowStage = "Stage is required";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -66,17 +96,18 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
   const submit = async () => {
     if (!validate()) return;
 
+    const record = {
+      ...form,
+      workflowStage: form.workflowStage || "New Lead",
+      source: form.source || "Referral",
+      nextFollowUp: form.followUpDate || form.nextFollowUpDate || ""
+    };
+
     try {
-      await onAdd({
-        ...form,
-        leadType: "Insurance Customer",
-        workflowStage: form.workflowStage || "New Lead",
-        source: form.source || "Referral",
-        nextFollowUp: showFollowUp ? (form.followUpDate || "") : ""
-      });
+      await onAdd(record);
 
       setSuccessMessage("Lead added successfully!");
-      setForm(createEmptyForm("New Lead"));
+      setForm(createEmptyForm());
       setErrors({});
       onClose();
     } catch {
@@ -93,7 +124,7 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
             {successMessage}
           </Alert>
         )}
-        
+
         <TextField
           fullWidth
           margin="dense"
@@ -104,7 +135,7 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           error={!!errors.name}
           helperText={errors.name}
         />
-        
+
         <TextField
           fullWidth
           margin="dense"
@@ -115,7 +146,7 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           error={!!errors.mobile}
           helperText={errors.mobile}
         />
-        
+
         <TextField
           fullWidth
           margin="dense"
@@ -127,7 +158,7 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           error={!!errors.email}
           helperText={errors.email}
         />
-        
+
         <TextField
           fullWidth
           margin="dense"
@@ -138,7 +169,7 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           error={!!errors.city}
           helperText={errors.city}
         />
-        
+
         <TextField
           fullWidth
           margin="dense"
@@ -149,55 +180,45 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           error={!!errors.qualification}
           helperText={errors.qualification}
         />
-        
+
         <TextField
           select
           fullWidth
           margin="dense"
-          label="Source"
-          name="source"
-          value={form.source}
-          onChange={handle}
-          error={!!errors.source}
-          helperText={errors.source}
+          label="Lead Type"
+          name="leadType"
+          value={form.leadType}
+          onChange={handleLeadTypeChange}
         >
-          {sources.map((option) => (
-            <MenuItem key={option} value={option}>
-              {option}
-            </MenuItem>
-          ))}
+          <MenuItem value="Insurance Customer">Insurance Customer</MenuItem>
+          <MenuItem value="Advisor">Advisor</MenuItem>
         </TextField>
 
         <TextField
           select
           fullWidth
           margin="dense"
-          label="Insurance Stage"
+          label={isInsuranceCustomer ? "Insurance Stage" : "Recruitment Stage"}
           name="workflowStage"
           value={form.workflowStage}
-          onChange={(e) => setForm((prev) => ({ ...prev, workflowStage: e.target.value }))}
+          onChange={handleStageChange}
           error={!!errors.workflowStage}
           helperText={errors.workflowStage}
         >
-          {customerWorkflowStages.map((option) => (
+          {currentStages.map((option) => (
             <MenuItem key={option} value={option}>
               {option}
             </MenuItem>
           ))}
         </TextField>
 
-        {showFollowUp && (
-          <TextField
-            fullWidth
-            margin="dense"
-            label="Follow-up Date"
-            name="followUpDate"
-            type="date"
-            value={form.followUpDate}
-            onChange={handle}
-            InputLabelProps={{ shrink: true }}
-          />
-        )}
+        <StageForm
+          stageConfig={stageConfig}
+          stage={form.workflowStage}
+          form={form}
+          errors={errors}
+          onChange={handle}
+        />
 
         <TextField
           fullWidth
@@ -212,8 +233,8 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={!!successMessage}>Cancel</Button>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={submit}
           disabled={!!successMessage}
         >

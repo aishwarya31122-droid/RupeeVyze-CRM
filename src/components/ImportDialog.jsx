@@ -476,7 +476,7 @@ function ImportDialog({ open, onClose, onImport }) {
           let importResult;
           switch (type) {
             case "advisors":
-              mappedRows.forEach((r) => { r.leadType = "Recruitment"; });
+              mappedRows.forEach((r) => { r.leadType = "Advisor"; });
               importResult = await importCandidates(mappedRows);
               if (importResult && importResult.imported > 0) {
                 addImportRecord({ type: "candidates", fileName: filename, count: importResult.imported, id: importResult.importId });
@@ -565,7 +565,7 @@ function ImportDialog({ open, onClose, onImport }) {
       let importResult;
       switch (detectedType) {
         case "advisors":
-          records.forEach((r) => { r.leadType = "Recruitment"; });
+          records.forEach((r) => { r.leadType = "Advisor"; });
           importResult = await importCandidates(records);
           if (importResult && importResult.imported > 0) {
             addImportRecord({ type: "candidates", fileName, count: importResult.imported, id: importResult.importId });

@@ -31,7 +31,7 @@ export default function BIDashboard() {
     const activeClients = clients.filter((c) => c.finalStatus === "Active Client").length;
     const premium = clients.reduce((sum, c) => sum + Number(c.annualPremiumBudget?.replace(/[^0-9]/g, "") || 0), 0);
     const policyCount = policies.length || clients.reduce((sum, c) => sum + (c.policies || []).length, 0);
-    const recruitment = candidates.filter((c) => c.leadType === "Recruitment").length;
+    const recruitment = candidates.filter((c) => c.leadType === "Advisor").length;
     const converted = candidates.filter((c) => c.leadStatus === "Converted" || c.workflowStage === "Active Client").length;
     const conversionRate = candidates.length > 0 ? Math.round((converted / candidates.length) * 100) : 0;
 
@@ -43,7 +43,7 @@ export default function BIDashboard() {
       conversion: converted,
       conversionRate,
       activeClients,
-      totalLeads: candidates.filter((c) => c.leadType !== "Recruitment").length
+      totalLeads: candidates.filter((c) => c.leadType !== "Advisor").length
     };
   }, [candidates, clients, policies]);
 
@@ -81,7 +81,7 @@ export default function BIDashboard() {
   }, [candidates]);
 
   const salesFunnel = useMemo(() => {
-    const advisorLeads = candidates.filter((c) => c.leadType !== "Recruitment");
+    const advisorLeads = candidates.filter((c) => c.leadType !== "Advisor");
     const statusCounts = advisorLeads.reduce((acc, c) => {
       const status = c.leadStatus || "Open";
       acc[status] = (acc[status] || 0) + 1;

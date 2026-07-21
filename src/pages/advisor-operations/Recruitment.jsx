@@ -39,6 +39,19 @@ import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import { useCrm } from "../../crmContext.jsx";
 import { useNavigate } from "react-router-dom";
 import FunnelChart from "../../components/FunnelChart.jsx";
+import StageForm, { getStageDefaultValues, clearHiddenStageFields } from "../../components/StageForm.jsx";
+import { advisorStageFields, advisorRecruitmentStages } from "../../data/stageConfig.js";
+
+const advisorBaseFields = {
+  name: "",
+  mobile: "",
+  email: "",
+  city: "",
+  qualification: "",
+  source: "",
+  workflowStage: "New Recruitment Lead",
+  notes: ""
+};
 
 function EmptyState({ icon: Icon, title, description }) {
   return (
@@ -59,48 +72,29 @@ function Recruitment() {
   const [advisorErrors, setAdvisorErrors] = useState({});
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
+  const advisorFormBase = useCallback(() => ({
+    ...advisorBaseFields,
+    ...getStageDefaultValues(advisorStageFields, "New Recruitment Lead"),
+    leadType: "Advisor"
+  }), []);
+
+  const [advisorForm, setAdvisorForm] = useState(advisorFormBase);
+  const [advisorFormStageConfig] = useState(advisorStageFields);
+
+  useEffect(() => {
+    if (!addLeadOpen) {
+      setAdvisorForm(advisorFormBase());
+      setAdvisorErrors({});
+    }
+  }, [addLeadOpen, advisorFormBase]);
+
   const handleRemoveDuplicates = useCallback(() => {
-    if (candidates.filter((c) => c.leadType === "Recruitment").length === 0) return;
+    if (candidates.filter((c) => c.leadType === "Advisor").length === 0) return;
     const result = window.confirm("Remove duplicate recruitment records? This cannot be undone.");
     if (!result) return;
     const removed = removeDuplicates();
     setSnackbar({ open: true, message: `${removed} duplicate(s) removed successfully.`, severity: "success" });
   }, [candidates, removeDuplicates]);
-
-  const emptyAdvisorForm = () => ({
-    name: "",
-    mobile: "",
-    email: "",
-    city: "",
-    qualification: "",
-    source: "",
-    workflowStage: "Interview",
-    followUpDate: "",
-    documentsSubmittedToTata: "",
-    documentSubmissionDate: "",
-    naafStatus: "",
-    naafGenerationDate: "",
-    trainingStatus: "",
-    trainingCompletionDate: "",
-    examDate: "",
-    examResult: "",
-    advisorCode: "",
-    codeGenerationStatus: "",
-    codeIssueDate: "",
-    activationStatus: "",
-    activationDate: "",
-    dropReason: "",
-    notes: ""
-  });
-
-  const [advisorForm, setAdvisorForm] = useState(emptyAdvisorForm);
-
-  useEffect(() => {
-    if (!addLeadOpen) {
-      setAdvisorForm(emptyAdvisorForm());
-      setAdvisorErrors({});
-    }
-  }, [addLeadOpen]);
 
   const handleAdvisorField = (e) => {
     const { name, value } = e.target;
@@ -112,35 +106,14 @@ function Recruitment() {
 
   const handleStageChange = (e) => {
     const newStage = e.target.value;
-    setAdvisorForm((prev) => ({ ...prev, workflowStage: newStage }));
+    setAdvisorForm((prev) => {
+      const withDefaults = { ...prev, workflowStage: newStage, ...getStageDefaultValues(advisorStageFields, newStage) };
+      return clearHiddenStageFields(withDefaults, advisorStageFields, newStage);
+    });
     if (advisorErrors.workflowStage) {
       setAdvisorErrors((prev) => ({ ...prev, workflowStage: "" }));
     }
   };
-
-  const stageFields = useMemo(() => {
-    const stage = advisorForm.workflowStage;
-    switch (stage) {
-      case "Interview":
-        return { followUpDate: true, documentsSubmittedToTata: false, documentSubmissionDate: false, naafStatus: false, naafGenerationDate: false, trainingStatus: false, trainingCompletionDate: false, examDate: false, examResult: false, advisorCode: false, codeGenerationStatus: false, codeIssueDate: false, activationStatus: false, activationDate: false, dropReason: false };
-      case "Documents":
-        return { followUpDate: false, documentsSubmittedToTata: true, documentSubmissionDate: advisorForm.documentsSubmittedToTata === "Submitted", naafStatus: false, naafGenerationDate: false, trainingStatus: false, trainingCompletionDate: false, examDate: false, examResult: false, advisorCode: false, codeGenerationStatus: false, codeIssueDate: false, activationStatus: false, activationDate: false, dropReason: false };
-      case "NAAF Generation":
-        return { followUpDate: false, documentsSubmittedToTata: false, documentSubmissionDate: false, naafStatus: true, naafGenerationDate: advisorForm.naafStatus === "Generated", trainingStatus: false, trainingCompletionDate: false, examDate: false, examResult: false, advisorCode: false, codeGenerationStatus: false, codeIssueDate: false, activationStatus: false, activationDate: false, dropReason: false };
-      case "Training":
-        return { followUpDate: false, documentsSubmittedToTata: false, documentSubmissionDate: false, naafStatus: false, naafGenerationDate: false, trainingStatus: true, trainingCompletionDate: advisorForm.trainingStatus === "Completed", examDate: false, examResult: false, advisorCode: false, codeGenerationStatus: false, codeIssueDate: false, activationStatus: false, activationDate: false, dropReason: false };
-      case "Exam":
-        return { followUpDate: false, documentsSubmittedToTata: false, documentSubmissionDate: false, naafStatus: false, naafGenerationDate: false, trainingStatus: false, trainingCompletionDate: false, examDate: true, examResult: true, advisorCode: false, codeGenerationStatus: false, codeIssueDate: false, activationStatus: false, activationDate: false, dropReason: false };
-      case "Code Generation":
-        return { followUpDate: false, documentsSubmittedToTata: false, documentSubmissionDate: false, naafStatus: false, naafGenerationDate: false, trainingStatus: false, trainingCompletionDate: false, examDate: false, examResult: false, advisorCode: true, codeGenerationStatus: true, codeIssueDate: advisorForm.codeGenerationStatus === "Generated", activationStatus: false, activationDate: false, dropReason: false };
-      case "Activation":
-        return { followUpDate: false, documentsSubmittedToTata: false, documentSubmissionDate: false, naafStatus: false, naafGenerationDate: false, trainingStatus: false, trainingCompletionDate: false, examDate: false, examResult: false, advisorCode: false, codeGenerationStatus: false, codeIssueDate: false, activationStatus: true, activationDate: advisorForm.activationStatus === "Activated", dropReason: false };
-      case "Dropped":
-        return { followUpDate: false, documentsSubmittedToTata: false, documentSubmissionDate: false, naafStatus: false, naafGenerationDate: false, trainingStatus: false, trainingCompletionDate: false, examDate: false, examResult: false, advisorCode: false, codeGenerationStatus: false, codeIssueDate: false, activationStatus: false, activationDate: false, dropReason: true };
-      default:
-        return { followUpDate: false, documentsSubmittedToTata: false, documentSubmissionDate: false, naafStatus: false, naafGenerationDate: false, trainingStatus: false, trainingCompletionDate: false, examDate: false, examResult: false, advisorCode: false, codeGenerationStatus: false, codeIssueDate: false, activationStatus: false, activationDate: false, dropReason: false };
-    }
-  }, [advisorForm.workflowStage, advisorForm.documentsSubmittedToTata, advisorForm.naafStatus, advisorForm.trainingStatus, advisorForm.codeGenerationStatus, advisorForm.activationStatus]);
 
   const submitAdvisor = () => {
     const errs = {};
@@ -158,7 +131,7 @@ function Recruitment() {
 
     handleAddLead({
       ...advisorForm,
-      leadType: "Recruitment",
+      leadType: "Advisor",
       leadId: `LD-${1000 + candidates.length + 1}`,
       leadStatus: "Open",
       leadSource: advisorForm.source,
@@ -166,7 +139,7 @@ function Recruitment() {
   };
 
   const advisorLeads = useMemo(
-    () => candidates.filter((candidate) => candidate.leadType === "Recruitment"),
+    () => candidates.filter((candidate) => candidate.leadType === "Advisor"),
     [candidates]
   );
 
@@ -179,13 +152,14 @@ function Recruitment() {
   );
 
   const metrics = useMemo(() => {
-    const activationPending = advisorLeads.filter((lead) => lead.workflowStage === "Activation").length;
-    const interviewStage = advisorLeads.filter((lead) => lead.workflowStage === "Interview").length;
-    const documentsStage = advisorLeads.filter((lead) => lead.workflowStage === "Documents").length;
+    const activationPending = advisorLeads.filter((lead) => lead.workflowStage === "Activation" || lead.workflowStage === "Activated Advisor").length;
+    const interviewStage = advisorLeads.filter((lead) => lead.workflowStage === "Interview" || lead.workflowStage === "Interview Scheduled").length;
+    const documentsStage = advisorLeads.filter((lead) => lead.workflowStage === "Documents" || lead.workflowStage === "Documents Pending" || lead.workflowStage === "Documents Submitted").length;
     const trainingInProgress = advisorLeads.filter((lead) => lead.workflowStage === "Training").length;
     const examPending = advisorLeads.filter((lead) => lead.workflowStage === "Exam").length;
     const codeGenPending = advisorLeads.filter((lead) => lead.workflowStage === "Code Generation").length;
     const dropped = advisorLeads.filter((lead) => lead.workflowStage === "Dropped").length;
+    const newRecruitment = advisorLeads.filter((lead) => lead.workflowStage === "New Recruitment Lead" || lead.workflowStage === "Contacted" || lead.workflowStage === "NAAF Generation").length;
     const businessStarted = activeAdvisors.filter((advisor) => Number(advisor.policiesSold || 0) > 0).length;
 
     return [
@@ -242,9 +216,9 @@ function Recruitment() {
       await addCandidate({
         ...lead,
         leadId: lead.leadId || `LD-${1000 + candidates.length + 1}`,
-        workflowStage: lead.workflowStage || "Interview",
+        workflowStage: lead.workflowStage || "New Recruitment Lead",
         leadStatus: lead.leadStatus || "Open",
-        leadType: lead.leadType || "Recruitment",
+        leadType: lead.leadType || "Advisor",
         leadSource: lead.leadSource || lead.source || "Referral",
         source: lead.source || lead.leadSource || "Referral"
       });
@@ -384,22 +358,19 @@ function Recruitment() {
         </Grid>
       </Grid>
 
-      <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
+      <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Recent Activities</Typography>
         {recentActivities.length === 0 ? (
           <EmptyState icon={AssignmentTurnedInIcon} title="No recent activity" description="Activities from advisors will appear here." />
         ) : (
           <Stack spacing={1}>
             {recentActivities.map((activity, index) => (
-              <Box key={`${activity.leadId}-${index}`} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 1.5, borderRadius: 2, bgcolor: "#f8fafc" }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: stageBadge[activity.stage] || "#94a3b8", flexShrink: 0 }} />
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{activity.leadName}</Typography>
-                    <Typography variant="caption" color="text.secondary">{activity.text}</Typography>
-                  </Box>
+              <Box key={`${activity.leadId}-${index}`} sx={{ display: "flex", justifyContent: "space-between", p: 1, borderRadius: 1, bgcolor: "#f9fafb" }}>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{activity.leadName}</Typography>
+                  <Typography variant="caption" color="text.secondary">{activity.text}</Typography>
                 </Box>
-                <Chip label={activity.date} size="small" variant="outlined" sx={{ flexShrink: 0 }} />
+                <Chip label={activity.date} size="small" variant="outlined" />
               </Box>
             ))}
           </Stack>
@@ -420,75 +391,19 @@ function Recruitment() {
             ))}
           </TextField>
           <TextField select fullWidth margin="dense" label="Recruitment Stage" name="workflowStage" value={advisorForm.workflowStage} onChange={handleStageChange} error={!!advisorErrors.workflowStage} helperText={advisorErrors.workflowStage}>
-            {advisorWorkflowStages.map((option) => (
+            {advisorRecruitmentStages.map((option) => (
               <MenuItem key={option} value={option}>{option}</MenuItem>
             ))}
           </TextField>
-          {stageFields.followUpDate && (
-            <TextField fullWidth margin="dense" label="Follow-up Date" name="followUpDate" type="date" value={advisorForm.followUpDate} onChange={handleAdvisorField} InputLabelProps={{ shrink: true }} />
-          )}
-          {stageFields.documentsSubmittedToTata && (
-            <TextField select fullWidth margin="dense" label="Documents Submitted to TATA Team" name="documentsSubmittedToTata" value={advisorForm.documentsSubmittedToTata} onChange={handleAdvisorField}>
-              <MenuItem value="Pending">Pending</MenuItem>
-              <MenuItem value="Submitted">Submitted</MenuItem>
-            </TextField>
-          )}
-          {stageFields.documentSubmissionDate && (
-            <TextField fullWidth margin="dense" label="Document Submission Date" name="documentSubmissionDate" type="date" value={advisorForm.documentSubmissionDate} onChange={handleAdvisorField} InputLabelProps={{ shrink: true }} />
-          )}
-          {stageFields.naafStatus && (
-            <TextField select fullWidth margin="dense" label="NAAF Status" name="naafStatus" value={advisorForm.naafStatus} onChange={handleAdvisorField}>
-              <MenuItem value="Pending">Pending</MenuItem>
-              <MenuItem value="Generated">Generated</MenuItem>
-            </TextField>
-          )}
-          {stageFields.naafGenerationDate && (
-            <TextField fullWidth margin="dense" label="NAAF Generation Date" name="naafGenerationDate" type="date" value={advisorForm.naafGenerationDate} onChange={handleAdvisorField} InputLabelProps={{ shrink: true }} />
-          )}
-          {stageFields.trainingStatus && (
-            <TextField select fullWidth margin="dense" label="25 Hrs Training Status" name="trainingStatus" value={advisorForm.trainingStatus} onChange={handleAdvisorField}>
-              <MenuItem value="Not Started">Not Started</MenuItem>
-              <MenuItem value="In Progress">In Progress</MenuItem>
-              <MenuItem value="Completed">Completed</MenuItem>
-            </TextField>
-          )}
-          {stageFields.trainingCompletionDate && (
-            <TextField fullWidth margin="dense" label="Date of 25 Hrs Training Completion" name="trainingCompletionDate" type="date" value={advisorForm.trainingCompletionDate} onChange={handleAdvisorField} InputLabelProps={{ shrink: true }} />
-          )}
-          {stageFields.examDate && (
-            <TextField fullWidth margin="dense" label="Date of Exam" name="examDate" type="date" value={advisorForm.examDate} onChange={handleAdvisorField} InputLabelProps={{ shrink: true }} />
-          )}
-          {stageFields.examResult && (
-            <TextField select fullWidth margin="dense" label="Exam Result" name="examResult" value={advisorForm.examResult} onChange={handleAdvisorField}>
-              <MenuItem value="Pending">Pending</MenuItem>
-              <MenuItem value="Passed">Passed</MenuItem>
-              <MenuItem value="Failed">Failed</MenuItem>
-            </TextField>
-          )}
-          {stageFields.advisorCode && (
-            <TextField fullWidth margin="dense" label="Tata AIA Advisor Code" name="advisorCode" value={advisorForm.advisorCode} onChange={handleAdvisorField} />
-          )}
-          {stageFields.codeGenerationStatus && (
-            <TextField select fullWidth margin="dense" label="Code Generation Status" name="codeGenerationStatus" value={advisorForm.codeGenerationStatus} onChange={handleAdvisorField}>
-              <MenuItem value="Pending">Pending</MenuItem>
-              <MenuItem value="Generated">Generated</MenuItem>
-            </TextField>
-          )}
-          {stageFields.codeIssueDate && (
-            <TextField fullWidth margin="dense" label="Code Issue Date" name="codeIssueDate" type="date" value={advisorForm.codeIssueDate} onChange={handleAdvisorField} InputLabelProps={{ shrink: true }} />
-          )}
-          {stageFields.activationStatus && (
-            <TextField select fullWidth margin="dense" label="Activation Status" name="activationStatus" value={advisorForm.activationStatus} onChange={handleAdvisorField}>
-              <MenuItem value="Pending">Pending</MenuItem>
-              <MenuItem value="Activated">Activated</MenuItem>
-            </TextField>
-          )}
-          {stageFields.activationDate && (
-            <TextField fullWidth margin="dense" label="Activation Date (First Policy Login)" name="activationDate" type="date" value={advisorForm.activationDate} onChange={handleAdvisorField} InputLabelProps={{ shrink: true }} />
-          )}
-          {stageFields.dropReason && (
-            <TextField fullWidth margin="dense" label="Drop Reason" name="dropReason" value={advisorForm.dropReason} onChange={handleAdvisorField} multiline rows={2} />
-          )}
+
+          <StageForm
+            stageConfig={advisorStageFields}
+            stage={advisorForm.workflowStage}
+            form={advisorForm}
+            errors={advisorErrors}
+            onChange={handleAdvisorField}
+          />
+
           <TextField fullWidth margin="dense" label="Notes" name="notes" value={advisorForm.notes} onChange={handleAdvisorField} multiline rows={3} />
         </DialogContent>
         <DialogActions>
@@ -496,7 +411,8 @@ function Recruitment() {
           <Button variant="contained" onClick={submitAdvisor}>Save Advisor</Button>
         </DialogActions>
       </Dialog>
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
+
+      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
         <Alert severity={snackbar.severity} onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
           {snackbar.message}
         </Alert>
