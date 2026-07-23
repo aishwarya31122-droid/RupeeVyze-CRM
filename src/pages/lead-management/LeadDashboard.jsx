@@ -58,7 +58,7 @@ function LeadDashboard() {
   const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
   const advisorCandidates = useMemo(() => candidates.filter((c) => {
     const isAdvisorLead = c.leadType === "Advisor" || c.leadType === "Recruitment";
-    const isActivated = c.workflowStage === "Activated" || c.workflowStage === "Activated Advisor";
+    const isActivated = c.workflowStage === "Activation" || c.workflowStage === "Business Started";
     return isAdvisorLead && !isActivated;
   }), [candidates]);
 
@@ -158,7 +158,7 @@ function LeadDashboard() {
         ...lead,
         leadId: lead.leadId || `LD-${1000 + candidates.length + 1}`,
         leadType: lead.leadType || "Insurance Customer",
-        workflowStage: lead.workflowStage || (isAdvisorLead ? "Sourced" : "New Lead"),
+        workflowStage: lead.workflowStage || (isAdvisorLead ? "New Lead" : "New Lead"),
         leadStatus: lead.leadStatus || "Open",
         leadSource: lead.leadSource || lead.source || "Referral",
         source: lead.source || lead.leadSource || "Referral",
@@ -193,7 +193,7 @@ function LeadDashboard() {
             <Button variant="outlined" size="small" onClick={() => handleQuickAction("add")}>Add New Lead</Button>
             <Button variant="outlined" size="small" onClick={() => handleQuickAction("pipeline")}>Open Pipeline</Button>
             <Button variant="outlined" size="small" onClick={() => handleQuickAction("tasks")}>Review Tasks</Button>
-            <Button variant="outlined" size="small" onClick={() => handleQuickAction("all")}>View All Leads</Button>
+            <Button variant="outlined" size="small" onClick={() => handleQuickAction("all")}>View Leads</Button>
           </div>
         </Paper>
       </div>

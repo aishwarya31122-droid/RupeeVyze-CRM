@@ -50,7 +50,7 @@ function CandidateDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { candidates, updateCandidateStage, updateCandidateNote, updateCandidate, deleteCandidate, advisorWorkflowStages } = useCrm();
-  const { currentUser, canEditClient, canDeleteClient, canAssignClient } = useAuth();
+  const { currentUser, isAdmin, isAdvisor, canEditClient, canDeleteClient, canAssignClient } = useAuth();
   const [activeTab, setActiveTab] = useState("Overview");
   const [note, setNote] = useState("");
   const [tasks, setTasks] = useState([]);
@@ -77,6 +77,15 @@ function CandidateDetails() {
     () => candidates.find((item) => String(item.id) === id),
     [candidates, id]
   );
+
+  const hasAccess = useMemo(() => {
+    if (!candidate) return false;
+    if (isAdmin) return true;
+    if (isAdvisor) {
+      return candidate.assignedAdvisorId === currentUser?.id;
+    }
+    return true;
+  }, [candidate, isAdmin, isAdvisor, currentUser]);
 
   const currentIndex = useMemo(() => candidates.findIndex((item) => String(item.id) === id), [candidates, id]);
   const previousLead = currentIndex > 0 ? candidates[currentIndex - 1] : null;
@@ -130,6 +139,16 @@ function CandidateDetails() {
       <div>
         <h1>Candidate not found</h1>
         <button onClick={() => navigate(-1)}>Back to Pipeline</button>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <div>
+        <h1>Access Denied</h1>
+        <p>You do not have permission to view this profile.</p>
+        <button onClick={() => navigate(-1)}>Back</button>
       </div>
     );
   }

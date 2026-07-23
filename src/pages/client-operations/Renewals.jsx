@@ -23,6 +23,7 @@ import {
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import AlarmIcon from "@mui/icons-material/Alarm";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth } from "../../authContext.jsx";
 
 const statusColors = {
   Upcoming: "info",
@@ -32,12 +33,20 @@ const statusColors = {
 
 export default function Renewals() {
   const { clients } = useCrm();
+  const { currentUser, isAdvisor } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const visibleClients = useMemo(() => {
+    if (isAdvisor && currentUser) {
+      return (clients || []).filter((c) => c.advisorAssigned === currentUser.name);
+    }
+    return clients || [];
+  }, [clients, currentUser, isAdvisor]);
+
   const renewals = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
-    return (clients || []).flatMap((client) => (
+    return visibleClients.flatMap((client) => (
       (client.renewals || []).map((renewal) => ({
         ...renewal,
         clientName: client.name,
@@ -46,7 +55,7 @@ export default function Renewals() {
         status: renewal.status || (renewal.dueDate && renewal.dueDate < today ? "Overdue" : "Upcoming")
       }))
     ));
-  }, [clients]);
+  }, [visibleClients]);
 
   const filteredRenewals = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();

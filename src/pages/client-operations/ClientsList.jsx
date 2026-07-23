@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Box,
   Button,
@@ -26,35 +26,48 @@ import PersonIcon from "@mui/icons-material/Person";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import EventIcon from "@mui/icons-material/Event";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth } from "../../authContext.jsx";
 
 export default function ClientsList() {
   const navigate = useNavigate();
   const { clients } = useCrm();
+  const { currentUser, isAdmin, isAdvisor } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
   const filteredClients = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
-    return (clients || []).filter((client) => {
+    let list = clients || [];
+    if (isAdvisor && currentUser) {
+      list = list.filter((client) => client.advisorAssigned === currentUser.name);
+    }
+    return list.filter((client) => {
       const matchesSearch = !normalized || client.name.toLowerCase().includes(normalized) || client.city.toLowerCase().includes(normalized) || client.advisorAssigned.toLowerCase().includes(normalized);
       const matchesStatus = statusFilter === "All" || (client.finalStatus || "Active Client") === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [clients, searchTerm, statusFilter]);
+  }, [clients, currentUser, isAdvisor, searchTerm, statusFilter]);
+
+  const summaryClients = useMemo(() => {
+    if (isAdvisor && currentUser) {
+      return (clients || []).filter((client) => client.advisorAssigned === currentUser.name);
+    }
+    return clients || [];
+  }, [clients, currentUser, isAdvisor]);
 
   const summaryCards = useMemo(() => {
-    const active = clients.filter((client) => (client.finalStatus || "Active Client") === "Active Client").length;
+    const active = summaryClients.filter((client) => (client.finalStatus || "Active Client") === "Active Client").length;
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const newClients = clients.filter((client) => client.dateReceived && client.dateReceived.startsWith(currentMonth)).length;
-    const inactive = clients.filter((client) => (client.finalStatus || "Active Client") === "Lost" || (client.finalStatus || "Active Client") === "Follow-up Pending").length;
+    const newClients = summaryClients.filter((client) => client.dateReceived && client.dateReceived.startsWith(currentMonth)).length;
+    const inactive = summaryClients.filter((client) => (client.finalStatus || "Active Client") === "Lost" || (client.finalStatus || "Active Client") === "Follow-up Pending").length;
 
     return [
-      { label: "Total Clients", value: clients.length, icon: PersonIcon, color: "#2563eb" },
+      { label: "Total Clients", value: summaryClients.length, icon: PersonIcon, color: "#2563eb" },
       { label: "Active Clients", value: active, icon: VerifiedUserIcon, color: "#16a34a" },
       { label: "New Clients", value: newClients, icon: EventIcon, color: "#d97706" },
       { label: "Inactive Clients", value: inactive, icon: PersonIcon, color: "#7c3aed" }
     ];
-  }, [clients]);
+  }, [summaryClients]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -136,7 +149,7 @@ export default function ClientsList() {
                       <Chip label={client.finalStatus || "Active Client"} size="small" color={client.finalStatus === "Active Client" ? "success" : client.finalStatus === "Lost" ? "error" : "info"} />
                     </TableCell>
                     <TableCell>
-                      <Button variant="outlined" size="small" onClick={() => navigate(`/adviser/client-operations/clients/${client.clientId || client.id}`)}>View</Button>
+                      <Link className="button secondary" to={`/adviser/lead-management/lead/${client.candidateId}`}>View</Link>
                     </TableCell>
                   </TableRow>
                 ))

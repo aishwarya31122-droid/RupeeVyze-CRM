@@ -23,6 +23,7 @@ import {
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth } from "../../authContext.jsx";
 
 const statusColors = {
   Pending: "warning",
@@ -33,11 +34,19 @@ const statusColors = {
 
 export default function Claims() {
   const { clients, claims: contextClaims } = useCrm();
+  const { currentUser, isAdvisor } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const visibleClients = useMemo(() => {
+    if (isAdvisor && currentUser) {
+      return (clients || []).filter((c) => c.advisorAssigned === currentUser.name);
+    }
+    return clients || [];
+  }, [clients, currentUser, isAdvisor]);
+
   const claims = useMemo(() => {
-    const fromClients = (clients || []).flatMap((client) => (
+    const fromClients = visibleClients.flatMap((client) => (
       (client.claims || []).map((claim) => ({
         ...claim,
         clientName: client.name,
@@ -61,7 +70,7 @@ export default function Claims() {
       return true;
     });
     return [...fromClients, ...newFromContext];
-  }, [clients, contextClaims]);
+  }, [visibleClients, contextClaims]);
 
   const filteredClaims = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();

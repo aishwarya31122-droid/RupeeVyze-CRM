@@ -93,7 +93,7 @@ export function prepareLeadForSave(lead, updates = {}, options = {}) {
 
   const isAdvisorLead = nextLead.leadType === "Advisor";
   const isCustomerLead = nextLead.leadType === "Insurance Customer";
-  const advisorActivated = isAdvisorLead && ["Business Started", "Activation", "Activated", "Activated Advisor"].includes(nextLead.workflowStage);
+  const advisorActivated = isAdvisorLead && ["Business Started", "Activation"].includes(nextLead.workflowStage);
   const policyIssued = isCustomerLead && ["Policy Issued", "Active Client"].includes(nextLead.workflowStage);
 
   const timelineEntries = Array.isArray(nextLead.timeline) ? nextLead.timeline : [];

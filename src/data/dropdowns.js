@@ -25,13 +25,15 @@ export const leadStatuses = ["Open", "Assigned", "In Progress", "Inactive Adviso
 export const advisorStatuses = ["Open", "In Progress", "On Hold", "Dropped", "Active"];
 
 export const advisorWorkflowStages = [
-  "Sourced",
-  "Documents Submitted",
-  "NAAF Generation",
-  "25 Hrs Training",
+  "New Lead",
+  "First Contact",
+  "Interested",
+  "KYC",
+  "Training",
   "Exam",
-  "Advisor Code Issued",
-  "Activated"
+  "Code Generation",
+  "Activation",
+  "Business Started"
 ];
 
 export const customerWorkflowStages = [
@@ -68,7 +70,7 @@ export const followUpRequiredStages = new Set([
   "Policy Discussion"
 ]);
 
-export const sources = ["Referral", "LinkedIn", "Walk-in", "Facebook", "Job Portal", "Website"];
+export const sources = ["Referral", "LinkedIn", "Walk-in", "Facebook", "Job Portal", "Website", "Social Media", "Employee Referral", "Other"];
 
 export const priorities = ["High", "Medium", "Low"];
 
@@ -97,23 +99,13 @@ export const stageBadge = {
   "Policy Issued": "#0f766e",
   "Premium Collected": "#16a34a",
   "Active Client": "#0f766e",
-  "Interview": "#0ea5e9",
-  "Documents": "#f97316",
-  "New Recruitment Lead": "#6366f1",
-  "Interview Scheduled": "#0891b2",
-  "Documents Pending": "#f97316",
-  "Documents Submitted": "#22c55e",
-  "Activated Advisor": "#16a34a",
-  "NAAF Generation": "#8b5cf6",
+  "KYC": "#f97316",
   "Training": "#0284c7",
   "Exam": "#f59e0b",
   "Code Generation": "#22c55e",
   "Activation": "#16a34a",
+  "Business Started": "#16a34a",
   "Dropped": "#ef4444",
   "Lost": "#ef4444",
-  "Sourced": "#6366f1",
-  "25 Hrs Training": "#0284c7",
-  "Advisor Code Issued": "#22c55e",
-  "Activated": "#16a34a",
   "On Hold": "#f59e0b"
 };

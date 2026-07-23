@@ -53,15 +53,13 @@ export function sortByPriority(items) {
 }
 
 export function getAllowedStageOptions(stages, currentStage) {
-  const currentIndex = stages.indexOf(currentStage);
-  if (currentIndex < 0) return stages;
-  return stages.slice(currentIndex);
+  return stages;
 }
 
 export function getStageConversion(stageCounts) {
   const total = stageCounts.reduce((sum, item) => sum + item.count, 0);
   return {
-    overall: total ? Math.round(((stageCounts.find((item) => item.stage === "Activated")?.count || 0) / total) * 100) : 0,
+    overall: total ? Math.round(((stageCounts.find((item) => item.stage === "Activation")?.count || 0) / total) * 100) : 0,
     byStage: stageCounts.map((item) => ({
       stage: item.stage,
       rate: total ? Math.round((item.count / total) * 100) : 0

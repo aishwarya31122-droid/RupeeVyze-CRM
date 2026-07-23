@@ -38,7 +38,6 @@ import InboxIcon from "@mui/icons-material/Inbox";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import { useCrm } from "../../crmContext.jsx";
 import { useNavigate } from "react-router-dom";
-import FunnelChart from "../../components/FunnelChart.jsx";
 import StageForm, { getStageDefaultValues, clearHiddenStageFields } from "../../components/StageForm.jsx";
 import { advisorStageFields, advisorRecruitmentStages } from "../../data/stageConfig.js";
 
@@ -49,7 +48,7 @@ const advisorBaseFields = {
   city: "",
   qualification: "",
   source: "",
-  workflowStage: "Sourced",
+  workflowStage: "New Lead",
   notes: ""
 };
 
@@ -74,7 +73,7 @@ function Recruitment() {
 
   const advisorFormBase = useCallback(() => ({
     ...advisorBaseFields,
-    ...getStageDefaultValues(advisorStageFields, "Sourced"),
+    ...getStageDefaultValues(advisorStageFields, "New Lead"),
     leadType: "Advisor"
   }), []);
 
@@ -151,24 +150,24 @@ function Recruitment() {
   );
 
   const metrics = useMemo(() => {
-    const activationPending = advisorLeads.filter((lead) => lead.workflowStage === "Activated" || lead.workflowStage === "Activated Advisor").length;
-    const documentsStage = advisorLeads.filter((lead) => lead.workflowStage === "Documents Submitted" || lead.workflowStage === "Documents" || lead.workflowStage === "Documents Pending").length;
-    const trainingInProgress = advisorLeads.filter((lead) => lead.workflowStage === "25 Hrs Training" || lead.workflowStage === "Training").length;
+    const activationPending = advisorLeads.filter((lead) => lead.workflowStage === "Activation" || lead.workflowStage === "Business Started").length;
+    const kycPending = advisorLeads.filter((lead) => lead.workflowStage === "KYC").length;
+    const trainingInProgress = advisorLeads.filter((lead) => lead.workflowStage === "Training").length;
     const examPending = advisorLeads.filter((lead) => lead.workflowStage === "Exam").length;
-    const codeGenPending = advisorLeads.filter((lead) => lead.workflowStage === "Advisor Code Issued" || lead.workflowStage === "Code Generation").length;
+    const codeGenPending = advisorLeads.filter((lead) => lead.workflowStage === "Code Generation").length;
     const dropped = advisorLeads.filter((lead) => lead.workflowStage === "Dropped").length;
-    const sourced = advisorLeads.filter((lead) => lead.workflowStage === "Sourced" || lead.workflowStage === "New Recruitment Lead" || lead.workflowStage === "Contacted").length;
-    const naaf = advisorLeads.filter((lead) => lead.workflowStage === "NAAF Generation").length;
+    const newLeads = advisorLeads.filter((lead) => lead.workflowStage === "New Lead" || lead.workflowStage === "First Contact").length;
+    const interested = advisorLeads.filter((lead) => lead.workflowStage === "Interested").length;
     const businessStarted = activeAdvisors.filter((advisor) => Number(advisor.policiesSold || 0) > 0).length;
 
     return [
       { label: "Total Advisors", value: advisorLeads.length, icon: GroupIcon, color: "#2563eb" },
-      { label: "Sourced", value: sourced, icon: AddIcon, color: "#6366f1" },
-      { label: "Documents", value: documentsStage, icon: FactCheckIcon, color: "#f97316" },
-      { label: "NAAF", value: naaf, icon: PlaylistAddCheckIcon, color: "#8b5cf6" },
+      { label: "New Leads", value: newLeads, icon: AddIcon, color: "#6366f1" },
+      { label: "Interested", value: interested, icon: TrendingUpIcon, color: "#f59e0b" },
+      { label: "KYC", value: kycPending, icon: FactCheckIcon, color: "#f97316" },
       { label: "Training", value: trainingInProgress, icon: AssignmentTurnedInIcon, color: "#0284c7" },
       { label: "Exam", value: examPending, icon: EventNoteIcon, color: "#f59e0b" },
-      { label: "Code Issued", value: codeGenPending, icon: PlaylistAddCheckIcon, color: "#22c55e" },
+      { label: "Code Generation", value: codeGenPending, icon: PlaylistAddCheckIcon, color: "#22c55e" },
       { label: "Activated", value: activationPending, icon: TrendingUpIcon, color: "#16a34a" },
       { label: "Dropped", value: dropped, icon: InboxIcon, color: "#ef4444" }
     ];
@@ -216,7 +215,7 @@ function Recruitment() {
       await addCandidate({
         ...lead,
         leadId: lead.leadId || `LD-${1000 + candidates.length + 1}`,
-        workflowStage: lead.workflowStage || "Sourced",
+        workflowStage: lead.workflowStage || "New Lead",
         leadStatus: lead.leadStatus || "Open",
         leadType: lead.leadType || "Advisor",
         leadSource: lead.leadSource || lead.source || "Referral",

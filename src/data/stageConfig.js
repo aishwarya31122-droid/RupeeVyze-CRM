@@ -44,36 +44,39 @@ export const insuranceCustomerStageFields = {
 };
 
 export const advisorStageFields = {
-  "Sourced": [
+  "New Lead": [
     select("recruitmentSource", "Recruitment Source", sources)
   ],
-  "Documents Submitted": [
-    select("documentStatus", "Document Status", ["Pending", "Submitted", "Verified", "Rejected"]),
-    dateField("documentSubmissionDate", "Document Submission Date"),
-    textarea("remarks", "Remarks"),
-    dateField("followUpDate", "Follow-up Date", { dependsOn: { field: "documentStatus", value: "Pending" } })
+  "First Contact": [
+    select("contactStatus", "Contact Status", ["Connected", "Not Connected", "Wrong Number", "Switched Off"]),
+    dateField("followUpDate", "Follow-up Date")
   ],
-  "NAAF Generation": [
-    select("naafStatus", "NAAF Status", ["Pending", "Generated", "Approved"]),
-    dateField("naafGenerationDate", "Generation Date")
+  "Interested": [
+    select("interestLevel", "Interest Level", ["High", "Medium", "Low"]),
+    dateField("followUpDate", "Follow-up Date")
   ],
-  "25 Hrs Training": [
+  "KYC": [
+    select("kycStatus", "KYC Status", ["Pending", "Submitted", "Verified", "Rejected", "Completed"])
+  ],
+  "Training": [
     select("trainingStatus", "Training Status", ["Pending", "In Progress", "Completed"]),
-    dateField("trainingCompletionDate", "Training Completion Date"),
-    dateField("followUpDate", "Follow-up Date", { dependsOn: { field: "trainingStatus", value: ["Pending", "In Progress"] } })
+    dateField("trainingCompletionDate", "Training Completion Date")
   ],
   "Exam": [
-    select("examStatus", "Exam Status", ["Pending", "Scheduled", "Passed", "Failed"]),
-    dateField("examDate", "Exam Date"),
-    dateField("followUpDate", "Follow-up Date", { dependsOn: { field: "examStatus", value: "Pending" } })
+    select("examStatus", "Exam Status", ["Not Scheduled", "Scheduled", "Completed", "Passed", "Failed"]),
+    { type: "date", name: "examDate", label: "Exam Date", dependsOn: { field: "examStatus", value: "Scheduled" } }
   ],
-  "Advisor Code Issued": [
+  "Code Generation": [
     select("codeStatus", "Code Status", ["Pending", "Generated"]),
-    text("advisorCode", "Advisor Code"),
-    dateField("codeIssueDate", "Code Issue Date")
+    { type: "text", name: "advisorCode", label: "Advisor Code", dependsOn: { field: "codeStatus", value: "Generated" } },
+    { type: "date", name: "codeGenerationDate", label: "Code Generation Date", dependsOn: { field: "codeStatus", value: "Generated" } }
   ],
-  "Activated": [
-    dateField("activationDate", "Activation Date"),
-    select("activationStatus", "Activation Status", ["Pending", "Activated"])
+  "Activation": [
+    select("activationStatus", "Activation Status", ["Pending", "Activated"]),
+    { type: "date", name: "activationDate", label: "Activation Date", dependsOn: { field: "activationStatus", value: "Activated" } }
+  ],
+  "Business Started": [
+    dateField("businessStartDate", "Business Start Date"),
+    select("businessStatus", "Business Status", ["Pending", "Active", "Inactive"])
   ]
 };

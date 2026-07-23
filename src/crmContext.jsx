@@ -270,22 +270,16 @@ export function CrmProvider({ children }) {
   );
 
   const advisorStageLifecycle = {
-    "Sourced":              { leadType: "Advisor", leadStatus: "Open" },
-    "Documents Submitted":  { leadType: "Advisor", leadStatus: "In Progress" },
-    "NAAF Generation":      { leadType: "Advisor", leadStatus: "In Progress" },
-    "25 Hrs Training":      { leadType: "Advisor", leadStatus: "In Progress" },
-    "Exam":                 { leadType: "Advisor", leadStatus: "In Progress" },
-    "Advisor Code Issued":  { leadType: "Advisor", leadStatus: "In Progress" },
-    "Activated":            { leadType: "Advisor", leadStatus: "Active" },
-    "New Recruitment Lead": { leadType: "Advisor", leadStatus: "Open" },
-    "Contacted":            { leadType: "Advisor", leadStatus: "Open" },
-    "Interview":            { leadType: "Advisor", leadStatus: "In Progress" },
-    "Documents":            { leadType: "Advisor", leadStatus: "In Progress" },
-    "Training":             { leadType: "Advisor", leadStatus: "In Progress" },
-    "Code Generation":      { leadType: "Advisor", leadStatus: "In Progress" },
-    "Activated Advisor":    { leadType: "Advisor", leadStatus: "Active" },
-    "Activation":           { leadType: "Advisor", leadStatus: "Active" },
-    "Dropped":              { leadType: "Advisor", leadStatus: "Dropped" }
+    "New Lead":          { leadType: "Advisor", leadStatus: "Open" },
+    "First Contact":     { leadType: "Advisor", leadStatus: "Open" },
+    "Interested":        { leadType: "Advisor", leadStatus: "In Progress" },
+    "KYC":              { leadType: "Advisor", leadStatus: "In Progress" },
+    "Training":          { leadType: "Advisor", leadStatus: "In Progress" },
+    "Exam":              { leadType: "Advisor", leadStatus: "In Progress" },
+    "Code Generation":   { leadType: "Advisor", leadStatus: "In Progress" },
+    "Activation":        { leadType: "Advisor", leadStatus: "Active" },
+    "Business Started":  { leadType: "Advisor", leadStatus: "Active" },
+    "Dropped":           { leadType: "Advisor", leadStatus: "Dropped" }
   };
 
   const updateCandidateStage = useCallback(async (candidateId, stage) => {
@@ -842,7 +836,7 @@ export function CrmProvider({ children }) {
   }, []);
 
   const derivedRecruiterNames = useMemo(() => {
-    const qualifiedStages = new Set(["Activated", "Activated Advisor"]);
+    const qualifiedStages = new Set(["Activation", "Business Started"]);
     return candidates
       .filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && qualifiedStages.has(c.workflowStage) && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor") && c.name)
       .map((c) => c.name)

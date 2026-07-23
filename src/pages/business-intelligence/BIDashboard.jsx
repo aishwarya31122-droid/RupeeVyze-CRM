@@ -33,7 +33,7 @@ export default function BIDashboard() {
     const policyCount = policies.length || clients.reduce((sum, c) => sum + (c.policies || []).length, 0);
     const recruitment = candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment").length;
     const advisorRecords = candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment");
-    const converted = advisorRecords.filter((c) => (c.workflowStage === "Activated" || c.workflowStage === "Activated Advisor") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")).length;
+    const converted = advisorRecords.filter((c) => (c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")).length;
     const conversionRate = advisorRecords.length > 0 ? Math.round((converted / advisorRecords.length) * 100) : 0;
 
     return {
@@ -98,7 +98,7 @@ export default function BIDashboard() {
       const advisor = c.assignedTo || "Unassigned";
       if (!acc[advisor]) acc[advisor] = { name: advisor, total: 0, converted: 0, premium: 0 };
       acc[advisor].total += 1;
-      if ((c.leadType === "Advisor" || c.leadType === "Recruitment") && (c.workflowStage === "Activated" || c.workflowStage === "Activated Advisor") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")) {
+      if ((c.leadType === "Advisor" || c.leadType === "Recruitment") && (c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")) {
         acc[advisor].converted += 1;
       }
       return acc;

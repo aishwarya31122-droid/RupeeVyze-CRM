@@ -23,6 +23,7 @@ import {
 import PolicyIcon from "@mui/icons-material/Policy";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth } from "../../authContext.jsx";
 
 const statusColors = {
   Active: "success",
@@ -33,11 +34,19 @@ const statusColors = {
 
 export default function Policies() {
   const { clients, policies: contextPolicies } = useCrm();
+  const { currentUser, isAdvisor } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const visibleClients = useMemo(() => {
+    if (isAdvisor && currentUser) {
+      return (clients || []).filter((c) => c.advisorAssigned === currentUser.name);
+    }
+    return clients || [];
+  }, [clients, currentUser, isAdvisor]);
+
   const policies = useMemo(() => {
-    const fromClients = (clients || []).flatMap((client) => (
+    const fromClients = visibleClients.flatMap((client) => (
       (client.policies || []).map((policy) => ({
         ...policy,
         clientName: client.name,
@@ -63,7 +72,7 @@ export default function Policies() {
       return true;
     });
     return [...fromClients, ...newFromContext];
-  }, [clients, contextPolicies]);
+  }, [visibleClients, contextPolicies]);
 
   const filteredPolicies = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();

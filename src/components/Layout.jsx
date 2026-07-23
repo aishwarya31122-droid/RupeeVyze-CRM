@@ -12,33 +12,41 @@ const allNavItems = [
   { label: "Administration", to: "/adviser/administration" }
 ];
 
+const ADVISOR_NAV_ITEMS = [
+  { label: "Dashboard", to: "/adviser/dashboard" },
+  { label: "Client Operations", to: "/adviser/client-operations" },
+];
+
 function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { candidates, clients } = useCrm();
-  const { currentUser, canViewModule, logout } = useAuth();
+  const { currentUser, isAdmin, isAdvisor, canViewModule, logout } = useAuth();
   const [search, setSearch] = useState("");
 
-  const navItems = useMemo(
-    () => allNavItems.filter((item) => canViewModule(item.to)),
-    [canViewModule]
-  );
+  const navItems = useMemo(() => {
+    if (isAdvisor) return ADVISOR_NAV_ITEMS;
+    return allNavItems.filter((item) => canViewModule(item.to));
+  }, [isAdvisor, canViewModule]);
 
   const notifications = useMemo(() => {
     const alertItems = [];
-    candidates.forEach((candidate) => {
+    const visibleCandidates = isAdvisor
+      ? candidates.filter((c) => c.assignedAdvisorId === currentUser?.id)
+      : candidates;
+    visibleCandidates.forEach((candidate) => {
       if (candidate.nextFollowUp || candidate.followUpDate) {
         const due = new Date(candidate.nextFollowUp || candidate.followUpDate);
         const today = new Date();
         const sameDay = due.toDateString() === today.toDateString();
         if (sameDay) alertItems.push({ id: candidate.id, message: `Follow-up Due Today • ${candidate.name}` });
       }
-      if (candidate.workflowStage === "Training" || candidate.workflowStage === "25 Hrs Training") alertItems.push({ id: `${candidate.id}-training`, message: `Training Pending • ${candidate.name}` });
+      if (candidate.workflowStage === "Training") alertItems.push({ id: `${candidate.id}-training`, message: `Training Pending • ${candidate.name}` });
       if (candidate.workflowStage === "Exam") alertItems.push({ id: `${candidate.id}-exam`, message: `Exam Scheduled Today • ${candidate.name}` });
       if (candidate.documents?.length === 0) alertItems.push({ id: `${candidate.id}-docs`, message: `Documents Pending • ${candidate.name}` });
     });
     return alertItems.slice(0, 5);
-  }, [candidates]);
+  }, [candidates, isAdvisor, currentUser]);
 
   const handleSearch = (event) => {
     const value = event.target.value;
@@ -46,28 +54,34 @@ function Layout({ children }) {
     if (value.trim().length > 2) {
       const q = value.toLowerCase();
 
-      const candidateMatch = candidates.find((candidate) => {
-        const fields = [
-          String(candidate.id),
-          candidate.leadId,
-          candidate.name,
-          candidate.mobile,
-          candidate.phone,
-          candidate.email,
-          candidate.city,
-          candidate.assignedTo,
-          candidate.leadSource,
-          candidate.advisorCode,
-        ];
-        return fields.some((field) => field?.toLowerCase().includes(q));
-      });
+      if (!isAdvisor) {
+        const candidateMatch = candidates.find((candidate) => {
+          const fields = [
+            String(candidate.id),
+            candidate.leadId,
+            candidate.name,
+            candidate.mobile,
+            candidate.phone,
+            candidate.email,
+            candidate.city,
+            candidate.assignedTo,
+            candidate.leadSource,
+            candidate.advisorCode,
+          ];
+          return fields.some((field) => field?.toLowerCase().includes(q));
+        });
 
-      if (candidateMatch) {
-        navigate(`/adviser/lead-management/lead/${candidateMatch.id}`);
-        return;
+        if (candidateMatch) {
+          navigate(`/adviser/lead-management/lead/${candidateMatch.id}`);
+          return;
+        }
       }
 
-      const clientMatch = (clients || []).find((client) => {
+      const advisorClients = isAdvisor
+        ? (clients || []).filter((c) => c.advisorAssigned === currentUser?.name)
+        : (clients || []);
+
+      const clientMatch = advisorClients.find((client) => {
         const fields = [
           String(client.id),
           client.clientId,
@@ -82,17 +96,19 @@ function Layout({ children }) {
       });
 
       if (clientMatch) {
-        navigate(`/adviser/client-operations/clients/${clientMatch.clientId || clientMatch.id}`);
+        navigate(`/adviser/lead-management/lead/${clientMatch.candidateId}`);
         return;
       }
 
-      const policyMatch = (clients || []).flatMap((client) => (client.policies || []).map((policy) => ({ ...policy, clientName: client.name, advisor: client.advisorAssigned })) ).find((policy) => {
-        const fields = [policy.policyNumber, policy.clientName, policy.advisor, policy.policyType];
-        return fields.some((field) => field?.toLowerCase().includes(q));
-      });
+      if (!isAdvisor) {
+        const policyMatch = (clients || []).flatMap((client) => (client.policies || []).map((policy) => ({ ...policy, clientName: client.name, advisor: client.advisorAssigned })) ).find((policy) => {
+          const fields = [policy.policyNumber, policy.clientName, policy.advisor, policy.policyType];
+          return fields.some((field) => field?.toLowerCase().includes(q));
+        });
 
-      if (policyMatch) {
-        navigate(`/adviser/client-operations/policies`);
+        if (policyMatch) {
+          navigate(`/adviser/client-operations/policies`);
+        }
       }
     }
   };

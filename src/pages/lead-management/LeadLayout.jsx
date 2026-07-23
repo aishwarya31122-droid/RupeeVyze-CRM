@@ -21,7 +21,7 @@ function LeadLayout({ children }) {
       { label: "Pipeline", to: "/adviser/lead-management/pipeline" },
       { label: "360 Lead Profile", to: profilePath },
       { label: "Tasks & Follow-ups", to: "/adviser/lead-management/tasks" },
-      { label: "All Leads", to: "/adviser/lead-management/all" }
+      { label: "Leads", to: "/adviser/lead-management/all" }
     ],
     [profilePath]
   );

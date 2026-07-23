@@ -9,7 +9,7 @@ function AdvisorLayout({ children }) {
   const nav = useMemo(
     () => [
       { label: "Recruitment", to: "/adviser/advisor-operations/recruitment" },
-      { label: "Active Advisors", to: "/adviser/advisor-operations/active" },
+      { label: "Advisor Recruitment", to: "/adviser/advisor-operations/active" },
       { label: "Performance", to: "/adviser/advisor-operations/performance" },
       { label: "Override & Payout", to: "/adviser/advisor-operations/override-payouts" },
       { label: "Business", to: "/adviser/advisor-operations/business" }

@@ -2,10 +2,9 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 
 const ADMIN_USER = { id: "admin-1", name: "Admin User", role: "admin", email: "admin@rupeevyze.com" };
 
-const ADMIN_ONLY_PATHS = [
-  "/adviser/advisor-operations",
-  "/adviser/business-intelligence",
-  "/adviser/administration",
+const ADVISOR_ALLOWED_PATHS = [
+  "/adviser/dashboard",
+  "/adviser/client-operations",
 ];
 
 const AuthContext = createContext(null);
@@ -33,9 +32,12 @@ export function AuthProvider({ children }) {
   const canViewModule = useCallback(
     (modulePath) => {
       if (isAdmin) return true;
-      return !ADMIN_ONLY_PATHS.some((p) => modulePath.startsWith(p));
+      if (isAdvisor) {
+        return ADVISOR_ALLOWED_PATHS.some((p) => modulePath.startsWith(p));
+      }
+      return true;
     },
-    [isAdmin]
+    [isAdmin, isAdvisor]
   );
 
   const canEditClient = useCallback(
@@ -46,9 +48,15 @@ export function AuthProvider({ children }) {
     [isAdmin, currentUser]
   );
 
-  const canDeleteClient = useCallback(() => isAdmin, [isAdmin]);
+  const canDeleteClient = useCallback(
+    (candidate) => {
+      if (isAdmin) return true;
+      return candidate?.assignedAdvisorId === currentUser?.id;
+    },
+    [isAdmin, currentUser]
+  );
 
-  const canAssignClient = useCallback(() => isAdmin, isAdmin);
+  const canAssignClient = useCallback(() => isAdmin, [isAdmin]);
 
   const canViewDashboard = useCallback(() => true, []);
 

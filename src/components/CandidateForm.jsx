@@ -60,9 +60,8 @@ const STAGE_FIELDS_BASE = new Set([
 ]);
 
 export default function CandidateForm({ open, onClose, onAdd, pipelineStages: propPipelineStages, sources: propSources }) {
-  const { recruiterNames, candidates } = useCrm();
+  const { candidates } = useCrm();
   const { currentUser, isAdvisor } = useAuth();
-  const advisorOptions = recruiterNames;
   const [form, setForm] = useState(() => createEmptyForm());
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
@@ -277,31 +276,6 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           errors={errors}
           onChange={handle}
         />
-
-        {isInsuranceCustomer && (
-          <TextField
-            select
-            fullWidth
-            margin="dense"
-            label="Assigned To"
-            name="assignedTo"
-            value={form.assignedTo || ""}
-            onChange={handle}
-          >
-            {advisorOptions.length === 0 ? (
-              <MenuItem value="" disabled>No advisors available</MenuItem>
-            ) : (
-              <>
-                <MenuItem value="">None</MenuItem>
-                {advisorOptions.map((name) => (
-                  <MenuItem key={name} value={name}>
-                    {name}
-                  </MenuItem>
-                ))}
-              </>
-            )}
-          </TextField>
-        )}
 
         <TextField
           fullWidth
