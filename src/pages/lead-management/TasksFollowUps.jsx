@@ -50,7 +50,10 @@ const statusColors = {
 
 function TasksFollowUps() {
   const { candidates, updateCandidate } = useCrm();
-  const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
+  const leads = useMemo(() => candidates.filter((c) => {
+    const isActivatedAdvisor = (c.leadType === "Advisor" || c.leadType === "Recruitment") && (c.workflowStage === "Activated" || c.workflowStage === "Activated Advisor");
+    return !isActivatedAdvisor;
+  }), [candidates]);
   const [selectedLead, setSelectedLead] = useState(String(leads[0]?.id || ""));
   const [newTask, setNewTask] = useState({ title: "", assignedTo: "", dueDate: "", priority: "Medium", notes: "" });
   const [searchTerm, setSearchTerm] = useState("");

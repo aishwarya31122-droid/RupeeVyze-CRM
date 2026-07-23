@@ -146,7 +146,7 @@ function ActiveAdvisors() {
                       <InboxIcon sx={{ fontSize: 48, color: "#cbd5e1", mb: 1 }} />
                       <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#64748b" }}>No active advisors found</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {searchTerm || statusFilter !== "All" ? "Try adjusting your filters." : "Converted advisors will appear here."}
+                        {searchTerm || statusFilter !== "All" ? "Try adjusting your filters." : "Advisors will appear here once added."}
                       </Typography>
                     </Box>
                   </TableCell>

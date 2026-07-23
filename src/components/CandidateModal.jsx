@@ -1,9 +1,14 @@
 import React, { useState } from "react";
 import { useCrm } from "../crmContext.jsx";
+import { useAuth } from "../authContext.jsx";
 import StageSelect from "./StageSelect.jsx";
 
 export default function CandidateModal({ candidate, onClose, onStageUpdate, onNoteSave, onSave }) {
-  const { pipelineStages, sources, followUpRequiredStages } = useCrm();
+  const { pipelineStages, sources, followUpRequiredStages, activeAdvisors, advisorStatuses } = useCrm();
+  const { canEditClient, canAssignClient, currentUser } = useAuth();
+  const isAdvisor = candidate.leadType === "Advisor" || candidate.leadType === "Recruitment";
+  const canEdit = canEditClient(candidate);
+  const activatedAdvisorOptions = activeAdvisors || [];
   const [form, setForm] = useState({
     name: candidate.name || "",
     mobile: candidate.mobile || candidate.phone || "",
@@ -27,6 +32,10 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   const handleSave = () => {
     const stageForFollowUp = selectedStage || form.workflowStage;
     const showFollowUp = followUpRequiredStages.has(stageForFollowUp);
+    const selectedAdvisorName = form.assignedTo || candidate.assignedTo || "";
+    const matchedAdvisor = selectedAdvisorName
+      ? activatedAdvisorOptions.find((a) => a.name === selectedAdvisorName)
+      : null;
     const payload = {
       ...form,
       mobile: form.mobile || candidate.mobile || candidate.phone || "",
@@ -35,7 +44,9 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
       leadSource: form.leadSource || candidate.leadSource || candidate.source || "",
       source: form.leadSource || candidate.leadSource || candidate.source || "",
       leadStatus: form.leadStatus || candidate.leadStatus || "Open",
-      assignedTo: form.assignedTo || candidate.assignedTo || "",
+      assignedTo: selectedAdvisorName,
+      assignedAdvisorId: matchedAdvisor?.id || candidate.assignedAdvisorId || "",
+      assignedAdvisorName: selectedAdvisorName,
       nextFollowUp: showFollowUp ? (form.followUpDate || candidate.nextFollowUp || candidate.followUpDate || "") : "",
       followUp: {
         ...candidate.followUp,
@@ -103,24 +114,52 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
             </select>
           </label>
           <label>
-            <span>Insurance Stage</span>
+            <span>{isAdvisor ? "Recruitment Stage" : "Insurance Stage"}</span>
             <StageSelect stage={selectedStage} leadType={candidate.leadType} onChange={(value) => setSelectedStage(value)} />
           </label>
-          <label>
-            <span>Lead Status</span>
-            <select name="leadStatus" value={form.leadStatus} onChange={handleChange}>
-              <option>Open</option>
-              <option>Assigned</option>
-              <option>In Progress</option>
-              <option>Converted</option>
-              <option>Lost</option>
-            </select>
-          </label>
-          <label>
-            <span>Assigned To</span>
-            <input name="assignedTo" value={form.assignedTo} onChange={handleChange} />
-          </label>
-          {showFollowUp && (
+          {isAdvisor ? (
+            <label>
+              <span>Status</span>
+              <select name="leadStatus" value={form.leadStatus} onChange={handleChange}>
+                {advisorStatuses.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <>
+              <label>
+                <span>Lead Status</span>
+                <select name="leadStatus" value={form.leadStatus} onChange={handleChange}>
+                  <option>Open</option>
+                  <option>Assigned</option>
+                  <option>In Progress</option>
+                  <option>Converted</option>
+                  <option>Lost</option>
+                </select>
+              </label>
+            </>
+          )}
+          {!isAdvisor && canAssignClient() && (
+            <label>
+              <span>Assigned To</span>
+              {activatedAdvisorOptions.length === 0 ? (
+                <select name="assignedTo" value="" disabled>
+                  <option value="" disabled>No Activated Advisors Available</option>
+                </select>
+              ) : (
+                <select name="assignedTo" value={form.assignedTo} onChange={handleChange}>
+                  <option value="">None</option>
+                  {activatedAdvisorOptions.map((advisor) => (
+                    <option key={advisor.id} value={advisor.name}>
+                      {advisor.name}{advisor.advisorCode ? ` (${advisor.advisorCode})` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+          )}
+          {!isAdvisor && showFollowUp && (
             <label>
               <span>Follow-up Date</span>
               <input type="date" name="followUpDate" value={form.followUpDate} onChange={handleChange} />

@@ -10,33 +10,44 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DeleteIcon from "@mui/icons-material/Delete";
 import HistoryIcon from "@mui/icons-material/History";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth, filterByRole } from "../../authContext.jsx";
 import { formatDate, getTodayFollowUps, getOverdueFollowUps } from "../../utils.js";
 import ImportDialog from "../../components/ImportDialog.jsx";
 
 function Dashboard() {
-  const { candidates, pipelineStages, importCandidates, importHistory, removeImportRecord, removeImportedCandidates, addImportRecord } = useCrm();
+  const { candidates: allCandidates, pipelineStages, advisorWorkflowStages, importCandidates, importHistory, removeImportRecord, removeImportedCandidates, addImportRecord } = useCrm();
+  const { currentUser, isAdmin } = useAuth();
+  const candidates = useMemo(() => filterByRole(allCandidates, currentUser), [allCandidates, currentUser]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [importOpen, setImportOpen] = useState(false);
 
   const todayFollowUps = useMemo(() => getTodayFollowUps(candidates), [candidates]);
   const overdueFollowUps = useMemo(() => getOverdueFollowUps(candidates), [candidates]);
 
-  const stageCounts = useMemo(
-    () => pipelineStages.map((stage) => ({ stage, count: candidates.filter((candidate) => candidate.workflowStage === stage).length })),
-    [candidates, pipelineStages]
-  );
+  const stageCounts = useMemo(() => {
+    const customerCounts = pipelineStages.map((stage) => ({
+      stage,
+      count: candidates.filter((c) => c.leadType !== "Advisor" && c.leadType !== "Recruitment" && c.workflowStage === stage).length
+    }));
+    const advisorCounts = advisorWorkflowStages.map((stage) => ({
+      stage,
+      count: candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.workflowStage === stage).length
+    }));
+    return [...customerCounts, ...advisorCounts];
+  }, [candidates, pipelineStages, advisorWorkflowStages]);
 
-  const totalCandidates = candidates.length;
+  const advisorRecords = useMemo(() => candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment"), [candidates]);
+  const totalAdvisors = advisorRecords.length;
   const documentsSubmitted = candidates.filter((c) => (c.documents || []).length > 0).length;
-  const trainingCompleted = candidates.filter((c) => ["Training", "Exam", "Active Client", "Policy Issued"].includes(c.workflowStage)).length;
-  const activatedAdvisors = candidates.filter((c) => c.leadStatus === "Converted" || c.workflowStage === "Active Client").length;
+  const trainingCompleted = candidates.filter((c) => ["Training", "Exam", "Code Generation", "Activation"].includes(c.workflowStage)).length;
+  const activatedAdvisors = advisorRecords.filter((c) => (c.workflowStage === "Activated" || c.workflowStage === "Activated Advisor") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")).length;
   const examResult = candidates.filter((c) => c.workflowStage === "Exam").length;
-  const conversionRate = totalCandidates > 0 ? Math.round((activatedAdvisors / totalCandidates) * 100) : 0;
+  const conversionRate = totalAdvisors > 0 ? Math.round((activatedAdvisors / totalAdvisors) * 100) : 0;
 
   const now = new Date();
 
   const dashboardCards = [
-    { key: "All", label: "Total Candidates", value: totalCandidates, icon: GroupIcon, color: "#2563eb" },
+    { key: "All", label: "Total Advisors", value: totalAdvisors, icon: GroupIcon, color: "#2563eb" },
     { key: "Documents Submitted", label: "Documents Submitted", value: documentsSubmitted, icon: FactCheckIcon, color: "#0f766e" },
     { key: "Training Completed", label: "Training", value: trainingCompleted, icon: AssignmentTurnedInIcon, color: "#7c3aed" },
     { key: "Activated", label: "Activated Advisors", value: activatedAdvisors, icon: TrendingUpIcon, color: "#16a34a" },
@@ -51,12 +62,12 @@ function Dashboard() {
     if (activeFilter === "Today") return todayFollowUps;
     if (activeFilter === "Overdue") return overdueFollowUps;
     if (activeFilter === "Documents Submitted") return candidates.filter((candidate) => (candidate.documents || []).length > 0);
-    if (activeFilter === "Training Completed") return candidates.filter((candidate) => ["Training", "Exam", "Activated"].includes(candidate.workflowStage));
-    if (activeFilter === "Activated") return candidates.filter((candidate) => candidate.workflowStage === "Activated");
+    if (activeFilter === "Training Completed") return candidates.filter((candidate) => ["Training", "Exam", "Code Generation", "Activation"].includes(candidate.workflowStage));
+    if (activeFilter === "Activated") return advisorRecords.filter((candidate) => (candidate.workflowStage === "Activated" || candidate.workflowStage === "Activated Advisor") && (candidate.leadStatus === "Active" || candidate.leadStatus === "Active Advisor"));
     if (activeFilter === "Conversion") return candidates;
     if (activeFilter === "Exam Passed") return candidates.filter((candidate) => candidate.workflowStage === "Exam");
     return candidates.filter((candidate) => candidate.workflowStage === activeFilter);
-  }, [activeFilter, candidates, todayFollowUps, overdueFollowUps]);
+  }, [activeFilter, candidates, advisorRecords, todayFollowUps, overdueFollowUps]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -66,9 +77,11 @@ function Dashboard() {
           <Typography variant="body1" sx={{ color: "#475569" }}>Monitor progress, prioritize follow-ups, and keep recruiter activity moving smoothly.</Typography>
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <Button variant="contained" size="small" startIcon={<UploadFileIcon />} onClick={() => setImportOpen(true)}>
-            Import Data
-          </Button>
+          {isAdmin && (
+            <Button variant="contained" size="small" startIcon={<UploadFileIcon />} onClick={() => setImportOpen(true)}>
+              Import Data
+            </Button>
+          )}
           <Chip label={formatDate(now.toISOString())} color="primary" variant="outlined" />
           <Chip label="Last updated: just now" color="default" />
           {overdueFollowUps.length > 0 && <Chip label={`${overdueFollowUps.length} alert${overdueFollowUps.length !== 1 ? "s" : ""}`} color="warning" />}
@@ -130,7 +143,7 @@ function Dashboard() {
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Recruitment Pulse</Typography>
         <Grid container spacing={2}>
           {[
-            { label: "Pipeline Count", value: totalCandidates },
+            { label: "Pipeline Count", value: totalAdvisors },
             { label: "Activated", value: activatedAdvisors },
             { label: "Follow-ups Due Today", value: todayFollowUps.length },
             { label: "Overdue Follow-ups", value: overdueFollowUps.length }
@@ -153,7 +166,7 @@ function Dashboard() {
         return result;
       }} />
 
-      {importHistory.length > 0 && (
+      {isAdmin && importHistory.length > 0 && (
         <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 3 }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
             <HistoryIcon sx={{ color: "#475569" }} />

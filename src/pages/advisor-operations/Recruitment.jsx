@@ -49,7 +49,7 @@ const advisorBaseFields = {
   city: "",
   qualification: "",
   source: "",
-  workflowStage: "New Recruitment Lead",
+  workflowStage: "Sourced",
   notes: ""
 };
 
@@ -74,7 +74,7 @@ function Recruitment() {
 
   const advisorFormBase = useCallback(() => ({
     ...advisorBaseFields,
-    ...getStageDefaultValues(advisorStageFields, "New Recruitment Lead"),
+    ...getStageDefaultValues(advisorStageFields, "Sourced"),
     leadType: "Advisor"
   }), []);
 
@@ -89,7 +89,7 @@ function Recruitment() {
   }, [addLeadOpen, advisorFormBase]);
 
   const handleRemoveDuplicates = useCallback(() => {
-    if (candidates.filter((c) => c.leadType === "Advisor").length === 0) return;
+    if (candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment").length === 0) return;
     const result = window.confirm("Remove duplicate recruitment records? This cannot be undone.");
     if (!result) return;
     const removed = removeDuplicates();
@@ -124,7 +124,6 @@ function Recruitment() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(advisorForm.email)) errs.email = "Invalid email";
     if (!advisorForm.city.trim()) errs.city = "City is required";
     if (!advisorForm.qualification.trim()) errs.qualification = "Qualification is required.";
-    if (!advisorForm.source) errs.source = "Source is required";
     if (!advisorForm.workflowStage) errs.workflowStage = "Workflow Stage is required";
     setAdvisorErrors(errs);
     if (Object.keys(errs).length > 0) return;
@@ -139,7 +138,7 @@ function Recruitment() {
   };
 
   const advisorLeads = useMemo(
-    () => candidates.filter((candidate) => candidate.leadType === "Advisor"),
+    () => candidates.filter((candidate) => (candidate.leadType === "Advisor" || candidate.leadType === "Recruitment") && candidate.workflowStage !== "Dropped"),
     [candidates]
   );
 
@@ -152,24 +151,25 @@ function Recruitment() {
   );
 
   const metrics = useMemo(() => {
-    const activationPending = advisorLeads.filter((lead) => lead.workflowStage === "Activation" || lead.workflowStage === "Activated Advisor").length;
-    const interviewStage = advisorLeads.filter((lead) => lead.workflowStage === "Interview" || lead.workflowStage === "Interview Scheduled").length;
-    const documentsStage = advisorLeads.filter((lead) => lead.workflowStage === "Documents" || lead.workflowStage === "Documents Pending" || lead.workflowStage === "Documents Submitted").length;
-    const trainingInProgress = advisorLeads.filter((lead) => lead.workflowStage === "Training").length;
+    const activationPending = advisorLeads.filter((lead) => lead.workflowStage === "Activated" || lead.workflowStage === "Activated Advisor").length;
+    const documentsStage = advisorLeads.filter((lead) => lead.workflowStage === "Documents Submitted" || lead.workflowStage === "Documents" || lead.workflowStage === "Documents Pending").length;
+    const trainingInProgress = advisorLeads.filter((lead) => lead.workflowStage === "25 Hrs Training" || lead.workflowStage === "Training").length;
     const examPending = advisorLeads.filter((lead) => lead.workflowStage === "Exam").length;
-    const codeGenPending = advisorLeads.filter((lead) => lead.workflowStage === "Code Generation").length;
+    const codeGenPending = advisorLeads.filter((lead) => lead.workflowStage === "Advisor Code Issued" || lead.workflowStage === "Code Generation").length;
     const dropped = advisorLeads.filter((lead) => lead.workflowStage === "Dropped").length;
-    const newRecruitment = advisorLeads.filter((lead) => lead.workflowStage === "New Recruitment Lead" || lead.workflowStage === "Contacted" || lead.workflowStage === "NAAF Generation").length;
+    const sourced = advisorLeads.filter((lead) => lead.workflowStage === "Sourced" || lead.workflowStage === "New Recruitment Lead" || lead.workflowStage === "Contacted").length;
+    const naaf = advisorLeads.filter((lead) => lead.workflowStage === "NAAF Generation").length;
     const businessStarted = activeAdvisors.filter((advisor) => Number(advisor.policiesSold || 0) > 0).length;
 
     return [
       { label: "Total Advisors", value: advisorLeads.length, icon: GroupIcon, color: "#2563eb" },
-      { label: "Interview", value: interviewStage, icon: AddIcon, color: "#0ea5e9" },
+      { label: "Sourced", value: sourced, icon: AddIcon, color: "#6366f1" },
       { label: "Documents", value: documentsStage, icon: FactCheckIcon, color: "#f97316" },
+      { label: "NAAF", value: naaf, icon: PlaylistAddCheckIcon, color: "#8b5cf6" },
       { label: "Training", value: trainingInProgress, icon: AssignmentTurnedInIcon, color: "#0284c7" },
       { label: "Exam", value: examPending, icon: EventNoteIcon, color: "#f59e0b" },
-      { label: "Code Generation", value: codeGenPending, icon: PlaylistAddCheckIcon, color: "#22c55e" },
-      { label: "Activation", value: activationPending, icon: TrendingUpIcon, color: "#16a34a" },
+      { label: "Code Issued", value: codeGenPending, icon: PlaylistAddCheckIcon, color: "#22c55e" },
+      { label: "Activated", value: activationPending, icon: TrendingUpIcon, color: "#16a34a" },
       { label: "Dropped", value: dropped, icon: InboxIcon, color: "#ef4444" }
     ];
   }, [activeAdvisors, advisorLeads, performanceRecords]);
@@ -216,7 +216,7 @@ function Recruitment() {
       await addCandidate({
         ...lead,
         leadId: lead.leadId || `LD-${1000 + candidates.length + 1}`,
-        workflowStage: lead.workflowStage || "New Recruitment Lead",
+        workflowStage: lead.workflowStage || "Sourced",
         leadStatus: lead.leadStatus || "Open",
         leadType: lead.leadType || "Advisor",
         leadSource: lead.leadSource || lead.source || "Referral",
@@ -385,11 +385,6 @@ function Recruitment() {
           <TextField fullWidth margin="dense" label="Email" name="email" type="email" value={advisorForm.email} onChange={handleAdvisorField} error={!!advisorErrors.email} helperText={advisorErrors.email} />
           <TextField fullWidth margin="dense" label="City" name="city" value={advisorForm.city} onChange={handleAdvisorField} error={!!advisorErrors.city} helperText={advisorErrors.city} />
           <TextField fullWidth margin="dense" label="Qualification" name="qualification" value={advisorForm.qualification} onChange={handleAdvisorField} error={!!advisorErrors.qualification} helperText={advisorErrors.qualification} />
-          <TextField select fullWidth margin="dense" label="Recruitment Source" name="source" value={advisorForm.source} onChange={handleAdvisorField} error={!!advisorErrors.source} helperText={advisorErrors.source}>
-            {sources.map((option) => (
-              <MenuItem key={option} value={option}>{option}</MenuItem>
-            ))}
-          </TextField>
           <TextField select fullWidth margin="dense" label="Recruitment Stage" name="workflowStage" value={advisorForm.workflowStage} onChange={handleStageChange} error={!!advisorErrors.workflowStage} helperText={advisorErrors.workflowStage}>
             {advisorRecruitmentStages.map((option) => (
               <MenuItem key={option} value={option}>{option}</MenuItem>

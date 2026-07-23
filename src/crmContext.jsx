@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { candidatesApi, clientsApi, settingsApi, teamMembersApi, performanceApi, overridePayoutsApi } from "./api/endpoints.js";
-import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, followUpRequiredStages, sources, recruiterNames, stageBadge } from "./data/dropdowns.js";
+import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, followUpRequiredStages, sources, stageBadge, advisorStatuses } from "./data/dropdowns.js";
 import { businessConfigs, defaultBusinessSettings } from "./data/config.js";
 import { getActiveAdvisorRows, getPerformanceSummary, getOverrideRecords } from "./pages/advisor-operations/advisorOperationsData.js";
 
@@ -165,6 +165,8 @@ function normalizeLocalRecord(record, index, existingCount) {
     workflowStage,
     leadStatus: record.leadStatus || "Open",
     assignedTo,
+    assignedAdvisorId: record.assignedAdvisorId || "",
+    assignedAdvisorName: record.assignedAdvisorName || "",
     leadSource: source,
     source,
     priority,
@@ -243,20 +245,7 @@ export function CrmProvider({ children }) {
 
     const allFailed = settled.every((r) => r.status === "rejected");
     if (allFailed) {
-      console.warn("All API calls failed, using local storage fallback");
-      const localCands = loadLocalCandidates();
-      const localClts = loadLocalClients();
-      const localSettings = loadLocalSettings();
-      const localTeam = loadLocalTeamMembers();
-      const localPerf = loadLocalPerformance();
-      const localOverrides = loadLocalOverrides();
-      setCandidates(localCands);
-      setClients(localClts);
-      setSettingsState(localSettings || defaultBusinessSettings);
-      setSelectedConfigId((localSettings || defaultBusinessSettings).selectedConfigId || "standard");
-      setTeamMembers(localTeam);
-      setPerformanceRecords(localPerf);
-      setOverridePayoutRecords(localOverrides);
+      console.warn("All API calls failed, server is the single source of truth. No local storage fallback.");
     }
   }, []);
 
@@ -280,45 +269,85 @@ export function CrmProvider({ children }) {
     [selectedConfigId]
   );
 
+  const advisorStageLifecycle = {
+    "Sourced":              { leadType: "Advisor", leadStatus: "Open" },
+    "Documents Submitted":  { leadType: "Advisor", leadStatus: "In Progress" },
+    "NAAF Generation":      { leadType: "Advisor", leadStatus: "In Progress" },
+    "25 Hrs Training":      { leadType: "Advisor", leadStatus: "In Progress" },
+    "Exam":                 { leadType: "Advisor", leadStatus: "In Progress" },
+    "Advisor Code Issued":  { leadType: "Advisor", leadStatus: "In Progress" },
+    "Activated":            { leadType: "Advisor", leadStatus: "Active" },
+    "New Recruitment Lead": { leadType: "Advisor", leadStatus: "Open" },
+    "Contacted":            { leadType: "Advisor", leadStatus: "Open" },
+    "Interview":            { leadType: "Advisor", leadStatus: "In Progress" },
+    "Documents":            { leadType: "Advisor", leadStatus: "In Progress" },
+    "Training":             { leadType: "Advisor", leadStatus: "In Progress" },
+    "Code Generation":      { leadType: "Advisor", leadStatus: "In Progress" },
+    "Activated Advisor":    { leadType: "Advisor", leadStatus: "Active" },
+    "Activation":           { leadType: "Advisor", leadStatus: "Active" },
+    "Dropped":              { leadType: "Advisor", leadStatus: "Dropped" }
+  };
+
   const updateCandidateStage = useCallback(async (candidateId, stage) => {
     const validStages = new Set([...advisorWorkflowStages, ...customerWorkflowStages]);
     if (!validStages.has(stage)) return;
-    const local = loadLocalCandidates();
-    const updated = local.map((c) => String(c.id) === String(candidateId) ? { ...c, workflowStage: stage } : c);
-    saveLocalCandidates(updated);
-    setCandidates(updated);
-    if (stage === "Policy Issued" || stage === "Active Client" || stage === "Policy Purchased" || stage === "Premium Collected") {
-      const cand = updated.find((c) => String(c.id) === String(candidateId));
-      if (cand && cand.leadType === "Insurance Customer") {
-        const localClients = loadLocalClients();
-        const alreadyClient = localClients.some((cl) => cl.candidateId === String(cand.id));
-        if (!alreadyClient) {
-          const clientRecord = {
-            id: localClients.length + 1,
-            clientId: `CL-${1000 + localClients.length + 1}`,
-            candidateId: String(cand.id),
-            name: cand.name,
-            email: cand.email || "",
-            phone: cand.mobile || cand.phone || "",
-            city: cand.city || "",
-            policyNumber: cand.policyNumber || "",
-            advisorAssigned: cand.assignedTo || "",
-            dateReceived: new Date().toISOString().slice(0, 10),
-            finalStatus: "Active Client",
-            interestLevel: cand.priority || "Medium",
-            leadQuality: cand.leadSource || cand.source || ""
-          };
-          const updatedClients = [...localClients, clientRecord];
-          saveLocalClients(updatedClients);
-          setClients(updatedClients);
-        }
-      }
-    }
+
     try {
       await candidatesApi.updateStage(candidateId, { stage });
-      await refreshCrmData();
+      setCandidates((prev) => {
+        return prev.map((c) => {
+          if (String(c.id) !== String(candidateId)) return c;
+          const isAdvisorRecord = c.leadType === "Advisor" || c.leadType === "Recruitment";
+          const lifecycle = isAdvisorRecord ? advisorStageLifecycle[stage] : null;
+          return {
+            ...c,
+            workflowStage: stage,
+            ...(lifecycle ? { leadType: lifecycle.leadType, leadStatus: lifecycle.leadStatus } : {})
+          };
+        });
+      });
     } catch (err) {
       console.warn("API unavailable, stage updated locally:", err.message);
+      setCandidates((prev) => {
+        return prev.map((c) => {
+          if (String(c.id) !== String(candidateId)) return c;
+          const isAdvisorRecord = c.leadType === "Advisor" || c.leadType === "Recruitment";
+          const lifecycle = isAdvisorRecord ? advisorStageLifecycle[stage] : null;
+          return {
+            ...c,
+            workflowStage: stage,
+            ...(lifecycle ? { leadType: lifecycle.leadType, leadStatus: lifecycle.leadStatus } : {})
+          };
+        });
+      });
+      if (stage === "Policy Issued" || stage === "Active Client" || stage === "Policy Purchased" || stage === "Premium Collected") {
+        setCandidates((prev) => {
+          const cand = prev.find((c) => String(c.id) === String(candidateId));
+          if (cand && cand.leadType === "Insurance Customer") {
+            setClients((prevClients) => {
+              const alreadyClient = prevClients.some((cl) => cl.candidateId === String(cand.id));
+              if (alreadyClient) return prevClients;
+              const clientRecord = {
+                id: prevClients.length + 1,
+                clientId: `CL-${1000 + prevClients.length + 1}`,
+                candidateId: String(cand.id),
+                name: cand.name,
+                email: cand.email || "",
+                phone: cand.mobile || cand.phone || "",
+                city: cand.city || "",
+                policyNumber: cand.policyNumber || "",
+                advisorAssigned: cand.assignedTo || "",
+                dateReceived: new Date().toISOString().slice(0, 10),
+                finalStatus: "Active Client",
+                interestLevel: cand.priority || "Medium",
+                leadQuality: cand.leadSource || cand.source || ""
+              };
+              return [...prevClients, clientRecord];
+            });
+          }
+          return prev;
+        });
+      }
     }
   }, [refreshCrmData]);
 
@@ -338,11 +367,6 @@ export function CrmProvider({ children }) {
   }, []);
 
   const addCandidate = useCallback(async (candidate) => {
-    const local = loadLocalCandidates();
-    const dup = findDuplicate(local, candidate);
-    if (dup) {
-      throw new Error("This record already exists.");
-    }
     const payload = {
       ...candidate,
       leadType: candidate.leadType || leadTypes[0],
@@ -351,189 +375,210 @@ export function CrmProvider({ children }) {
       leadSource: candidate.leadSource || candidate.source || selectedConfig.defaultSource,
       source: candidate.source || candidate.leadSource || selectedConfig.defaultSource,
       assignedTo: candidate.assignedTo || "",
+      assignedAdvisorId: candidate.assignedAdvisorId || "",
+      assignedAdvisorName: candidate.assignedAdvisorName || "",
       createdDate: candidate.createdDate || new Date().toISOString().slice(0, 10),
       nextFollowUp: candidate.nextFollowUp || candidate.followUpDate || ""
     };
-    const record = normalizeLocalRecord(payload, 0, local.length);
-    const updated = [...local, record];
-    saveLocalCandidates(updated);
-    setCandidates(updated);
     try {
-      await candidatesApi.create(payload);
-      await refreshCrmData();
+      const result = await candidatesApi.create(payload);
+      setCandidates((prev) => {
+        const dup = findDuplicate(prev, result);
+        if (dup) return prev;
+        return [...prev, result];
+      });
     } catch (err) {
       console.warn("API unavailable, candidate added locally:", err.message);
+      setCandidates((prev) => {
+        const dup = findDuplicate(prev, candidate);
+        if (dup) return prev;
+        const record = normalizeLocalRecord(payload, 0, prev.length);
+        return [...prev, record];
+      });
     }
-  }, [refreshCrmData, selectedConfig]);
+  }, [selectedConfig, refreshCrmData, findDuplicate]);
 
   const importCandidates = useCallback(async (records) => {
     const importId = `IMP-${Date.now()}`;
     try {
       const result = await candidatesApi.bulkCreate(records);
-      await refreshCrmData();
+      setCandidates((prev) => {
+        const existingPhones = new Set(
+          prev.map((r) => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
+        );
+        const imported = records.filter((r) => {
+          const phone = String(r.mobile || r.phone || "").replace(/\D/g, "");
+          if (phone && existingPhones.has(phone)) return false;
+          if (phone) existingPhones.add(phone);
+          return true;
+        }).map((r, i) => ({ ...normalizeLocalRecord(r, i, prev.length), _importId: importId }));
+        return [...prev, ...imported];
+      });
       return { ...result, importId };
     } catch (err) {
-      console.warn("API unavailable, importing to local storage:", err.message);
-      const localCandidates = loadLocalCandidates();
-      const existingPhones = new Set(
-        localCandidates.map((r) => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
-      );
-      const imported = [];
-      for (const record of records) {
-        const phone = String(record.mobile || record.phone || "").replace(/\D/g, "");
-        if (phone && existingPhones.has(phone)) continue;
-        if (phone) existingPhones.add(phone);
-        imported.push({ ...normalizeLocalRecord(record, imported.length, localCandidates.length), _importId: importId });
-      }
-      const updated = [...localCandidates, ...imported];
-      saveLocalCandidates(updated);
-      setCandidates(updated);
-      return { imported: imported.length, skipped: records.length - imported.length, importId };
+      console.warn("API unavailable, importing locally:", err.message);
+      setCandidates((prev) => {
+        const existingPhones = new Set(
+          prev.map((r) => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
+        );
+        const imported = [];
+        for (const record of records) {
+          const phone = String(record.mobile || record.phone || "").replace(/\D/g, "");
+          if (phone && existingPhones.has(phone)) continue;
+          if (phone) existingPhones.add(phone);
+          imported.push({ ...normalizeLocalRecord(record, imported.length, prev.length), _importId: importId });
+        }
+        return [...prev, ...imported];
+      });
+      return { imported: records.length, skipped: 0, importId };
     }
   }, [refreshCrmData]);
 
   const removeDuplicates = useCallback(() => {
-    const local = loadLocalCandidates();
     const seen = new Set();
     const normalize = (s) => (s || "").trim().toLowerCase();
-    const deduped = local.filter((r) => {
-      const key = [
-        normalize(r.name),
-        normalize(r.mobile || r.phone),
-        normalize(r.qualification),
-        normalize(r.workflowStage)
-      ].join("::");
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
+    let removedCount = 0;
+    setCandidates((prev) => {
+      const originalLength = prev.length;
+      const deduped = prev.filter((r) => {
+        const key = [
+          normalize(r.name),
+          normalize(r.mobile || r.phone),
+          normalize(r.qualification),
+          normalize(r.workflowStage)
+        ].join("::");
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      removedCount = originalLength - deduped.length;
+      return deduped;
     });
-    if (deduped.length < local.length) {
-      saveLocalCandidates(deduped);
-      setCandidates(deduped);
-    }
-    return local.length - deduped.length;
+    return removedCount;
   }, []);
 
   const updateCandidate = useCallback(async (candidateId, updates) => {
-    const local = loadLocalCandidates();
-    const updated = local.map((c) => {
-      if (String(c.id) !== String(candidateId)) return c;
-      const merged = { ...c, ...updates };
-      if (updates.mobile) merged.phone = updates.mobile;
-      if (updates.phone) merged.mobile = updates.phone;
-      if (updates.source) merged.leadSource = updates.source;
-      if (updates.leadSource) merged.source = updates.leadSource;
-      if (updates.followUpDate) merged.nextFollowUp = updates.followUpDate;
-      return merged;
-    });
-    saveLocalCandidates(updated);
-    setCandidates(updated);
-    if (updates.leadStatus === "Policy Purchased" || updates.workflowStage === "Policy Purchased") {
-      const cand = updated.find((c) => String(c.id) === String(candidateId));
-      if (cand && cand.leadType === "Insurance Customer") {
-        const localClients = loadLocalClients();
-        const alreadyClient = localClients.some((cl) => cl.candidateId === String(cand.id));
-        if (!alreadyClient) {
-          const clientRecord = {
-            id: localClients.length + 1,
-            clientId: `CL-${1000 + localClients.length + 1}`,
-            candidateId: String(cand.id),
-            name: cand.name,
-            email: cand.email || "",
-            phone: cand.mobile || cand.phone || "",
-            city: cand.city || "",
-            mobile: cand.mobile || cand.phone || "",
-            policyNumber: cand.policyNumber || "",
-            advisorAssigned: cand.assignedTo || "",
-            dateReceived: new Date().toISOString().slice(0, 10),
-            finalStatus: "Active Client",
-            interestLevel: cand.priority || "Medium",
-            leadSource: cand.leadSource || cand.source || ""
-          };
-          const updatedClients = [...localClients, clientRecord];
-          saveLocalClients(updatedClients);
-          setClients(updatedClients);
+    const applyUpdates = (prev) => {
+      const updated = prev.map((c) => {
+        if (String(c.id) !== String(candidateId)) return c;
+        const merged = { ...c, ...updates };
+        if (updates.mobile) merged.phone = updates.mobile;
+        if (updates.phone) merged.mobile = updates.phone;
+        if (updates.source) merged.leadSource = updates.source;
+        if (updates.leadSource) merged.source = updates.leadSource;
+        if (updates.followUpDate) merged.nextFollowUp = updates.followUpDate;
+        if (updates.workflowStage && updates.workflowStage !== c.workflowStage) {
+          const lifecycle = advisorStageLifecycle[updates.workflowStage];
+          if (lifecycle) {
+            merged.leadType = lifecycle.leadType;
+            merged.leadStatus = lifecycle.leadStatus;
+          }
+        }
+        return merged;
+      });
+      return updated;
+    };
+    const applyClientConversion = (prev) => {
+      if (updates.leadStatus === "Policy Purchased" || updates.workflowStage === "Policy Purchased") {
+        const cand = prev.find((c) => String(c.id) === String(candidateId));
+        if (cand && cand.leadType === "Insurance Customer") {
+          setClients((prevClients) => {
+            const alreadyClient = prevClients.some((cl) => cl.candidateId === String(cand.id));
+            if (alreadyClient) return prevClients;
+            const clientRecord = {
+              id: prevClients.length + 1,
+              clientId: `CL-${1000 + prevClients.length + 1}`,
+              candidateId: String(cand.id),
+              name: cand.name,
+              email: cand.email || "",
+              phone: cand.mobile || cand.phone || "",
+              city: cand.city || "",
+              mobile: cand.mobile || cand.phone || "",
+              policyNumber: cand.policyNumber || "",
+              advisorAssigned: cand.assignedTo || "",
+              dateReceived: new Date().toISOString().slice(0, 10),
+              finalStatus: "Active Client",
+              interestLevel: cand.priority || "Medium",
+              leadSource: cand.leadSource || cand.source || ""
+            };
+            return [...prevClients, clientRecord];
+          });
         }
       }
-    }
+      return prev;
+    };
     try {
       await candidatesApi.update(candidateId, updates);
-      await refreshCrmData();
+      setCandidates((prev) => applyClientConversion(applyUpdates(prev)));
     } catch (err) {
       console.warn("API unavailable, candidate updated locally:", err.message);
+      setCandidates((prev) => applyClientConversion(applyUpdates(prev)));
     }
   }, [refreshCrmData]);
 
   const updateCandidateNote = useCallback(async (candidateId, note) => {
-    const local = loadLocalCandidates();
-    const updated = local.map((c) => String(c.id) === String(candidateId) ? { ...c, notes: note } : c);
-    saveLocalCandidates(updated);
-    setCandidates(updated);
     try {
       await candidatesApi.updateNote(candidateId, { note });
-      await refreshCrmData();
+      setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId) ? { ...c, notes: note } : c));
     } catch (err) {
       console.warn("API unavailable, note updated locally:", err.message);
+      setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId) ? { ...c, notes: note } : c));
     }
   }, [refreshCrmData]);
 
   const markFollowUpDone = useCallback(async (candidateId) => {
-    const local = loadLocalCandidates();
-    const updated = local.map((c) => String(c.id) === String(candidateId)
-      ? { ...c, followUp: { ...(c.followUp || {}), status: "Done" } }
-      : c
-    );
-    saveLocalCandidates(updated);
-    setCandidates(updated);
     try {
       await candidatesApi.updateFollowUp(candidateId, { status: "Done" });
-      await refreshCrmData();
+      setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId)
+        ? { ...c, followUp: { ...(c.followUp || {}), status: "Done" } }
+        : c
+      ));
     } catch (err) {
       console.warn("API unavailable, follow-up marked done locally:", err.message);
+      setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId)
+        ? { ...c, followUp: { ...(c.followUp || {}), status: "Done" } }
+        : c
+      ));
     }
   }, [refreshCrmData]);
 
   const deleteCandidate = useCallback(async (candidateId) => {
-    const local = loadLocalCandidates();
-    const updated = local.filter((c) => String(c.id) !== String(candidateId));
-    saveLocalCandidates(updated);
-    setCandidates(updated);
     try {
       await candidatesApi.remove(candidateId);
-      await refreshCrmData();
+      setCandidates((prev) => prev.filter((c) => String(c.id) !== String(candidateId)));
     } catch (err) {
       console.warn("API unavailable, candidate deleted locally:", err.message);
+      setCandidates((prev) => prev.filter((c) => String(c.id) !== String(candidateId)));
     }
   }, [refreshCrmData]);
 
   const addClient = useCallback(async (client) => {
     try {
-      await clientsApi.create(client);
-      await refreshCrmData();
+      const result = await clientsApi.create(client);
+      setClients((prev) => [...prev, result]);
     } catch (err) {
       console.warn("API unavailable, adding client locally:", err.message);
-      const local = loadLocalClients();
-      const id = local.length + 1;
-      const record = { id, clientId: client.clientId || `CL-${1000 + id}`, ...client, dateReceived: client.dateReceived || new Date().toISOString().slice(0, 10) };
-      const updated = [...local, record];
-      saveLocalClients(updated);
-      setClients(updated);
+      setClients((prev) => {
+        const id = prev.length + 1;
+        const record = { id, clientId: client.clientId || `CL-${1000 + id}`, ...client, dateReceived: client.dateReceived || new Date().toISOString().slice(0, 10) };
+        return [...prev, record];
+      });
     }
   }, [refreshCrmData]);
 
   const updateClient = useCallback(async (clientId, updates) => {
     try {
-      await clientsApi.update(clientId, updates);
-      await refreshCrmData();
+      const result = await clientsApi.update(clientId, updates);
+      setClients((prev) => prev.map((c) => {
+        if (String(c.id) !== String(clientId) && String(c.clientId) !== String(clientId)) return c;
+        return { ...c, ...result };
+      }));
     } catch (err) {
       console.warn("API unavailable, updating client locally:", err.message);
-      const local = loadLocalClients();
-      const updated = local.map((c) => {
+      setClients((prev) => prev.map((c) => {
         if (String(c.id) !== String(clientId) && String(c.clientId) !== String(clientId)) return c;
         return { ...c, ...updates };
-      });
-      saveLocalClients(updated);
-      setClients(updated);
+      }));
     }
   }, [refreshCrmData]);
 
@@ -541,11 +586,9 @@ export function CrmProvider({ children }) {
     try {
       const updated = await settingsApi.update(newSettings);
       setSettingsState(updated);
-      saveLocalSettings(updated);
     } catch (err) {
       console.warn("API unavailable, saving settings locally:", err.message);
       setSettingsState(newSettings);
-      saveLocalSettings(newSettings);
     }
   }, []);
 
@@ -556,232 +599,196 @@ export function CrmProvider({ children }) {
       );
       if (existing) {
         await performanceApi.update(existing.id, record);
+        setPerformanceRecords((prev) => prev.map((r) => r.id === existing.id ? { ...r, ...record } : r));
       } else {
-        await performanceApi.create(record);
+        const result = await performanceApi.create(record);
+        setPerformanceRecords((prev) => [...prev, result]);
       }
-      await refreshCrmData();
     } catch (err) {
       console.warn("API unavailable, saving performance record locally:", err.message);
-      const local = loadLocalPerformance();
-      const existing = local.find((r) => r.advisorCode === record.advisorCode || r.advisorName === record.advisorName);
-      let updated;
-      if (existing) {
-        updated = local.map((r) => r.id === existing.id ? { ...r, ...record } : r);
-      } else {
-        updated = [...local, { id: Date.now(), ...record }];
-      }
-      saveLocalPerformance(updated);
-      setPerformanceRecords(updated);
+      setPerformanceRecords((prev) => {
+        const existing = prev.find((r) => r.advisorCode === record.advisorCode || r.advisorName === record.advisorName);
+        if (existing) {
+          return prev.map((r) => r.id === existing.id ? { ...r, ...record } : r);
+        }
+        return [...prev, { id: Date.now(), ...record }];
+      });
     }
   }, [refreshCrmData, performanceRecords]);
 
   const updatePerformanceRecord = useCallback(async (id, data) => {
     try {
       await performanceApi.update(id, data);
-      await refreshCrmData();
+      setPerformanceRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...data } : r));
     } catch (err) {
       console.warn("API unavailable, updating performance record locally:", err.message);
-      const local = loadLocalPerformance();
-      const updated = local.map((r) => r.id === id ? { ...r, ...data } : r);
-      saveLocalPerformance(updated);
-      setPerformanceRecords(updated);
+      setPerformanceRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...data } : r));
     }
   }, [refreshCrmData]);
 
   const saveOverridePayoutRecords = useCallback(async (records) => {
     try {
       await overridePayoutsApi.replaceAll(records);
-      await refreshCrmData();
+      setOverridePayoutRecords(records);
     } catch (err) {
       console.warn("API unavailable, saving override records locally:", err.message);
-      saveLocalOverrides(records);
       setOverridePayoutRecords(records);
     }
   }, [refreshCrmData]);
 
   const importPolicies = useCallback(async (records) => {
-    try {
-      await refreshCrmData();
-    } catch { /* ignore */ }
-    const local = loadLocalPolicies();
-    const existingIds = new Set(local.map((r) => String(r.policyNumber || r.id || "").toLowerCase()));
-    const imported = records.filter((r) => {
-      const key = String(r.policyNumber || r.id || "").toLowerCase();
-      if (!key || existingIds.has(key)) return false;
-      existingIds.add(key);
-      return true;
+    setPolicies((prev) => {
+      const existingIds = new Set(prev.map((r) => String(r.policyNumber || r.id || "").toLowerCase()));
+      const imported = records.filter((r) => {
+        const key = String(r.policyNumber || r.id || "").toLowerCase();
+        if (!key || existingIds.has(key)) return false;
+        existingIds.add(key);
+        return true;
+      });
+      return [...prev, ...imported];
     });
-    const updated = [...local, ...imported];
-    saveLocalPolicies(updated);
-    setPolicies(updated);
-    return { imported: imported.length, skipped: records.length - imported.length };
-  }, [refreshCrmData]);
+    return { imported: records.length, skipped: 0 };
+  }, []);
 
   const importClaims = useCallback(async (records) => {
-    try {
-      await refreshCrmData();
-    } catch { /* ignore */ }
-    const local = loadLocalClaims();
-    const existingIds = new Set(local.map((r) => String(r.claimId || r.id || "").toLowerCase()));
-    const imported = records.filter((r) => {
-      const key = String(r.claimId || r.id || "").toLowerCase();
-      if (!key || existingIds.has(key)) return false;
-      existingIds.add(key);
-      return true;
+    setClaims((prev) => {
+      const existingIds = new Set(prev.map((r) => String(r.claimId || r.id || "").toLowerCase()));
+      const imported = records.filter((r) => {
+        const key = String(r.claimId || r.id || "").toLowerCase();
+        if (!key || existingIds.has(key)) return false;
+        existingIds.add(key);
+        return true;
+      });
+      return [...prev, ...imported];
     });
-    const updated = [...local, ...imported];
-    saveLocalClaims(updated);
-    setClaims(updated);
-    return { imported: imported.length, skipped: records.length - imported.length };
-  }, [refreshCrmData]);
+    return { imported: records.length, skipped: 0 };
+  }, []);
 
   const importTeamMembers = useCallback(async (records) => {
     try {
       await refreshCrmData();
     } catch { /* ignore */ }
-    const local = loadLocalTeamMembers();
-    const existingIds = new Set(local.map((r) => String(r.id || r.email || "").toLowerCase()));
-    const imported = records.filter((r) => {
-      const key = String(r.id || r.email || "").toLowerCase();
-      if (!key || existingIds.has(key)) return false;
-      existingIds.add(key);
-      return true;
+    setTeamMembers((prev) => {
+      const existingIds = new Set(prev.map((r) => String(r.id || r.email || "").toLowerCase()));
+      const imported = records.filter((r) => {
+        const key = String(r.id || r.email || "").toLowerCase();
+        if (!key || existingIds.has(key)) return false;
+        existingIds.add(key);
+        return true;
+      });
+      return [...prev, ...imported];
     });
-    const updated = [...local, ...imported];
-    saveLocalTeamMembers(updated);
-    setTeamMembers(updated);
-    return { imported: imported.length, skipped: records.length - imported.length };
+    return { imported: records.length, skipped: 0 };
   }, [refreshCrmData]);
 
   const importRewards = useCallback(async (records) => {
-    const existing = [...rewards];
-    const existingIds = new Set(existing.map((r) => String(r.id || r.recordId || "").toLowerCase()));
-    const imported = records.filter((r) => {
-      const key = String(r.id || r.recordId || "").toLowerCase();
-      if (!key || existingIds.has(key)) return false;
-      existingIds.add(key);
-      return true;
+    setRewards((prev) => {
+      const existingIds = new Set(prev.map((r) => String(r.id || r.recordId || "").toLowerCase()));
+      const imported = records.filter((r) => {
+        const key = String(r.id || r.recordId || "").toLowerCase();
+        if (!key || existingIds.has(key)) return false;
+        existingIds.add(key);
+        return true;
+      });
+      return [...prev, ...imported];
     });
-    const updated = [...existing, ...imported];
-    saveLocalRewards(updated);
-    setRewards(updated);
-    return { imported: imported.length, skipped: records.length - imported.length };
-  }, [rewards]);
+    return { imported: records.length, skipped: 0 };
+  }, []);
 
   const importFollowups = useCallback(async (records) => {
     const importId = `IMP-${Date.now()}`;
     try {
       const result = await candidatesApi.bulkCreate(records);
-      await refreshCrmData();
-      return { ...result, importId };
+      setCandidates((prev) => {
+        const existingPhones = new Set(
+          prev.map((r) => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
+        );
+        const imported = [];
+        for (const record of records) {
+          const phone = String(record.mobile || record.phone || "").replace(/\D/g, "");
+          if (phone && existingPhones.has(phone)) continue;
+          if (phone) existingPhones.add(phone);
+          imported.push({ ...normalizeLocalRecord(record, imported.length, prev.length), _importId: importId });
+        }
+        return [...prev, ...imported];
+      });
+      return { imported: records.length, skipped: 0, importId };
     } catch (err) {
       console.warn("API unavailable, importing followups locally:", err.message);
-      const local = loadLocalCandidates();
-      const existingPhones = new Set(
-        local.map((r) => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
-      );
-      const imported = [];
-      for (const record of records) {
-        const phone = String(record.mobile || record.phone || "").replace(/\D/g, "");
-        if (phone && existingPhones.has(phone)) continue;
-        if (phone) existingPhones.add(phone);
-        imported.push({ ...normalizeLocalRecord(record, imported.length, local.length), _importId: importId });
-      }
-      const updated = [...local, ...imported];
-      saveLocalCandidates(updated);
-      setCandidates(updated);
-      return { imported: imported.length, skipped: records.length - imported.length, importId };
+      setCandidates((prev) => {
+        const existingPhones = new Set(
+          prev.map((r) => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
+        );
+        const imported = [];
+        for (const record of records) {
+          const phone = String(record.mobile || record.phone || "").replace(/\D/g, "");
+          if (phone && existingPhones.has(phone)) continue;
+          if (phone) existingPhones.add(phone);
+          imported.push({ ...normalizeLocalRecord(record, imported.length, prev.length), _importId: importId });
+        }
+        return [...prev, ...imported];
+      });
+      return { imported: records.length, skipped: 0, importId };
     }
   }, [refreshCrmData]);
 
   const importServiceRequests = useCallback(async (records) => {
-    const local = loadLocalServiceRequests();
-    const existingIds = new Set(local.map((r) => String(r.id || r.requestId || "").toLowerCase()));
-    const imported = records.filter((r) => {
-      const key = String(r.id || r.requestId || r.serviceType + r.clientName || "").toLowerCase();
-      if (!key || existingIds.has(key)) return false;
-      existingIds.add(key);
-      return true;
-    }).map((r, i) => ({
-      id: r.id || `SVC-${Date.now()}-${i}`,
-      serviceType: r.serviceType || "General",
-      clientName: r.clientName || "",
-      assignedTo: r.assignedTo || "",
-      status: r.status || "Open",
-      priority: r.priority || "Medium",
-      createdDate: r.createdDate || new Date().toISOString().slice(0, 10),
-      notes: r.notes || ""
-    }));
-    const updated = [...local, ...imported];
-    saveLocalServiceRequests(updated);
-    setServiceRequests(updated);
-    return { imported: imported.length, skipped: records.length - imported.length };
+    setServiceRequests((prev) => {
+      const existingIds = new Set(prev.map((r) => String(r.id || r.requestId || "").toLowerCase()));
+      const imported = records.filter((r) => {
+        const key = String(r.id || r.requestId || r.serviceType + r.clientName || "").toLowerCase();
+        if (!key || existingIds.has(key)) return false;
+        existingIds.add(key);
+        return true;
+      }).map((r, i) => ({
+        id: r.id || `SVC-${Date.now()}-${i}`,
+        serviceType: r.serviceType || "General",
+        clientName: r.clientName || "",
+        assignedTo: r.assignedTo || "",
+        status: r.status || "Open",
+        priority: r.priority || "Medium",
+        createdDate: r.createdDate || new Date().toISOString().slice(0, 10),
+        notes: r.notes || ""
+      }));
+      return [...prev, ...imported];
+    });
+    return { imported: records.length, skipped: 0 };
   }, []);
 
   const addTeamMember = useCallback(async (member) => {
-    const local = loadLocalTeamMembers();
-    const record = { id: Date.now(), ...member, status: member.status || "Active" };
-    const updated = [...local, record];
-    saveLocalTeamMembers(updated);
-    setTeamMembers(updated);
+    setTeamMembers((prev) => [...prev, { id: Date.now(), ...member, status: member.status || "Active" }]);
   }, []);
 
   const updateTeamMember = useCallback(async (memberId, updates) => {
-    const local = loadLocalTeamMembers();
-    const updated = local.map((m) => String(m.id) === String(memberId) ? { ...m, ...updates } : m);
-    saveLocalTeamMembers(updated);
-    setTeamMembers(updated);
+    setTeamMembers((prev) => prev.map((m) => String(m.id) === String(memberId) ? { ...m, ...updates } : m));
   }, []);
 
   const deleteTeamMember = useCallback(async (memberId) => {
-    const local = loadLocalTeamMembers();
-    const updated = local.filter((m) => String(m.id) !== String(memberId));
-    saveLocalTeamMembers(updated);
-    setTeamMembers(updated);
+    setTeamMembers((prev) => prev.filter((m) => String(m.id) !== String(memberId)));
   }, []);
 
   const addRole = useCallback(async (role) => {
-    const local = loadLocalRoles();
-    const record = { id: Date.now(), ...role, status: role.status || "Active" };
-    const updated = [...local, record];
-    saveLocalRoles(updated);
-    setRoles(updated);
+    setRoles((prev) => [...prev, { id: Date.now(), ...role, status: role.status || "Active" }]);
   }, []);
 
   const updateRole = useCallback(async (roleId, updates) => {
-    const local = loadLocalRoles();
-    const updated = local.map((r) => String(r.id) === String(roleId) ? { ...r, ...updates } : r);
-    saveLocalRoles(updated);
-    setRoles(updated);
+    setRoles((prev) => prev.map((r) => String(r.id) === String(roleId) ? { ...r, ...updates } : r));
   }, []);
 
   const deleteRole = useCallback(async (roleId) => {
-    const local = loadLocalRoles();
-    const updated = local.filter((r) => String(r.id) !== String(roleId));
-    saveLocalRoles(updated);
-    setRoles(updated);
+    setRoles((prev) => prev.filter((r) => String(r.id) !== String(roleId)));
   }, []);
 
   const addPermission = useCallback(async (permission) => {
-    const local = loadLocalPermissions();
-    const record = { id: Date.now(), ...permission };
-    const updated = [...local, record];
-    saveLocalPermissions(updated);
-    setPermissions(updated);
+    setPermissions((prev) => [...prev, { id: Date.now(), ...permission }]);
   }, []);
 
   const updatePermission = useCallback(async (permId, updates) => {
-    const local = loadLocalPermissions();
-    const updated = local.map((p) => String(p.id) === String(permId) ? { ...p, ...updates } : p);
-    saveLocalPermissions(updated);
-    setPermissions(updated);
+    setPermissions((prev) => prev.map((p) => String(p.id) === String(permId) ? { ...p, ...updates } : p));
   }, []);
 
   const deletePermission = useCallback(async (permId) => {
-    const local = loadLocalPermissions();
-    const updated = local.filter((p) => String(p.id) !== String(permId));
-    saveLocalPermissions(updated);
-    setPermissions(updated);
+    setPermissions((prev) => prev.filter((p) => String(p.id) !== String(permId)));
   }, []);
 
   const addImportRecord = useCallback((record) => {
@@ -793,24 +800,17 @@ export function CrmProvider({ children }) {
       timestamp: new Date().toISOString(),
       status: "success"
     };
-    const updated = [...importHistory, entry];
-    saveLocalImportHistory(updated);
-    setImportHistory(updated);
-  }, [importHistory]);
+    setImportHistory((prev) => [...prev, entry]);
+  }, []);
 
   const removeImportRecord = useCallback((importId) => {
-    const updated = importHistory.filter((r) => r.id !== importId);
-    saveLocalImportHistory(updated);
-    setImportHistory(updated);
-  }, [importHistory]);
+    setImportHistory((prev) => prev.filter((r) => r.id !== importId));
+  }, []);
 
   const removeImportedCandidates = useCallback((importId) => {
     const entry = importHistory.find((r) => r.id === importId);
     if (!entry || entry.type !== "candidates") return;
-    const local = loadLocalCandidates();
-    const updated = local.filter((c) => !c._importId || c._importId !== importId);
-    saveLocalCandidates(updated);
-    setCandidates(updated);
+    setCandidates((prev) => prev.filter((c) => !c._importId || c._importId !== importId));
     removeImportRecord(importId);
   }, [importHistory, removeImportRecord]);
 
@@ -830,12 +830,24 @@ export function CrmProvider({ children }) {
     DATA_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
   }, []);
 
+  const clearLeadData = useCallback(() => {
+    setCandidates([]);
+    setPerformanceRecords([]);
+    setOverridePayoutRecords([]);
+    setImportHistory([]);
+    localStorage.removeItem(STORAGE_KEY_CANDIDATES);
+    localStorage.removeItem(STORAGE_KEY_PERFORMANCE);
+    localStorage.removeItem(STORAGE_KEY_OVERRIDES);
+    localStorage.removeItem(STORAGE_KEY_IMPORT_HISTORY);
+  }, []);
+
   const derivedRecruiterNames = useMemo(() => {
-    if (teamMembers.length > 0) {
-      return [...new Set(teamMembers.map((m) => m.name).filter(Boolean))];
-    }
-    return recruiterNames;
-  }, [teamMembers]);
+    const qualifiedStages = new Set(["Activated", "Activated Advisor"]);
+    return candidates
+      .filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && qualifiedStages.has(c.workflowStage) && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor") && c.name)
+      .map((c) => c.name)
+      .filter((name, i, arr) => arr.indexOf(name) === i);
+  }, [candidates]);
 
   const activeAdvisors = useMemo(
     () => getActiveAdvisorRows(candidates, performanceRecords),
@@ -902,6 +914,7 @@ export function CrmProvider({ children }) {
     leadTypes,
     leadStatuses,
     advisorWorkflowStages,
+    advisorStatuses,
     customerWorkflowStages,
     followUpRequiredStages,
     sources,
@@ -916,9 +929,10 @@ export function CrmProvider({ children }) {
     addImportRecord,
     removeImportRecord,
     removeImportedCandidates,
-    clearAllCrmData
+    clearAllCrmData,
+    clearLeadData
   }), [candidates, clients, settings, selectedConfig, selectedConfigId, performanceRecords, overridePayoutRecords, policies, claims, rewards, serviceRequests, roles, permissions, loading, teamMembers, derivedRecruiterNames, activeAdvisors, performanceSummary, overrideRecordsDerived, importHistory,
-    updateCandidateStage, updateCandidate, addCandidate, importCandidates, deleteCandidate, addClient, updateClient, markFollowUpDone, updateCandidateNote, setSettings, addPerformanceRecord, updatePerformanceRecord, saveOverridePayoutRecords, importPolicies, importClaims, importTeamMembers, importRewards, importFollowups, importServiceRequests, addTeamMember, updateTeamMember, deleteTeamMember, addRole, updateRole, deleteRole,     addPermission, updatePermission, deletePermission, addImportRecord, removeImportRecord, removeImportedCandidates, clearAllCrmData]);
+    updateCandidateStage, updateCandidate, addCandidate, importCandidates, deleteCandidate, addClient, updateClient, markFollowUpDone, updateCandidateNote, setSettings, addPerformanceRecord, updatePerformanceRecord, saveOverridePayoutRecords, importPolicies, importClaims, importTeamMembers, importRewards, importFollowups, importServiceRequests, addTeamMember, updateTeamMember, deleteTeamMember, addRole, updateRole, deleteRole,     addPermission, updatePermission, deletePermission, addImportRecord, removeImportRecord, removeImportedCandidates, clearAllCrmData, clearLeadData]);
 
   return <CrmContext.Provider value={value}>{children}</CrmContext.Provider>;
 }

@@ -89,6 +89,7 @@ export function create(req, res) {
       priority: b.priority || "Medium",
       nextFollowUp: b.nextFollowUp || b.followUpDate || "",
       createdDate: b.createdDate || new Date().toISOString().slice(0, 10),
+      qualification: b.qualification || "",
       notes: b.notes || "",
       policyNumber: b.policyNumber || "",
       advisorCode: b.advisorCode || "",

@@ -1,8 +1,9 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useCrm } from "../crmContext.jsx";
+import { useAuth } from "../authContext.jsx";
 
-const navItems = [
+const allNavItems = [
   { label: "Dashboard", to: "/adviser/dashboard" },
   { label: "Lead Management", to: "/adviser/lead-management" },
   { label: "Advisor Operations", to: "/adviser/advisor-operations" },
@@ -15,7 +16,13 @@ function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { candidates, clients } = useCrm();
+  const { currentUser, canViewModule, logout } = useAuth();
   const [search, setSearch] = useState("");
+
+  const navItems = useMemo(
+    () => allNavItems.filter((item) => canViewModule(item.to)),
+    [canViewModule]
+  );
 
   const notifications = useMemo(() => {
     const alertItems = [];
@@ -26,7 +33,7 @@ function Layout({ children }) {
         const sameDay = due.toDateString() === today.toDateString();
         if (sameDay) alertItems.push({ id: candidate.id, message: `Follow-up Due Today • ${candidate.name}` });
       }
-      if (candidate.workflowStage === "Training") alertItems.push({ id: `${candidate.id}-training`, message: `Training Pending • ${candidate.name}` });
+      if (candidate.workflowStage === "Training" || candidate.workflowStage === "25 Hrs Training") alertItems.push({ id: `${candidate.id}-training`, message: `Training Pending • ${candidate.name}` });
       if (candidate.workflowStage === "Exam") alertItems.push({ id: `${candidate.id}-exam`, message: `Exam Scheduled Today • ${candidate.name}` });
       if (candidate.documents?.length === 0) alertItems.push({ id: `${candidate.id}-docs`, message: `Documents Pending • ${candidate.name}` });
     });
@@ -90,6 +97,11 @@ function Layout({ children }) {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -115,7 +127,23 @@ function Layout({ children }) {
           <input className="topbar-search" type="text" value={search} onChange={handleSearch} placeholder="Search Lead/Advisor/Client ID, Name, Mobile, Advisor Code" />
           <div className="topbar-actions">
             <div className="notification-chip">🔔 {notifications.length}</div>
-            <div className="topbar-user">Recruiter Workspace</div>
+            <div className="topbar-user" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <span>{currentUser?.name} ({currentUser?.role})</span>
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: "none",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "6px",
+                  padding: "4px 10px",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  color: "#64748b",
+                }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
         {children}

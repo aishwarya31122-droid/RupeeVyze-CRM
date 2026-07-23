@@ -5,7 +5,7 @@ import { useCrm } from "../../crmContext.jsx";
 
 function LeadLayout({ children }) {
   const { candidates } = useCrm();
-  const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
+  const leads = useMemo(() => candidates, [candidates]);
   const location = useLocation();
   const navigate = useNavigate();
   const currentLeadId = location.pathname.match(/^\/adviser\/lead-management\/lead\/([^/]+)/)?.[1];

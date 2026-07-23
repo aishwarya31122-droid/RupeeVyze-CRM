@@ -1,12 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Box, Button, Paper, Typography } from "@mui/material";
 import { useCrm } from "../crmContext.jsx";
+import { useAuth, filterByRole } from "../authContext.jsx";
 import CandidateCard from "../components/CandidateCard.jsx";
 import CandidateModal from "../components/CandidateModal.jsx";
 import CandidateForm from "../components/CandidateForm.jsx";
 
 function Pipeline({ detailsPrefix }) {
-  const { candidates, updateCandidateStage, updateCandidate, updateCandidateNote, addCandidate, pipelineStages, sources, recruiterNames, stageBadge } = useCrm();
+  const { candidates: allCandidates, updateCandidateStage, updateCandidate, updateCandidateNote, addCandidate, pipelineStages, sources, recruiterNames, stageBadge, advisorWorkflowStages, customerWorkflowStages } = useCrm();
+  const { currentUser } = useAuth();
+  const candidates = useMemo(() => filterByRole(allCandidates, currentUser), [allCandidates, currentUser]);
   const detailsPathPrefix = detailsPrefix || "/adviser/lead-management/lead";
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("All Stages");
@@ -15,24 +18,38 @@ function Pipeline({ detailsPrefix }) {
   const [cityFilter, setCityFilter] = useState("All Cities");
   const [activeCandidate, setActiveCandidate] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [recordType, setRecordType] = useState("All");
+
+  useEffect(() => {
+    setStageFilter("All Stages");
+  }, [recordType]);
 
   const cityOptions = useMemo(() => {
-    const customerLeads = candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer");
-    return [...new Set(customerLeads.map((candidate) => candidate.city).filter(Boolean))];
+    return [...new Set(candidates.map((candidate) => candidate.city).filter(Boolean))];
   }, [candidates]);
 
+  const leadTypeFilter = recordType === "Client Leads" ? "Insurance Customer" : recordType === "Advisors" ? ["Advisor", "Recruitment"] : null;
+
+  const stageOptions = useMemo(() => {
+    if (recordType === "Client Leads") return customerWorkflowStages;
+    if (recordType === "Advisors") return advisorWorkflowStages;
+    return [...new Set([...customerWorkflowStages, ...advisorWorkflowStages])];
+  }, [recordType]);
+
   const filteredCandidates = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return candidates.filter((candidate) => {
-      const matchesType = !candidate.leadType || candidate.leadType === "Insurance Customer";
-      const searchText = [candidate.name, candidate.mobile, candidate.phone, candidate.email, candidate.city].join(" ").toLowerCase();
-      const matchesSearch = searchText.includes(search.toLowerCase());
+      const searchText = [candidate.name, candidate.mobile, candidate.phone, candidate.email, candidate.city, candidate.leadId, candidate.advisorCode].join(" ").toLowerCase();
+      const matchesSearch = q === "" || searchText.includes(q);
+      const matchesType = !leadTypeFilter || (Array.isArray(leadTypeFilter) ? leadTypeFilter.includes(candidate.leadType) : candidate.leadType === leadTypeFilter);
+      const matchesActivation = candidate.workflowStage !== "Activated Advisor" && candidate.workflowStage !== "Activated";
       const matchesStage = stageFilter === "All Stages" || candidate.workflowStage === stageFilter;
       const matchesSource = sourceFilter === "All Sources" || candidate.source === sourceFilter || candidate.leadSource === sourceFilter;
       const matchesRecruiter = recruiterFilter === "All Recruiters" || candidate.recruitedBy === recruiterFilter || candidate.assignedTo === recruiterFilter;
       const matchesCity = cityFilter === "All Cities" || candidate.city === cityFilter;
-      return matchesType && matchesSearch && matchesStage && matchesSource && matchesRecruiter && matchesCity;
+      return matchesSearch && matchesType && matchesActivation && matchesStage && matchesSource && matchesRecruiter && matchesCity;
     });
-  }, [candidates, search, stageFilter, sourceFilter, recruiterFilter, cityFilter]);
+  }, [candidates, search, leadTypeFilter, stageFilter, sourceFilter, recruiterFilter, cityFilter]);
 
   const exportCsv = () => {
     const rows = [
@@ -81,6 +98,11 @@ function Pipeline({ detailsPrefix }) {
 
       <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2, mb: 2.5 }}>
         <div className="filters-row">
+          <select className="filter" value={recordType} onChange={(e) => setRecordType(e.target.value)}>
+            <option>All</option>
+            <option>Client Leads</option>
+            <option>Advisors</option>
+          </select>
           <input
             type="text"
             placeholder="Search lead by name, phone, email or city"
@@ -90,7 +112,7 @@ function Pipeline({ detailsPrefix }) {
           />
           <select className="filter" value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}>
             <option>All Stages</option>
-            {pipelineStages.map((stage) => (
+            {stageOptions.map((stage) => (
               <option key={stage}>{stage}</option>
             ))}
           </select>
@@ -106,12 +128,14 @@ function Pipeline({ detailsPrefix }) {
               <option key={city}>{city}</option>
             ))}
           </select>
-          <select className="filter" value={recruiterFilter} onChange={(e) => setRecruiterFilter(e.target.value)}>
-            <option>All Recruiters</option>
-            {recruiterNames.map((name) => (
-              <option key={name}>{name}</option>
-            ))}
-          </select>
+          {recordType !== "Advisors" && (
+            <select className="filter" value={recruiterFilter} onChange={(e) => setRecruiterFilter(e.target.value)}>
+              <option>All Recruiters</option>
+              {recruiterNames.map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </select>
+          )}
         </div>
       </Paper>
 
@@ -149,6 +173,7 @@ function Pipeline({ detailsPrefix }) {
           }}
           onSave={(id, payload) => {
             updateCandidate(id, payload);
+            setActiveCandidate(null);
           }}
         />
       )}

@@ -23,7 +23,12 @@ const getFallbackRemarks = (advisorName, paymentStatus, index) => {
 
 export function getActiveAdvisorRows(candidates = [], performanceRecords = []) {
   return (candidates || [])
-    .filter((candidate) => candidate.leadType === "Advisor" && (candidate.leadStatus === "Converted" || candidate.workflowStage === "Activation"))
+    .filter((candidate) => {
+      const isAdvisorRecord = candidate.leadType === "Advisor" || candidate.leadType === "Recruitment";
+      const isActivated = candidate.workflowStage === "Activated" || candidate.workflowStage === "Activated Advisor";
+      const hasActiveStatus = candidate.leadStatus === "Active" || candidate.leadStatus === "Active Advisor";
+      return isAdvisorRecord && isActivated && hasActiveStatus;
+    })
     .map((candidate) => {
       const record = (performanceRecords || []).find((item) => {
         const sameAdvisorCode = Boolean(item.advisorCode) && item.advisorCode === candidate.advisorCode;

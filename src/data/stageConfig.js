@@ -1,26 +1,7 @@
-export const insuranceCustomerStages = [
-  "New Lead",
-  "Contacted",
-  "Follow-up",
-  "Need Analysis",
-  "Proposal Shared",
-  "Policy Discussion",
-  "Policy Issued",
-  "Lost"
-];
+import { customerWorkflowStages, advisorWorkflowStages, sources } from "./dropdowns.js";
 
-export const advisorRecruitmentStages = [
-  "New Recruitment Lead",
-  "Contacted",
-  "Interview",
-  "Documents",
-  "NAAF Generation",
-  "Training",
-  "Exam",
-  "Code Generation",
-  "Activated Advisor",
-  "Dropped"
-];
+export const insuranceCustomerStages = customerWorkflowStages;
+export const advisorRecruitmentStages = advisorWorkflowStages;
 
 const text = (name, label, opts) => ({ type: "text", name, label, ...opts });
 const select = (name, label, options, opts) => ({ type: "select", name, label, options, ...opts });
@@ -29,8 +10,7 @@ const textarea = (name, label, opts) => ({ type: "textarea", name, label, ...opt
 
 export const insuranceCustomerStageFields = {
   "New Lead": [
-    select("leadSource", "Lead Source", ["Referral", "LinkedIn", "Walk-in", "Facebook", "Job Portal", "Website"]),
-    text("assignedTo", "Assigned To")
+    select("leadSource", "Lead Source", sources)
   ],
   "Contacted": [
     select("contactStatus", "Contact Status", ["Connected", "Not Connected", "Wrong Number", "Switched Off", "Busy"]),
@@ -64,19 +44,10 @@ export const insuranceCustomerStageFields = {
 };
 
 export const advisorStageFields = {
-  "New Recruitment Lead": [
-    select("recruitmentSource", "Recruitment Source", ["Referral", "LinkedIn", "Walk-in", "Facebook", "Job Portal", "Website"])
+  "Sourced": [
+    select("recruitmentSource", "Recruitment Source", sources)
   ],
-  "Contacted": [
-    select("contactStatus", "Contact Status", ["Connected", "Not Connected", "Busy", "No Response"]),
-    dateField("followUpDate", "Follow-up Date")
-  ],
-  "Interview": [
-    select("interviewStatus", "Interview Status", ["Pending", "Scheduled", "Completed", "Rejected"]),
-    dateField("interviewDate", "Interview Date"),
-    dateField("followUpDate", "Follow-up Date")
-  ],
-  "Documents": [
+  "Documents Submitted": [
     select("documentStatus", "Document Status", ["Pending", "Submitted", "Verified", "Rejected"]),
     dateField("documentSubmissionDate", "Document Submission Date"),
     textarea("remarks", "Remarks"),
@@ -86,7 +57,7 @@ export const advisorStageFields = {
     select("naafStatus", "NAAF Status", ["Pending", "Generated", "Approved"]),
     dateField("naafGenerationDate", "Generation Date")
   ],
-  "Training": [
+  "25 Hrs Training": [
     select("trainingStatus", "Training Status", ["Pending", "In Progress", "Completed"]),
     dateField("trainingCompletionDate", "Training Completion Date"),
     dateField("followUpDate", "Follow-up Date", { dependsOn: { field: "trainingStatus", value: ["Pending", "In Progress"] } })
@@ -96,17 +67,13 @@ export const advisorStageFields = {
     dateField("examDate", "Exam Date"),
     dateField("followUpDate", "Follow-up Date", { dependsOn: { field: "examStatus", value: "Pending" } })
   ],
-  "Code Generation": [
+  "Advisor Code Issued": [
     select("codeStatus", "Code Status", ["Pending", "Generated"]),
     text("advisorCode", "Advisor Code"),
     dateField("codeIssueDate", "Code Issue Date")
   ],
-  "Activated Advisor": [
+  "Activated": [
     dateField("activationDate", "Activation Date"),
     select("activationStatus", "Activation Status", ["Pending", "Activated"])
-  ],
-  "Dropped": [
-    textarea("dropReason", "Drop Reason"),
-    dateField("dropDate", "Drop Date")
   ]
 };

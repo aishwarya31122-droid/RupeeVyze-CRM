@@ -42,9 +42,10 @@ const LINE_ACTIVATED = "#10b981";
 function Reports() {
   const { candidates, pipelineStages } = useCrm();
 
+  const advisorRecords = useMemo(() => candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment"), [candidates]);
   const totalCandidates = candidates.length;
-  const activatedAdvisors = candidates.filter((c) => c.leadStatus === "Converted" || c.workflowStage === "Active Client").length;
-  const conversionRate = totalCandidates > 0 ? Math.round((activatedAdvisors / totalCandidates) * 100) : 0;
+  const activatedAdvisors = advisorRecords.filter((c) => (c.workflowStage === "Activated" || c.workflowStage === "Activated Advisor") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")).length;
+  const conversionRate = advisorRecords.length > 0 ? Math.round((activatedAdvisors / advisorRecords.length) * 100) : 0;
   const documentsPending = candidates.filter((c) => (c.documents || []).length > 0).length;
 
   const sourceAnalysis = useMemo(() => {
@@ -78,7 +79,7 @@ function Reports() {
       if (!month) return acc;
       if (!acc[month]) acc[month] = { month, recruited: 0, activated: 0 };
       acc[month].recruited += 1;
-      if (candidate.leadStatus === "Converted" || candidate.workflowStage === "Active Client") {
+      if ((candidate.leadType === "Advisor" || candidate.leadType === "Recruitment") && (candidate.workflowStage === "Activated" || candidate.workflowStage === "Activated Advisor") && (candidate.leadStatus === "Active" || candidate.leadStatus === "Active Advisor")) {
         acc[month].activated += 1;
       }
       return acc;

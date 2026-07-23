@@ -18,19 +18,20 @@ export const pipelineStages = [
   "Lost"
 ];
 
-export const leadTypes = ["Insurance Customer", "Advisor"];
+export const leadTypes = ["Insurance Customer", "Advisor", "Recruitment"];
 
-export const leadStatuses = ["Open", "Assigned", "Converted", "Lost"];
+export const leadStatuses = ["Open", "Assigned", "In Progress", "Inactive Advisor", "Active Advisor", "Converted", "Lost"];
+
+export const advisorStatuses = ["Open", "In Progress", "On Hold", "Dropped", "Active"];
 
 export const advisorWorkflowStages = [
-  "Interview",
-  "Documents",
+  "Sourced",
+  "Documents Submitted",
   "NAAF Generation",
-  "Training",
+  "25 Hrs Training",
   "Exam",
-  "Code Generation",
-  "Activation",
-  "Dropped"
+  "Advisor Code Issued",
+  "Activated"
 ];
 
 export const customerWorkflowStages = [
@@ -109,5 +110,10 @@ export const stageBadge = {
   "Code Generation": "#22c55e",
   "Activation": "#16a34a",
   "Dropped": "#ef4444",
-  "Lost": "#ef4444"
+  "Lost": "#ef4444",
+  "Sourced": "#6366f1",
+  "25 Hrs Training": "#0284c7",
+  "Advisor Code Issued": "#22c55e",
+  "Activated": "#16a34a",
+  "On Hold": "#f59e0b"
 };

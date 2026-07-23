@@ -17,10 +17,12 @@ import {
   Typography
 } from "@mui/material";
 import { useCrm } from "../crmContext.jsx";
+import { useAuth } from "../authContext.jsx";
 import StageSelect from "../components/StageSelect.jsx";
+import CandidateModal from "../components/CandidateModal.jsx";
 import { formatDate, getFollowUpDate } from "../utils.js";
 
-const tabs = [
+const customerTabs = [
   "Overview",
   "Timeline",
   "Activities",
@@ -32,10 +34,23 @@ const tabs = [
   "Conversion"
 ];
 
+const advisorTabs = [
+  "Overview",
+  "Recruitment Journey",
+  "Recruitment Activities",
+  "Onboarding Documents",
+  "Recruitment Communication",
+  "Training & Exam",
+  "Recruitment Notes",
+  "Recruitment History",
+  "Activation"
+];
+
 function CandidateDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { candidates, updateCandidateStage, updateCandidateNote, updateCandidate } = useCrm();
+  const { candidates, updateCandidateStage, updateCandidateNote, updateCandidate, deleteCandidate, advisorWorkflowStages } = useCrm();
+  const { currentUser, canEditClient, canDeleteClient, canAssignClient } = useAuth();
   const [activeTab, setActiveTab] = useState("Overview");
   const [note, setNote] = useState("");
   const [tasks, setTasks] = useState([]);
@@ -48,6 +63,15 @@ function CandidateDetails() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedDocument, setUploadedDocument] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [onboardingDocs, setOnboardingDocs] = useState({});
+  const [viewingDoc, setViewingDoc] = useState(null);
+  const [deletingDoc, setDeletingDoc] = useState(null);
+  const [onboardUploadTarget, setOnboardUploadTarget] = useState(null);
+  const [onboardFile, setOnboardFile] = useState(null);
+  const [onboardUploading, setOnboardUploading] = useState(false);
+  const [onboardFileError, setOnboardFileError] = useState("");
 
   const candidate = useMemo(
     () => candidates.find((item) => String(item.id) === id),
@@ -58,8 +82,12 @@ function CandidateDetails() {
   const previousLead = currentIndex > 0 ? candidates[currentIndex - 1] : null;
   const nextLead = currentIndex >= 0 && currentIndex < candidates.length - 1 ? candidates[currentIndex + 1] : null;
 
+  const isAdvisorLead = candidate?.leadType === "Advisor" || candidate?.leadType === "Recruitment";
+
+  const tabs = useMemo(() => (isAdvisorLead ? advisorTabs : customerTabs), [isAdvisorLead]);
+
   const availableDocumentTypes = useMemo(() => {
-    if (candidate?.leadType === "Advisor") {
+    if (isAdvisorLead) {
       return [
         "Aadhaar Card",
         "PAN Card",
@@ -84,7 +112,7 @@ function CandidateDetails() {
       "Nominee Proof",
       "Other"
     ];
-  }, [candidate?.leadType]);
+  }, [isAdvisorLead]);
 
   useEffect(() => {
     if (candidate) {
@@ -92,6 +120,8 @@ function CandidateDetails() {
       setTasks(candidate.tasks ? [...candidate.tasks] : []);
       setCommunications(candidate.communication ? [...candidate.communication] : []);
       setDocuments(candidate.documents ? [...candidate.documents] : []);
+      setOnboardingDocs(candidate.onboardingDocuments || {});
+      setActiveTab("Overview");
     }
   }, [candidate]);
 
@@ -182,6 +212,80 @@ function CandidateDetails() {
     setUploading(false);
   };
 
+  const ALLOWED_DOC_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+  const handleOnboardFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_DOC_TYPES.includes(file.type)) {
+      setOnboardFileError("Only PDF, JPG, JPEG, and PNG files are allowed.");
+      setOnboardFile(null);
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setOnboardFileError("File size must be under 5 MB.");
+      setOnboardFile(null);
+      return;
+    }
+    setOnboardFileError("");
+    setOnboardFile(file);
+  };
+
+  const handleOnboardUpload = () => {
+    if (!onboardUploadTarget || !onboardFile) return;
+    setOnboardUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const now = new Date().toLocaleString();
+      const updated = {
+        ...onboardingDocs,
+        [onboardUploadTarget]: {
+          status: "Submitted",
+          fileName: onboardFile.name,
+          fileURL: reader.result,
+          uploadDate: now,
+          uploadedBy: "Current User"
+        }
+      };
+      setOnboardingDocs(updated);
+      setOnboardUploading(false);
+      setOnboardUploadTarget(null);
+      setOnboardFile(null);
+      setOnboardFileError("");
+      updateCandidate(candidate.id, { onboardingDocuments: updated });
+    };
+    reader.readAsDataURL(onboardFile);
+  };
+
+  const handleOnboardConfirmDelete = () => {
+    if (!deletingDoc) return;
+    const updated = { ...onboardingDocs };
+    delete updated[deletingDoc];
+    setOnboardingDocs(updated);
+    setDeletingDoc(null);
+    updateCandidate(candidate.id, { onboardingDocuments: updated });
+  };
+
+  if (!candidate) {
+    return (
+      <div className="detail-card" style={{ padding: "3rem", textAlign: "center" }}>
+        <Typography variant="h5" sx={{ color: "#64748b", mb: 2 }}>Lead not found</Typography>
+        <Button variant="contained" onClick={() => navigate(-1)}>Go Back</Button>
+      </div>
+    );
+  }
+
+  if (!canEditClient(candidate)) {
+    return (
+      <div className="detail-card" style={{ padding: "3rem", textAlign: "center" }}>
+        <Typography variant="h5" sx={{ color: "#dc2626", mb: 1 }}>Access Denied</Typography>
+        <Typography variant="body1" sx={{ color: "#64748b", mb: 2 }}>You do not have permission to view this client.</Typography>
+        <Button variant="contained" onClick={() => navigate(-1)}>Go Back</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="detail-card">
       <div className="page-header">
@@ -190,6 +294,14 @@ function CandidateDetails() {
           <p>360° Lead Profile • {candidate.leadId || candidate.advisorCode || candidate.email} • {candidate.city || candidate.phone}</p>
         </div>
         <div className="page-actions">
+          <button type="button" className="button secondary" onClick={() => setEditOpen(true)}>
+            Edit
+          </button>
+          {canDeleteClient() && (
+            <button type="button" className="button secondary" style={{ color: "#dc2626", borderColor: "#dc2626" }} onClick={() => setDeleteConfirmOpen(true)}>
+              Delete
+            </button>
+          )}
           <button type="button" className="button secondary" onClick={() => previousLead && navigate(`/adviser/lead-management/lead/${previousLead.id}`)} disabled={!previousLead}>
             ← Previous Lead
           </button>
@@ -529,6 +641,362 @@ function CandidateDetails() {
           ) : (
             <p>No conversion history found.</p>
           )}
+        </div>
+      )}
+
+      {activeTab === "Recruitment Journey" && (
+        <div className="card">
+          <h3>Recruitment Journey</h3>
+          <div className="timeline">
+            {[...advisorWorkflowStages, "Dropped"].map((stage) => {
+              const stageTimeline = (candidate.timeline || []).find((t) => t.stage === stage);
+              const isCurrentStage = candidate.workflowStage === stage;
+              const isPastStage = (() => {
+                const currentIdx = advisorWorkflowStages.indexOf(candidate.workflowStage);
+                const stageIdx = advisorWorkflowStages.indexOf(stage);
+                return currentIdx > stageIdx;
+              })();
+              return (
+                <div key={stage} className="timeline-step" style={{ opacity: isPastStage || isCurrentStage ? 1 : 0.45 }}>
+                  <span style={{ fontWeight: isCurrentStage ? 700 : 400 }}>{stage}</span>
+                  {stageTimeline && <p>{stageTimeline.date}</p>}
+                  {isCurrentStage && <p style={{ color: "#2563eb", fontWeight: 600 }}>Current</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {activeTab === "Recruitment Activities" && (
+        <div className="card">
+          <h3>Recruitment Activities</h3>
+          {(candidate.activities || []).length > 0 ? (
+            <div className="activity-list">
+              {candidate.activities.map((activity, index) => (
+                <div key={`${activity.type}-${index}`} className="activity-item">
+                  <div className="activity-dot" style={{ background: "#2563eb" }} />
+                  <div>
+                    <strong>{activity.type}</strong>
+                    <p>{activity.text}</p>
+                  </div>
+                  <span>{activity.date}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No recruitment activities recorded.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === "Onboarding Documents" && (
+        <div className="card">
+          <h3>Onboarding Documents</h3>
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            {["Aadhaar", "PAN", "Bank Details", "Educational Certificates", "Passport Photo", "Address Proof", "Cancelled Cheque", "NAAF Form"].map((doc) => {
+              const docData = onboardingDocs[doc] || { status: "Pending" };
+              const isUploaded = docData.status === "Submitted" || docData.status === "Verified";
+              const statusColor = docData.status === "Verified" ? "#16a34a" : docData.status === "Submitted" ? "#2563eb" : docData.status === "Rejected" ? "#dc2626" : "#64748b";
+              return (
+                <div key={doc} className="activity-item" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
+                  <div className="activity-dot" style={{ background: statusColor }} />
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <strong>{doc}</strong>
+                    {isUploaded && docData.uploadDate && (
+                      <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
+                        Uploaded: {docData.uploadDate} by {docData.uploadedBy}
+                      </p>
+                    )}
+                  </div>
+                  <span style={{ color: statusColor, fontWeight: 600, marginRight: 8 }}>{docData.status}</span>
+                  <Stack direction="row" spacing={1} useFlexGap>
+                    {!isUploaded ? (
+                      <>
+                        <Button size="small" variant="contained" onClick={() => { setOnboardUploadTarget(doc); setOnboardFile(null); setOnboardFileError(""); }}>
+                          Upload
+                        </Button>
+                        <Button size="small" variant="outlined" disabled>
+                          View
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button size="small" variant="contained" onClick={() => { setOnboardUploadTarget(doc); setOnboardFile(null); setOnboardFileError(""); }}>
+                          Replace
+                        </Button>
+                        <Button size="small" variant="outlined" onClick={() => setViewingDoc(doc)}>
+                          View
+                        </Button>
+                        <Button size="small" variant="outlined" color="error" onClick={() => setDeletingDoc(doc)}>
+                          Remove
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
+                </div>
+              );
+            })}
+          </div>
+
+          {onboardUploadTarget && (
+            <div className="modal-backdrop" onClick={() => { setOnboardUploadTarget(null); setOnboardFile(null); setOnboardFileError(""); }}>
+              <div className="modal-content" style={{ maxWidth: "480px", padding: "1.5rem" }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ margin: "0 0 0.5rem" }}>
+                  {onboardingDocs[onboardUploadTarget] ? "Replace" : "Upload"} {onboardUploadTarget}
+                </h3>
+                <Button component="label" variant="outlined" fullWidth sx={{ mb: 1 }}>
+                  Choose File
+                  <input hidden type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleOnboardFileChange} />
+                </Button>
+                {onboardFileError && <Alert severity="error" sx={{ mb: 1 }}>{onboardFileError}</Alert>}
+                {onboardFile && <Alert severity="info" sx={{ mb: 1 }}>{onboardFile.name}</Alert>}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1rem" }}>
+                  <button className="button secondary" onClick={() => { setOnboardUploadTarget(null); setOnboardFile(null); setOnboardFileError(""); }}>Cancel</button>
+                  <button className="button primary" disabled={!onboardFile || onboardUploading} onClick={handleOnboardUpload}>
+                    {onboardUploading ? "Uploading..." : "Upload"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {viewingDoc && onboardingDocs[viewingDoc] && (
+            <div className="modal-backdrop" onClick={() => setViewingDoc(null)}>
+              <div className="modal-content" style={{ maxWidth: "700px", padding: "1.5rem" }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ margin: "0 0 0.5rem" }}>{viewingDoc}</h3>
+                <p style={{ margin: "0 0 1rem", color: "#475569" }}>{onboardingDocs[viewingDoc].fileName}</p>
+                {onboardingDocs[viewingDoc].fileURL?.startsWith("data:image") ? (
+                  <img src={onboardingDocs[viewingDoc].fileURL} alt={viewingDoc} style={{ maxWidth: "100%", maxHeight: "500px", display: "block", margin: "0 auto" }} />
+                ) : onboardingDocs[viewingDoc].fileURL?.startsWith("data:application/pdf") ? (
+                  <iframe src={onboardingDocs[viewingDoc].fileURL} style={{ width: "100%", height: "500px", border: "1px solid #e2e8f0" }} title={viewingDoc} />
+                ) : (
+                  <p>No preview available.</p>
+                )}
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
+                  <button className="button secondary" onClick={() => setViewingDoc(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {deletingDoc && (
+            <div className="modal-backdrop" onClick={() => setDeletingDoc(null)}>
+              <div className="modal-content" style={{ maxWidth: "420px", padding: "1.5rem" }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ margin: "0 0 0.5rem" }}>Remove Document</h3>
+                <p style={{ margin: "0 0 1.5rem", color: "#475569" }}>
+                  Are you sure you want to remove <strong>{deletingDoc}</strong>? The status will reset to Pending.
+                </p>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                  <button className="button secondary" onClick={() => setDeletingDoc(null)}>Cancel</button>
+                  <button className="button secondary" style={{ color: "#dc2626", borderColor: "#dc2626" }} onClick={handleOnboardConfirmDelete}>Remove</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "Recruitment Communication" && (
+        <div className="card">
+          <h3>Recruitment Communication</h3>
+          {(communications || []).length > 0 ? (
+            <div className="activity-list">
+              {communications.map((comm, index) => (
+                <div key={`${comm.type}-${index}`} className="activity-item">
+                  <div className="activity-dot" style={{ background: "#10b981" }} />
+                  <div>
+                    <strong>{comm.type}</strong>
+                    <p>{comm.remarks}</p>
+                  </div>
+                  <span>{comm.date || "\u2014"}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No recruitment communication entries.</p>
+          )}
+          <div style={{ marginTop: 16, display: "grid", gap: 8 }}>
+            <label>
+              <span>Type</span>
+              <select value={newComm.type} onChange={(e) => setNewComm((prev) => ({ ...prev, type: e.target.value }))}>
+                <option>Call</option>
+                <option>Email</option>
+                <option>SMS</option>
+                <option>WhatsApp</option>
+                <option>Interview Notification</option>
+                <option>Training Notification</option>
+                <option>Exam Notification</option>
+              </select>
+            </label>
+            <label>
+              <span>Date</span>
+              <input type="date" value={newComm.date} onChange={(e) => setNewComm((prev) => ({ ...prev, date: e.target.value }))} />
+            </label>
+            <label>
+              <span>Remarks</span>
+              <textarea value={newComm.remarks} onChange={(e) => setNewComm((prev) => ({ ...prev, remarks: e.target.value }))} />
+            </label>
+            <button className="button primary" onClick={handleAddCommunication}>Save Communication</button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "Training & Exam" && (
+        <div className="card">
+          <h3>Training &amp; Exam</h3>
+          <div className="detail-grid">
+            <div>
+              <h3>Training</h3>
+              <div className="detail-item">
+                <span>Status</span>
+                <strong>{candidate.trainingStatus || "Pending"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Training Date</span>
+                <strong>{formatDate(candidate.trainingDate) || "Not scheduled"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Completion Date</span>
+                <strong>{formatDate(candidate.trainingCompletionDate) || "Not completed"}</strong>
+              </div>
+            </div>
+            <div>
+              <h3>Exam</h3>
+              <div className="detail-item">
+                <span>Status</span>
+                <strong>{candidate.examStatus || "Pending"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Exam Date</span>
+                <strong>{formatDate(candidate.examDate) || "Not scheduled"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Exam Score</span>
+                <strong>{candidate.examResult || "Not available"}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "Recruitment Notes" && (
+        <div className="card">
+          <h3>Recruitment Notes</h3>
+          <textarea
+            className="details-notes"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add or update recruitment notes"
+          />
+          <button className="primary" onClick={handleSaveNote}>Save Notes</button>
+        </div>
+      )}
+
+      {activeTab === "Recruitment History" && (
+        <div className="card">
+          <h3>Recruitment History</h3>
+          {(candidate.timeline || []).length > 0 ? (
+            <div className="activity-list">
+              {candidate.timeline.map((item, index) => (
+                <div key={`${item.stage}-recruit-hist-${index}`} className="activity-item">
+                  <div className="activity-dot" style={{ background: "#64748b" }} />
+                  <div>
+                    <strong>{item.stage}</strong>
+                    <p>{item.date}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No recruitment history available.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === "Activation" && (
+        <div className="card">
+          <h3>Activation</h3>
+          <div className="detail-grid">
+            <div>
+              <h3>Activation Details</h3>
+              <div className="detail-item">
+                <span>Advisor Code</span>
+                <strong>{candidate.advisorCode || "Not generated"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Code Generation Date</span>
+                <strong>{formatDate(candidate.codeGenerationDate) || "Not generated"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Activation Date</span>
+                <strong>{formatDate(candidate.activationDate) || "Not activated"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Reporting Manager</span>
+                <strong>{candidate.reportingManager || "Not assigned"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Branch</span>
+                <strong>{candidate.branch || "Not specified"}</strong>
+              </div>
+              <div className="detail-item">
+                <span>Current Status</span>
+                <strong>{candidate.leadStatus || "Open"}</strong>
+              </div>
+            </div>
+            {candidate.leadStatus === "Lost" && (
+              <div>
+                <h3>Dropped</h3>
+                <div className="detail-item">
+                  <span>Drop Reason</span>
+                  <strong>{candidate.dropReason || "Not specified"}</strong>
+                </div>
+                <div className="detail-item">
+                  <span>Drop Date</span>
+                  <strong>{formatDate(candidate.dropDate) || "Not specified"}</strong>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {editOpen && (
+        <CandidateModal
+          candidate={candidate}
+          stageOptions={isAdvisorLead ? [] : undefined}
+          stageColors={{}}
+          onClose={() => setEditOpen(false)}
+          onSave={(id, payload) => {
+            updateCandidate(id, payload);
+            setEditOpen(false);
+          }}
+        />
+      )}
+
+      {deleteConfirmOpen && (
+        <div className="modal-backdrop" onClick={() => setDeleteConfirmOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: "420px", padding: "1.5rem" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 0.5rem" }}>Delete Record</h3>
+            <p style={{ margin: "0 0 1.5rem", color: "#475569" }}>
+              Are you sure you want to delete <strong>{candidate.name}</strong>? This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+              <button className="button secondary" onClick={() => setDeleteConfirmOpen(false)}>Cancel</button>
+              <button
+                className="button secondary"
+                style={{ color: "#dc2626", borderColor: "#dc2626" }}
+                onClick={async () => {
+                  await deleteCandidate(candidate.id);
+                  setDeleteConfirmOpen(false);
+                  navigate(-1);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

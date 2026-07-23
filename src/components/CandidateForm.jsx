@@ -8,8 +8,26 @@ import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Alert from "@mui/material/Alert";
 import { useCrm } from "../crmContext.jsx";
+import { useAuth } from "../authContext.jsx";
 import StageForm, { getStageDefaultValues, clearHiddenStageFields } from "./StageForm.jsx";
-import { insuranceCustomerStageFields, advisorStageFields, insuranceCustomerStages, advisorRecruitmentStages } from "../data/stageConfig.js";
+import {
+  insuranceCustomerStages,
+  advisorRecruitmentStages,
+  insuranceCustomerStageFields,
+  advisorStageFields,
+} from "../data/stageConfig.js";
+
+const stageConfigByLeadType = {
+  "Insurance Customer": insuranceCustomerStageFields,
+  Advisor: advisorStageFields,
+  Recruitment: advisorStageFields,
+};
+
+const firstStageByLeadType = {
+  "Insurance Customer": insuranceCustomerStages[0],
+  Advisor: advisorRecruitmentStages[0],
+  Recruitment: advisorRecruitmentStages[0],
+};
 
 const baseFields = {
   name: "",
@@ -18,24 +36,34 @@ const baseFields = {
   city: "",
   qualification: "",
   leadType: "Insurance Customer",
-  workflowStage: "New Lead",
-  notes: ""
+  workflowStage: insuranceCustomerStages[0],
+  notes: "",
 };
 
-const createEmptyForm = () => {
-  const customerDefaults = getStageDefaultValues(insuranceCustomerStageFields, "New Lead");
-  const advisorDefaults = getStageDefaultValues(advisorStageFields, "New Recruitment Lead");
+const createEmptyForm = (leadType) => {
+  const lt = leadType || "Insurance Customer";
+  const config = stageConfigByLeadType[lt];
+  const firstStage = firstStageByLeadType[lt];
+  const stageDefaults = getStageDefaultValues(config, firstStage);
   return {
     ...baseFields,
-    ...customerDefaults,
-    ...advisorDefaults,
-    leadType: "Insurance Customer",
-    workflowStage: "New Lead"
+    ...stageDefaults,
+    leadType: lt,
+    workflowStage: firstStage,
   };
 };
 
+const STAGE_FIELDS_BASE = new Set([
+  "name", "mobile", "email", "city", "qualification",
+  "source", "leadType", "workflowStage", "notes", "assignedTo",
+  "nextFollowUp",
+]);
+
 export default function CandidateForm({ open, onClose, onAdd, pipelineStages: propPipelineStages, sources: propSources }) {
-  const [form, setForm] = useState(createEmptyForm);
+  const { recruiterNames, candidates } = useCrm();
+  const { currentUser, isAdvisor } = useAuth();
+  const advisorOptions = recruiterNames;
+  const [form, setForm] = useState(() => createEmptyForm());
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -56,27 +84,48 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
   };
 
   const handleLeadTypeChange = (e) => {
-    const value = e.target.value;
-    const base = { ...baseFields, leadType: value, notes: form.notes };
-    if (value === "Insurance Customer") {
-      setForm({ ...base, workflowStage: "New Lead", ...getStageDefaultValues(insuranceCustomerStageFields, "New Lead") });
-    } else {
-      setForm({ ...base, workflowStage: "New Recruitment Lead", ...getStageDefaultValues(advisorStageFields, "New Recruitment Lead") });
-    }
+    const newLeadType = e.target.value;
+    const newConfig = stageConfigByLeadType[newLeadType];
+    const newFirstStage = firstStageByLeadType[newLeadType];
+    setForm((prev) => {
+      const cleaned = { ...prev };
+      const oldConfig = stageConfigByLeadType[prev.leadType] || insuranceCustomerStageFields;
+      const oldFields = Object.keys(oldConfig).reduce((acc, stage) => {
+        (oldConfig[stage] || []).forEach((f) => acc.add(f.name));
+        return acc;
+      }, new Set());
+      for (const key of Object.keys(cleaned)) {
+        if (oldFields.has(key) && !STAGE_FIELDS_BASE.has(key)) {
+          cleaned[key] = "";
+        }
+      }
+      const stageDefaults = getStageDefaultValues(newConfig, newFirstStage);
+      return {
+        ...cleaned,
+        leadType: newLeadType,
+        workflowStage: newFirstStage,
+        ...stageDefaults,
+      };
+    });
+    setErrors({});
   };
 
   const handleStageChange = (e) => {
     const value = e.target.value;
-    const stageConfig = form.leadType === "Insurance Customer" ? insuranceCustomerStageFields : advisorStageFields;
+    const config = stageConfigByLeadType[form.leadType] || insuranceCustomerStageFields;
     setForm((prev) => {
-      const withDefaults = { ...prev, workflowStage: value, ...getStageDefaultValues(stageConfig, value) };
-      return clearHiddenStageFields(withDefaults, stageConfig, value);
+      const withDefaults = {
+        ...prev,
+        workflowStage: value,
+        ...getStageDefaultValues(config, value),
+      };
+      return clearHiddenStageFields(withDefaults, config, value);
     });
   };
 
+  const stageConfig = stageConfigByLeadType[form.leadType] || insuranceCustomerStageFields;
   const isInsuranceCustomer = form.leadType === "Insurance Customer";
-  const stageConfig = isInsuranceCustomer ? insuranceCustomerStageFields : advisorStageFields;
-  const currentStages = isInsuranceCustomer ? insuranceCustomerStages : advisorRecruitmentStages;
+  const visibleStages = isInsuranceCustomer ? insuranceCustomerStages : advisorRecruitmentStages;
 
   const validate = () => {
     const newErrors = {};
@@ -96,11 +145,20 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
   const submit = async () => {
     if (!validate()) return;
 
+    const selectedAdvisorName = isAdvisor ? currentUser.name : form.assignedTo || "";
+    const matchedAdvisor = selectedAdvisorName
+      ? candidates.find((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.name === selectedAdvisorName)
+      : null;
+
     const record = {
       ...form,
-      workflowStage: form.workflowStage || "New Lead",
+      leadType: form.leadType,
+      workflowStage: form.workflowStage || firstStageByLeadType[form.leadType],
       source: form.source || "Referral",
-      nextFollowUp: form.followUpDate || form.nextFollowUpDate || ""
+      nextFollowUp: isInsuranceCustomer ? (form.followUpDate || form.nextFollowUpDate || "") : "",
+      assignedAdvisorId: isInsuranceCustomer ? (isAdvisor ? currentUser.id : matchedAdvisor?.id || "") : "",
+      assignedAdvisorName: isInsuranceCustomer ? (isAdvisor ? currentUser.name : selectedAdvisorName) : "",
+      assignedTo: isInsuranceCustomer ? selectedAdvisorName : "",
     };
 
     try {
@@ -198,14 +256,14 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           select
           fullWidth
           margin="dense"
-          label={isInsuranceCustomer ? "Insurance Stage" : "Recruitment Stage"}
+          label="Workflow Stage"
           name="workflowStage"
           value={form.workflowStage}
           onChange={handleStageChange}
           error={!!errors.workflowStage}
           helperText={errors.workflowStage}
         >
-          {currentStages.map((option) => (
+          {visibleStages.map((option) => (
             <MenuItem key={option} value={option}>
               {option}
             </MenuItem>
@@ -219,6 +277,31 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
           errors={errors}
           onChange={handle}
         />
+
+        {isInsuranceCustomer && (
+          <TextField
+            select
+            fullWidth
+            margin="dense"
+            label="Assigned To"
+            name="assignedTo"
+            value={form.assignedTo || ""}
+            onChange={handle}
+          >
+            {advisorOptions.length === 0 ? (
+              <MenuItem value="" disabled>No advisors available</MenuItem>
+            ) : (
+              <>
+                <MenuItem value="">None</MenuItem>
+                {advisorOptions.map((name) => (
+                  <MenuItem key={name} value={name}>
+                    {name}
+                  </MenuItem>
+                ))}
+              </>
+            )}
+          </TextField>
+        )}
 
         <TextField
           fullWidth

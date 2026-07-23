@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import FunnelChart from "../../components/FunnelChart.jsx";
 import CandidateForm from "../../components/CandidateForm.jsx";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth, filterByRole } from "../../authContext.jsx";
 import { formatDate, getTodayFollowUps, getOverdueFollowUps } from "../../utils.js";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
@@ -17,9 +18,6 @@ import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
 import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
 import PriorityHighOutlinedIcon from "@mui/icons-material/PriorityHighOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
-
-const insuranceFunnelStages = ["New Lead", "Contacted", "Follow-up", "Need Analysis", "Proposal Shared", "Policy Discussion", "Policy Issued", "Lost"];
-const advisorFunnelStages = ["Interview", "Documents", "NAAF Generation", "Training", "Exam", "Code Generation", "Activation", "Dropped"];
 
 function KPI({ label, value, icon: Icon, color }) {
   return (
@@ -52,13 +50,19 @@ function KPI({ label, value, icon: Icon, color }) {
 
 function LeadDashboard() {
   const navigate = useNavigate();
-  const { candidates, addCandidate } = useCrm();
+  const { candidates: allCandidates, addCandidate, customerWorkflowStages, advisorWorkflowStages } = useCrm();
+  const { currentUser } = useAuth();
+  const candidates = useMemo(() => filterByRole(allCandidates, currentUser), [allCandidates, currentUser]);
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
   const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
-  const advisorCandidates = useMemo(() => candidates.filter((c) => c.leadType === "Advisor"), [candidates]);
+  const advisorCandidates = useMemo(() => candidates.filter((c) => {
+    const isAdvisorLead = c.leadType === "Advisor" || c.leadType === "Recruitment";
+    const isActivated = c.workflowStage === "Activated" || c.workflowStage === "Activated Advisor";
+    return isAdvisorLead && !isActivated;
+  }), [candidates]);
 
-  const totalLeads = leads.length;
+  const totalLeads = candidates.length;
   const advisorLeads = advisorCandidates.length;
   const customerLeads = leads.length;
   const openLeads = leads.filter((l) => l.leadStatus === "Open").length;
@@ -79,13 +83,21 @@ function LeadDashboard() {
 
   const priorityLeads = leads.filter((lead) => lead.priority === "High" || lead.followUp?.priority === "High").length;
 
+  const insuranceFunnelStages = useMemo(() => {
+    return customerWorkflowStages.filter((s) => !["Qualified", "Financial Need Analysis", "Product Recommendation", "Illustration Shared", "Proposal Submitted", "Medical", "Underwriting", "Premium Collected", "Active Client"].includes(s));
+  }, [customerWorkflowStages]);
+
+  const advisorFunnelStages = useMemo(() => {
+    return [...advisorWorkflowStages, "Dropped"];
+  }, [advisorWorkflowStages]);
+
   const advisorFunnelData = useMemo(() => {
     return advisorFunnelStages.map((stage) => ({ stage, count: advisorCandidates.filter((lead) => lead.workflowStage === stage).length }));
-  }, [advisorCandidates]);
+  }, [advisorCandidates, advisorFunnelStages]);
 
   const insuranceFunnelData = useMemo(() => {
     return insuranceFunnelStages.map((stage) => ({ stage, count: leads.filter((lead) => lead.workflowStage === stage).length }));
-  }, [leads]);
+  }, [leads, insuranceFunnelStages]);
 
   const conversionRate = totalLeads ? Math.round((convertedLeads / totalLeads) * 100) : 0;
 
@@ -141,15 +153,16 @@ function LeadDashboard() {
 
   const handleAddLead = async (lead) => {
     try {
+      const isAdvisorLead = lead.leadType === "Advisor" || lead.leadType === "Recruitment";
       await addCandidate({
         ...lead,
-        leadId: lead.leadId || `LD-${1000 + leads.length + 1}`,
-        leadType: "Insurance Customer",
-        workflowStage: lead.workflowStage || "New Lead",
+        leadId: lead.leadId || `LD-${1000 + candidates.length + 1}`,
+        leadType: lead.leadType || "Insurance Customer",
+        workflowStage: lead.workflowStage || (isAdvisorLead ? "Sourced" : "New Lead"),
         leadStatus: lead.leadStatus || "Open",
         leadSource: lead.leadSource || lead.source || "Referral",
         source: lead.source || lead.leadSource || "Referral",
-        nextFollowUp: lead.nextFollowUp || ""
+        nextFollowUp: isAdvisorLead ? "" : (lead.nextFollowUp || "")
       });
       setAddLeadOpen(false);
     } catch {
