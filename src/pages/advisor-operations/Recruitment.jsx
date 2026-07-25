@@ -88,7 +88,7 @@ function Recruitment() {
   }, [addLeadOpen, advisorFormBase]);
 
   const handleRemoveDuplicates = useCallback(() => {
-    if (candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment").length === 0) return;
+    if (candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer").length === 0) return;
     const result = window.confirm("Remove duplicate recruitment records? This cannot be undone.");
     if (!result) return;
     const removed = removeDuplicates();
@@ -137,7 +137,7 @@ function Recruitment() {
   };
 
   const advisorLeads = useMemo(
-    () => candidates.filter((candidate) => (candidate.leadType === "Advisor" || candidate.leadType === "Recruitment") && candidate.workflowStage !== "Dropped"),
+    () => candidates.filter((candidate) => (candidate.leadType === "Advisor" || candidate.leadType === "Recruitment") && candidate.leadType !== "Insurance Customer" && candidate.workflowStage !== "Dropped" && candidate.workflowStage !== "Active Client"),
     [candidates]
   );
 
@@ -151,7 +151,7 @@ function Recruitment() {
 
   const metrics = useMemo(() => {
     const activationPending = advisorLeads.filter((lead) => lead.workflowStage === "Activation" || lead.workflowStage === "Business Started").length;
-    const kycPending = advisorLeads.filter((lead) => lead.workflowStage === "KYC").length;
+    const kycPending = advisorLeads.filter((lead) => lead.workflowStage === "KYC Pending" || lead.workflowStage === "KYC Complete").length;
     const trainingInProgress = advisorLeads.filter((lead) => lead.workflowStage === "Training").length;
     const examPending = advisorLeads.filter((lead) => lead.workflowStage === "Exam").length;
     const codeGenPending = advisorLeads.filter((lead) => lead.workflowStage === "Code Generation").length;

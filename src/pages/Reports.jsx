@@ -40,52 +40,52 @@ const LINE_RECRUITED = "#2563eb";
 const LINE_ACTIVATED = "#10b981";
 
 function Reports() {
-  const { candidates, pipelineStages } = useCrm();
+  const { candidates, pipelineStages, advisorWorkflowStages } = useCrm();
 
-  const advisorRecords = useMemo(() => candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment"), [candidates]);
-  const totalCandidates = candidates.length;
+  const advisorRecords = useMemo(() => candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer"), [candidates]);
+  const totalCandidates = advisorRecords.length;
   const activatedAdvisors = advisorRecords.filter((c) => (c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")).length;
   const conversionRate = advisorRecords.length > 0 ? Math.round((activatedAdvisors / advisorRecords.length) * 100) : 0;
-  const documentsPending = candidates.filter((c) => (c.documents || []).length > 0).length;
+  const documentsPending = advisorRecords.filter((c) => (c.documents || []).length > 0).length;
 
   const sourceAnalysis = useMemo(() => {
-    const counts = candidates.reduce((acc, candidate) => {
+    const counts = advisorRecords.reduce((acc, candidate) => {
       const source = candidate.leadSource || candidate.source || "Unknown";
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {});
     return Object.entries(counts).map(([source, count]) => ({ name: source, value: count }));
-  }, [candidates]);
+  }, [advisorRecords]);
 
   const stageDistribution = useMemo(
-    () => pipelineStages.map((stage) => ({
+    () => advisorWorkflowStages.map((stage) => ({
       stage,
-      count: candidates.filter((candidate) => candidate.workflowStage === stage).length
+      count: advisorRecords.filter((candidate) => candidate.workflowStage === stage).length
     })).filter((item) => item.count > 0),
-    [candidates, pipelineStages]
+    [advisorRecords, advisorWorkflowStages]
   );
 
   const funnelData = useMemo(
-    () => pipelineStages.map((stage) => ({
+    () => advisorWorkflowStages.map((stage) => ({
       name: stage,
-      value: candidates.filter((candidate) => candidate.workflowStage === stage).length
+      value: advisorRecords.filter((candidate) => candidate.workflowStage === stage).length
     })).filter((item) => item.value > 0),
-    [candidates, pipelineStages]
+    [advisorRecords, advisorWorkflowStages]
   );
 
   const monthlyTrend = useMemo(() => {
-    const grouped = candidates.reduce((acc, candidate) => {
+    const grouped = advisorRecords.reduce((acc, candidate) => {
       const month = (candidate.createdDate || "").slice(0, 7);
       if (!month) return acc;
       if (!acc[month]) acc[month] = { month, recruited: 0, activated: 0 };
       acc[month].recruited += 1;
-      if ((candidate.leadType === "Advisor" || candidate.leadType === "Recruitment") && (candidate.workflowStage === "Activation" || candidate.workflowStage === "Business Started") && (candidate.leadStatus === "Active" || candidate.leadStatus === "Active Advisor")) {
+      if ((candidate.workflowStage === "Activation" || candidate.workflowStage === "Business Started") && (candidate.leadStatus === "Active" || candidate.leadStatus === "Active Advisor")) {
         acc[month].activated += 1;
       }
       return acc;
     }, {});
     return Object.values(grouped).sort((a, b) => a.month.localeCompare(b.month));
-  }, [candidates]);
+  }, [advisorRecords]);
 
   const bestSource = sourceAnalysis.length > 0
     ? sourceAnalysis.reduce((max, item) => (item.value > max.value ? item : max))
@@ -95,7 +95,7 @@ function Reports() {
     ? stageDistribution.reduce((max, item) => (item.count > max.count ? item : max))
     : { stage: "N/A", count: 0 };
 
-  const followUpRequired = candidates.filter((c) => c.followUp?.status === "Pending" && !["Converted", "Lost"].includes(c.leadStatus)).length;
+  const followUpRequired = advisorRecords.filter((c) => c.followUp?.status === "Pending" && !["Converted", "Lost"].includes(c.leadStatus)).length;
 
   const kpis = [
     { label: "Total Candidates", value: totalCandidates, icon: PeopleIcon, color: "#2563eb" },

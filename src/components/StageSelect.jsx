@@ -2,9 +2,14 @@ import React from "react";
 import { useCrm } from "../crmContext.jsx";
 import { getAllowedStageOptions } from "../utils";
 
-export default function StageSelect({ stage, leadType, onChange, disabled }) {
-  const { advisorWorkflowStages, customerWorkflowStages } = useCrm();
-  const availableStages = leadType === "Insurance Customer" ? customerWorkflowStages : advisorWorkflowStages;
+export default function StageSelect({ stage, leadType, onChange, disabled, clientFlow }) {
+  const { advisorWorkflowStages, customerWorkflowStages, clientWorkflowStages } = useCrm();
+  let availableStages;
+  if (clientFlow) {
+    availableStages = clientWorkflowStages;
+  } else {
+    availableStages = !leadType || leadType === "Insurance Customer" ? customerWorkflowStages : advisorWorkflowStages;
+  }
   const stageOptions = availableStages.includes(stage) ? availableStages : [stage, ...availableStages];
   const options = getAllowedStageOptions(stageOptions, stage);
 

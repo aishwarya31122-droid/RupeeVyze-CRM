@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { formatDate } from "../utils.js";
 
-export default function CandidateCard({ candidate, onOpen, stageColor, detailsPrefix = "/adviser/lead-management/lead" }) {
+export default function CandidateCard({ candidate, onOpen, stageColor, detailsPrefix = "/adviser/profile" }) {
   const navigate = useNavigate();
 
   return (

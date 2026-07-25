@@ -12,7 +12,7 @@ function AllLeads() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   const insuranceLeads = useMemo(() => {
-    return candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer");
+    return candidates.filter((c) => (!c.leadType || c.leadType === "Insurance Customer") && c.workflowStage !== "Active Client");
   }, [candidates]);
 
   const handleRemoveDuplicates = useCallback(() => {
@@ -81,7 +81,7 @@ function AllLeads() {
                     <td>{l.priority || l.followUp?.priority}</td>
                     <td>{l.nextFollowUp}</td>
                     <td>
-                      <Link className="button secondary" to={`/adviser/lead-management/lead/${l.id}`}>View</Link>
+                      <Link className="button secondary" to={`/adviser/profile/${l.id}`}>View</Link>
                     </td>
                   </tr>
                 ))

@@ -55,8 +55,11 @@ export const advisorStageFields = {
     select("interestLevel", "Interest Level", ["High", "Medium", "Low"]),
     dateField("followUpDate", "Follow-up Date")
   ],
-  "KYC": [
-    select("kycStatus", "KYC Status", ["Pending", "Submitted", "Verified", "Rejected", "Completed"])
+  "KYC Pending": [
+    select("kycStatus", "KYC Status", ["Pending", "Submitted", "In Progress"])
+  ],
+  "KYC Complete": [
+    select("kycStatus", "KYC Status", ["Verified", "Rejected", "Completed"])
   ],
   "Training": [
     select("trainingStatus", "Training Status", ["Pending", "In Progress", "Completed"]),

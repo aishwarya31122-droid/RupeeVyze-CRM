@@ -72,13 +72,13 @@ function Layout({ children }) {
         });
 
         if (candidateMatch) {
-          navigate(`/adviser/lead-management/lead/${candidateMatch.id}`);
+          navigate(`/adviser/profile/${candidateMatch.id}`);
           return;
         }
       }
 
       const advisorClients = isAdvisor
-        ? (clients || []).filter((c) => c.advisorAssigned === currentUser?.name)
+        ? (clients || []).filter((c) => c.assignedAdvisorId === currentUser?.id)
         : (clients || []);
 
       const clientMatch = advisorClients.find((client) => {
@@ -96,7 +96,7 @@ function Layout({ children }) {
       });
 
       if (clientMatch) {
-        navigate(`/adviser/lead-management/lead/${clientMatch.candidateId}`);
+        navigate(`/adviser/profile/${clientMatch.candidateId}`);
         return;
       }
 

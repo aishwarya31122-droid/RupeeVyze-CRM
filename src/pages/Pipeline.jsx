@@ -10,7 +10,7 @@ function Pipeline({ detailsPrefix }) {
   const { candidates: allCandidates, updateCandidateStage, updateCandidate, updateCandidateNote, addCandidate, pipelineStages, sources, recruiterNames, stageBadge, advisorWorkflowStages, customerWorkflowStages } = useCrm();
   const { currentUser } = useAuth();
   const candidates = useMemo(() => filterByRole(allCandidates, currentUser), [allCandidates, currentUser]);
-  const detailsPathPrefix = detailsPrefix || "/adviser/lead-management/lead";
+  const detailsPathPrefix = detailsPrefix || "/adviser/profile";
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("All Stages");
   const [sourceFilter, setSourceFilter] = useState("All Sources");
@@ -30,6 +30,7 @@ function Pipeline({ detailsPrefix }) {
     return candidates.filter((candidate) => {
       const isInsuranceCustomer = !candidate.leadType || candidate.leadType === "Insurance Customer";
       if (!isInsuranceCustomer) return false;
+      if (candidate.workflowStage === "Active Client") return false;
       const searchText = [candidate.name, candidate.mobile, candidate.phone, candidate.email, candidate.city, candidate.leadId, candidate.advisorCode].join(" ").toLowerCase();
       const matchesSearch = q === "" || searchText.includes(q);
       const matchesStage = stageFilter === "All Stages" || candidate.workflowStage === stageFilter;

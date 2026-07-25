@@ -31,8 +31,8 @@ export default function BIDashboard() {
     const activeClients = clients.filter((c) => c.finalStatus === "Active Client").length;
     const premium = clients.reduce((sum, c) => sum + Number(c.annualPremiumBudget?.replace(/[^0-9]/g, "") || 0), 0);
     const policyCount = policies.length || clients.reduce((sum, c) => sum + (c.policies || []).length, 0);
-    const recruitment = candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment").length;
-    const advisorRecords = candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment");
+    const recruitment = candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer").length;
+    const advisorRecords = candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer");
     const converted = advisorRecords.filter((c) => (c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")).length;
     const conversionRate = advisorRecords.length > 0 ? Math.round((converted / advisorRecords.length) * 100) : 0;
 
@@ -71,7 +71,8 @@ export default function BIDashboard() {
   }, [candidates]);
 
   const recruitmentFunnel = useMemo(() => {
-    const stageCounts = candidates.reduce((acc, c) => {
+    const advisorOnly = candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer");
+    const stageCounts = advisorOnly.reduce((acc, c) => {
       const stage = c.workflowStage || "Unknown";
       acc[stage] = (acc[stage] || 0) + 1;
       return acc;
@@ -82,7 +83,7 @@ export default function BIDashboard() {
   }, [candidates]);
 
   const salesFunnel = useMemo(() => {
-    const advisorLeads = candidates.filter((c) => c.leadType !== "Advisor" && c.leadType !== "Recruitment");
+    const advisorLeads = candidates.filter((c) => c.leadType !== "Advisor" && c.leadType !== "Recruitment" && c.workflowStage !== "Active Client");
     const statusCounts = advisorLeads.reduce((acc, c) => {
       const status = c.leadStatus || "Open";
       acc[status] = (acc[status] || 0) + 1;
@@ -94,11 +95,12 @@ export default function BIDashboard() {
   }, [candidates]);
 
   const advisorPerformance = useMemo(() => {
-    const perfMap = candidates.reduce((acc, c) => {
+    const advisorOnly = candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer");
+    const perfMap = advisorOnly.reduce((acc, c) => {
       const advisor = c.assignedTo || "Unassigned";
       if (!acc[advisor]) acc[advisor] = { name: advisor, total: 0, converted: 0, premium: 0 };
       acc[advisor].total += 1;
-      if ((c.leadType === "Advisor" || c.leadType === "Recruitment") && (c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")) {
+      if ((c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")) {
         acc[advisor].converted += 1;
       }
       return acc;

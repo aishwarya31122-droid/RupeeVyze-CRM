@@ -16,7 +16,7 @@ function LeadManagementModule() {
           path="pipeline"
           element={
             <Pipeline
-              detailsPrefix="/adviser/lead-management/lead"
+              detailsPrefix="/adviser/profile"
             />
           }
         />

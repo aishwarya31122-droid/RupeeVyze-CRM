@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { useAuth } from "./authContext.jsx";
 import Layout from "./components/Layout";
 import Login from "./pages/Login.jsx";
@@ -8,12 +8,18 @@ import AdvisorOperationsModule from "./pages/advisor-operations/AdvisorOperation
 import ClientOperationsModule from "./pages/client-operations/ClientOperationsModule.jsx";
 import BusinessIntModule from "./pages/business-intelligence/BusinessIntModule.jsx";
 import AdminModule from "./pages/administration/AdminModule.jsx";
+import CandidateDetails from "./pages/CandidateDetails.jsx";
 
 function ProtectedRoute({ children, modulePath }) {
   const { currentUser, canViewModule } = useAuth();
   if (!currentUser) return <Navigate to="/login" replace />;
   if (modulePath && !canViewModule(modulePath)) return <Navigate to="/adviser/dashboard" replace />;
   return children;
+}
+
+function ProfileRoute() {
+  const { id } = useParams();
+  return <CandidateDetails key={id} />;
 }
 
 function App() {
@@ -29,6 +35,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Navigate to="/adviser/dashboard" replace />} />
                   <Route path="/adviser/dashboard" element={<Dashboard />} />
+                  <Route path="/adviser/profile/:id" element={<ProfileRoute />} />
                   <Route path="/adviser/lead-management/*" element={<LeadManagementModule />} />
                   <Route path="/adviser/advisor-operations/*" element={
                     <ProtectedRoute modulePath="/adviser/advisor-operations"><AdvisorOperationsModule /></ProtectedRoute>

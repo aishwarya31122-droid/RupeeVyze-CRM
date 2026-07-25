@@ -30,30 +30,50 @@ import { useAuth } from "../../authContext.jsx";
 
 export default function ClientsList() {
   const navigate = useNavigate();
-  const { clients } = useCrm();
+  const { candidates: allCandidates } = useCrm();
   const { currentUser, isAdmin, isAdvisor } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const activeClientCandidates = useMemo(() => {
+    let list = (allCandidates || []).filter(
+      (c) => (c.leadType === "Insurance Customer" || !c.leadType) && c.workflowStage === "Active Client"
+    );
+    if (isAdvisor && currentUser) {
+      list = list.filter((c) => c.assignedAdvisorId === currentUser.id);
+    }
+    return list.map((c) => ({
+      candidateId: String(c.id),
+      clientId: c.leadId || `LD-${c.id}`,
+      name: c.name || "",
+      mobile: c.mobile || c.phone || "",
+      city: c.city || "",
+      advisorAssigned: c.assignedAdvisorName || c.assignedTo || "",
+      assignedAdvisorId: c.assignedAdvisorId || "",
+      finalStatus: c.leadStatus || "Active Client",
+      leadSource: c.leadSource || c.source || "",
+      email: c.email || "",
+      policyTypeInterest: c.policyTypeInterest || "",
+      nextFollowUpDate: c.nextFollowUp || "",
+      followUpStatus: c.followUp?.status || "",
+      policyIssued: c.policyIssued || false,
+      kycStarted: c.kycStarted || false,
+      activity: c.activities || [],
+      priority: c.priority || "Medium",
+      dateReceived: c.createdDate || ""
+    }));
+  }, [allCandidates, currentUser, isAdvisor]);
+
   const filteredClients = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
-    let list = clients || [];
-    if (isAdvisor && currentUser) {
-      list = list.filter((client) => client.advisorAssigned === currentUser.name);
-    }
-    return list.filter((client) => {
+    return activeClientCandidates.filter((client) => {
       const matchesSearch = !normalized || client.name.toLowerCase().includes(normalized) || client.city.toLowerCase().includes(normalized) || client.advisorAssigned.toLowerCase().includes(normalized);
       const matchesStatus = statusFilter === "All" || (client.finalStatus || "Active Client") === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [clients, currentUser, isAdvisor, searchTerm, statusFilter]);
+  }, [activeClientCandidates, searchTerm, statusFilter]);
 
-  const summaryClients = useMemo(() => {
-    if (isAdvisor && currentUser) {
-      return (clients || []).filter((client) => client.advisorAssigned === currentUser.name);
-    }
-    return clients || [];
-  }, [clients, currentUser, isAdvisor]);
+  const summaryClients = activeClientCandidates;
 
   const summaryCards = useMemo(() => {
     const active = summaryClients.filter((client) => (client.finalStatus || "Active Client") === "Active Client").length;
@@ -149,7 +169,10 @@ export default function ClientsList() {
                       <Chip label={client.finalStatus || "Active Client"} size="small" color={client.finalStatus === "Active Client" ? "success" : client.finalStatus === "Lost" ? "error" : "info"} />
                     </TableCell>
                     <TableCell>
-                      <Link className="button secondary" to={`/adviser/lead-management/lead/${client.candidateId}`}>View</Link>
+                      <Stack direction="row" spacing={1}>
+                        <Link className="button secondary" to={`/adviser/profile/${client.candidateId}`}>View</Link>
+                        <Link className="button secondary" to={`/adviser/client-operations/clients/${client.candidateId}`}>Edit</Link>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))

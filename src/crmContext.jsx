@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { candidatesApi, clientsApi, settingsApi, teamMembersApi, performanceApi, overridePayoutsApi } from "./api/endpoints.js";
-import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, followUpRequiredStages, sources, stageBadge, advisorStatuses } from "./data/dropdowns.js";
+import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, clientWorkflowStages, followUpRequiredStages, sources, stageBadge, advisorStatuses } from "./data/dropdowns.js";
 import { businessConfigs, defaultBusinessSettings } from "./data/config.js";
 import { getActiveAdvisorRows, getPerformanceSummary, getOverrideRecords } from "./pages/advisor-operations/advisorOperationsData.js";
 
@@ -190,20 +190,20 @@ function normalizeLocalRecord(record, index, existingCount) {
 const CrmContext = createContext(null);
 
 export function CrmProvider({ children }) {
-  const [candidates, setCandidates] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [settings, setSettingsState] = useState(defaultBusinessSettings);
-  const [selectedConfigId, setSelectedConfigId] = useState(defaultBusinessSettings.selectedConfigId);
-  const [teamMembers, setTeamMembers] = useState([]);
-  const [performanceRecords, setPerformanceRecords] = useState([]);
-  const [overridePayoutRecords, setOverridePayoutRecords] = useState([]);
-  const [policies, setPolicies] = useState([]);
-  const [claims, setClaims] = useState([]);
-  const [serviceRequests, setServiceRequests] = useState([]);
-  const [roles, setRoles] = useState([]);
-  const [permissions, setPermissions] = useState([]);
-  const [rewards, setRewards] = useState([]);
-  const [importHistory, setImportHistory] = useState([]);
+  const [candidates, setCandidates] = useState(() => loadLocalCandidates());
+  const [clients, setClients] = useState(() => loadLocalClients());
+  const [settings, setSettingsState] = useState(() => loadLocalSettings() || defaultBusinessSettings);
+  const [selectedConfigId, setSelectedConfigId] = useState(() => (loadLocalSettings()?.selectedConfigId) || defaultBusinessSettings.selectedConfigId);
+  const [teamMembers, setTeamMembers] = useState(() => loadLocalTeamMembers());
+  const [performanceRecords, setPerformanceRecords] = useState(() => loadLocalPerformance());
+  const [overridePayoutRecords, setOverridePayoutRecords] = useState(() => loadLocalOverrides());
+  const [policies, setPolicies] = useState(() => loadLocalPolicies());
+  const [claims, setClaims] = useState(() => loadLocalClaims());
+  const [serviceRequests, setServiceRequests] = useState(() => loadLocalServiceRequests());
+  const [roles, setRoles] = useState(() => loadLocalRoles());
+  const [permissions, setPermissions] = useState(() => loadLocalPermissions());
+  const [rewards, setRewards] = useState(() => loadLocalRewards());
+  const [importHistory, setImportHistory] = useState(() => loadLocalImportHistory());
   const [loading, setLoading] = useState(true);
 
   const refreshCrmData = useCallback(async () => {
@@ -218,12 +218,20 @@ export function CrmProvider({ children }) {
     const [candsResult, cltsResult, setsResult, teamResult, perfResult, overridesResult] = settled;
 
     if (candsResult.status === "fulfilled") {
-      setCandidates(candsResult.value);
-      saveLocalCandidates(candsResult.value);
+      const apiData = candsResult.value;
+      const localData = loadLocalCandidates();
+      if (apiData.length > 0 || localData.length === 0) {
+        setCandidates(apiData);
+        saveLocalCandidates(apiData);
+      }
     }
     if (cltsResult.status === "fulfilled") {
-      setClients(cltsResult.value);
-      saveLocalClients(cltsResult.value);
+      const apiData = cltsResult.value;
+      const localData = loadLocalClients();
+      if (apiData.length > 0 || localData.length === 0) {
+        setClients(apiData);
+        saveLocalClients(apiData);
+      }
     }
     if (setsResult.status === "fulfilled") {
       setSettingsState(setsResult.value);
@@ -231,21 +239,28 @@ export function CrmProvider({ children }) {
       saveLocalSettings(setsResult.value);
     }
     if (teamResult.status === "fulfilled") {
-      setTeamMembers(teamResult.value);
-      saveLocalTeamMembers(teamResult.value);
+      const apiData = teamResult.value;
+      const localData = loadLocalTeamMembers();
+      if (apiData.length > 0 || localData.length === 0) {
+        setTeamMembers(apiData);
+        saveLocalTeamMembers(apiData);
+      }
     }
     if (perfResult.status === "fulfilled") {
-      setPerformanceRecords(perfResult.value);
-      saveLocalPerformance(perfResult.value);
+      const apiData = perfResult.value;
+      const localData = loadLocalPerformance();
+      if (apiData.length > 0 || localData.length === 0) {
+        setPerformanceRecords(apiData);
+        saveLocalPerformance(apiData);
+      }
     }
     if (overridesResult.status === "fulfilled") {
-      setOverridePayoutRecords(overridesResult.value);
-      saveLocalOverrides(overridesResult.value);
-    }
-
-    const allFailed = settled.every((r) => r.status === "rejected");
-    if (allFailed) {
-      console.warn("All API calls failed, server is the single source of truth. No local storage fallback.");
+      const apiData = overridesResult.value;
+      const localData = loadLocalOverrides();
+      if (apiData.length > 0 || localData.length === 0) {
+        setOverridePayoutRecords(apiData);
+        saveLocalOverrides(apiData);
+      }
     }
   }, []);
 
@@ -264,84 +279,68 @@ export function CrmProvider({ children }) {
     return () => { cancelled = true; };
   }, [refreshCrmData]);
 
+  useEffect(() => { saveLocalCandidates(candidates); }, [candidates]);
+  useEffect(() => { saveLocalClients(clients); }, [clients]);
+  useEffect(() => { saveLocalSettings(settings); }, [settings]);
+  useEffect(() => { saveLocalTeamMembers(teamMembers); }, [teamMembers]);
+  useEffect(() => { saveLocalPerformance(performanceRecords); }, [performanceRecords]);
+  useEffect(() => { saveLocalOverrides(overridePayoutRecords); }, [overridePayoutRecords]);
+  useEffect(() => { saveLocalPolicies(policies); }, [policies]);
+  useEffect(() => { saveLocalClaims(claims); }, [claims]);
+  useEffect(() => { saveLocalServiceRequests(serviceRequests); }, [serviceRequests]);
+  useEffect(() => { saveLocalRoles(roles); }, [roles]);
+  useEffect(() => { saveLocalPermissions(permissions); }, [permissions]);
+  useEffect(() => { saveLocalRewards(rewards); }, [rewards]);
+  useEffect(() => { saveLocalImportHistory(importHistory); }, [importHistory]);
+
+
+
   const selectedConfig = useMemo(
     () => businessConfigs.find((c) => c.id === selectedConfigId) || businessConfigs[0],
     [selectedConfigId]
   );
 
   const advisorStageLifecycle = {
-    "New Lead":          { leadType: "Advisor", leadStatus: "Open" },
-    "First Contact":     { leadType: "Advisor", leadStatus: "Open" },
-    "Interested":        { leadType: "Advisor", leadStatus: "In Progress" },
-    "KYC":              { leadType: "Advisor", leadStatus: "In Progress" },
-    "Training":          { leadType: "Advisor", leadStatus: "In Progress" },
-    "Exam":              { leadType: "Advisor", leadStatus: "In Progress" },
-    "Code Generation":   { leadType: "Advisor", leadStatus: "In Progress" },
-    "Activation":        { leadType: "Advisor", leadStatus: "Active" },
-    "Business Started":  { leadType: "Advisor", leadStatus: "Active" },
-    "Dropped":           { leadType: "Advisor", leadStatus: "Dropped" }
+    "New Lead":          { leadStatus: "Open" },
+    "First Contact":     { leadStatus: "Open" },
+    "Interested":        { leadStatus: "In Progress" },
+    "KYC Pending":       { leadStatus: "In Progress" },
+    "KYC Complete":      { leadStatus: "In Progress" },
+    "Training":          { leadStatus: "In Progress" },
+    "Exam":              { leadStatus: "In Progress" },
+    "Code Generation":   { leadStatus: "In Progress" },
+    "Activation":        { leadStatus: "Active" },
+    "Business Started":  { leadStatus: "Active" },
+    "Dropped":           { leadStatus: "Dropped" }
+  };
+
+  const customerStageLifecycle = {
+    "Active Client": { leadStatus: "Active Client" },
+    "Lost":          { leadStatus: "Lost" }
   };
 
   const updateCandidateStage = useCallback(async (candidateId, stage) => {
-    const validStages = new Set([...advisorWorkflowStages, ...customerWorkflowStages]);
+    const validStages = new Set([...advisorWorkflowStages, ...customerWorkflowStages, ...clientWorkflowStages]);
     if (!validStages.has(stage)) return;
+
+    const buildStageUpdate = (c) => {
+      if (String(c.id) !== String(candidateId)) return c;
+      const isAdvisorRecord = c.leadType === "Advisor" || c.leadType === "Recruitment";
+      const lifecycle = isAdvisorRecord ? advisorStageLifecycle[stage] : customerStageLifecycle[stage];
+      return {
+        ...c,
+        workflowStage: stage,
+        ...(lifecycle ? { leadStatus: lifecycle.leadStatus } : {}),
+        ...(isAdvisorRecord && stage === "Activation" ? { activationStatus: "Activated" } : {})
+      };
+    };
 
     try {
       await candidatesApi.updateStage(candidateId, { stage });
-      setCandidates((prev) => {
-        return prev.map((c) => {
-          if (String(c.id) !== String(candidateId)) return c;
-          const isAdvisorRecord = c.leadType === "Advisor" || c.leadType === "Recruitment";
-          const lifecycle = isAdvisorRecord ? advisorStageLifecycle[stage] : null;
-          return {
-            ...c,
-            workflowStage: stage,
-            ...(lifecycle ? { leadType: lifecycle.leadType, leadStatus: lifecycle.leadStatus } : {})
-          };
-        });
-      });
+      setCandidates((prev) => prev.map(buildStageUpdate));
     } catch (err) {
       console.warn("API unavailable, stage updated locally:", err.message);
-      setCandidates((prev) => {
-        return prev.map((c) => {
-          if (String(c.id) !== String(candidateId)) return c;
-          const isAdvisorRecord = c.leadType === "Advisor" || c.leadType === "Recruitment";
-          const lifecycle = isAdvisorRecord ? advisorStageLifecycle[stage] : null;
-          return {
-            ...c,
-            workflowStage: stage,
-            ...(lifecycle ? { leadType: lifecycle.leadType, leadStatus: lifecycle.leadStatus } : {})
-          };
-        });
-      });
-      if (stage === "Policy Issued" || stage === "Active Client" || stage === "Policy Purchased" || stage === "Premium Collected") {
-        setCandidates((prev) => {
-          const cand = prev.find((c) => String(c.id) === String(candidateId));
-          if (cand && cand.leadType === "Insurance Customer") {
-            setClients((prevClients) => {
-              const alreadyClient = prevClients.some((cl) => cl.candidateId === String(cand.id));
-              if (alreadyClient) return prevClients;
-              const clientRecord = {
-                id: prevClients.length + 1,
-                clientId: `CL-${1000 + prevClients.length + 1}`,
-                candidateId: String(cand.id),
-                name: cand.name,
-                email: cand.email || "",
-                phone: cand.mobile || cand.phone || "",
-                city: cand.city || "",
-                policyNumber: cand.policyNumber || "",
-                advisorAssigned: cand.assignedTo || "",
-                dateReceived: new Date().toISOString().slice(0, 10),
-                finalStatus: "Active Client",
-                interestLevel: cand.priority || "Medium",
-                leadQuality: cand.leadSource || cand.source || ""
-              };
-              return [...prevClients, clientRecord];
-            });
-          }
-          return prev;
-        });
-      }
+      setCandidates((prev) => prev.map(buildStageUpdate));
     }
   }, [refreshCrmData]);
 
@@ -462,51 +461,25 @@ export function CrmProvider({ children }) {
         if (updates.leadSource) merged.source = updates.leadSource;
         if (updates.followUpDate) merged.nextFollowUp = updates.followUpDate;
         if (updates.workflowStage && updates.workflowStage !== c.workflowStage) {
-          const lifecycle = advisorStageLifecycle[updates.workflowStage];
+          const isAdvisorRecord = c.leadType === "Advisor" || c.leadType === "Recruitment";
+          const lifecycle = isAdvisorRecord ? advisorStageLifecycle[updates.workflowStage] : customerStageLifecycle[updates.workflowStage];
           if (lifecycle) {
-            merged.leadType = lifecycle.leadType;
             merged.leadStatus = lifecycle.leadStatus;
           }
+        }
+        if (updates.workflowStage === "Activation" && (c.leadType === "Advisor" || c.leadType === "Recruitment")) {
+          merged.activationStatus = "Activated";
         }
         return merged;
       });
       return updated;
     };
-    const applyClientConversion = (prev) => {
-      if (updates.leadStatus === "Policy Purchased" || updates.workflowStage === "Policy Purchased") {
-        const cand = prev.find((c) => String(c.id) === String(candidateId));
-        if (cand && cand.leadType === "Insurance Customer") {
-          setClients((prevClients) => {
-            const alreadyClient = prevClients.some((cl) => cl.candidateId === String(cand.id));
-            if (alreadyClient) return prevClients;
-            const clientRecord = {
-              id: prevClients.length + 1,
-              clientId: `CL-${1000 + prevClients.length + 1}`,
-              candidateId: String(cand.id),
-              name: cand.name,
-              email: cand.email || "",
-              phone: cand.mobile || cand.phone || "",
-              city: cand.city || "",
-              mobile: cand.mobile || cand.phone || "",
-              policyNumber: cand.policyNumber || "",
-              advisorAssigned: cand.assignedTo || "",
-              dateReceived: new Date().toISOString().slice(0, 10),
-              finalStatus: "Active Client",
-              interestLevel: cand.priority || "Medium",
-              leadSource: cand.leadSource || cand.source || ""
-            };
-            return [...prevClients, clientRecord];
-          });
-        }
-      }
-      return prev;
-    };
     try {
       await candidatesApi.update(candidateId, updates);
-      setCandidates((prev) => applyClientConversion(applyUpdates(prev)));
+      setCandidates((prev) => applyUpdates(prev));
     } catch (err) {
       console.warn("API unavailable, candidate updated locally:", err.message);
-      setCandidates((prev) => applyClientConversion(applyUpdates(prev)));
+      setCandidates((prev) => applyUpdates(prev));
     }
   }, [refreshCrmData]);
 
@@ -910,6 +883,7 @@ export function CrmProvider({ children }) {
     advisorWorkflowStages,
     advisorStatuses,
     customerWorkflowStages,
+    clientWorkflowStages,
     followUpRequiredStages,
     sources,
     recruiterNames: derivedRecruiterNames,

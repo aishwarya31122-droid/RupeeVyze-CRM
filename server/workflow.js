@@ -91,8 +91,8 @@ export function prepareLeadForSave(lead, updates = {}, options = {}) {
   const baseDate = normalizeDate(updates.updatedAt || updates.createdDate || lead.createdDate || new Date().toISOString());
   const nextLead = buildLeadPayload(lead, { ...updates, updatedAt: baseDate }, options);
 
-  const isAdvisorLead = nextLead.leadType === "Advisor";
-  const isCustomerLead = nextLead.leadType === "Insurance Customer";
+  const isAdvisorLead = nextLead.leadType === "Advisor" || nextLead.leadType === "Recruitment";
+  const isCustomerLead = nextLead.leadType === "Insurance Customer" || (!nextLead.leadType && nextLead.leadType !== "Advisor" && nextLead.leadType !== "Recruitment");
   const advisorActivated = isAdvisorLead && ["Business Started", "Activation"].includes(nextLead.workflowStage);
   const policyIssued = isCustomerLead && ["Policy Issued", "Active Client"].includes(nextLead.workflowStage);
 
@@ -105,7 +105,11 @@ export function prepareLeadForSave(lead, updates = {}, options = {}) {
     nextLead.leadStatus = "Converted";
   }
 
-  if (policyIssued) {
+  if (isCustomerLead && nextLead.workflowStage === "Active Client") {
+    timelineEntries.push({ stage: "Active Client", date: baseDate });
+    activityEntries.push({ type: "Policy", text: "Policy Issued and Active Client", date: baseDate });
+    nextLead.leadStatus = "Active Client";
+  } else if (isCustomerLead && nextLead.workflowStage === "Policy Issued") {
     timelineEntries.push({ stage: "Policy Issued", date: baseDate });
     activityEntries.push({ type: "Policy", text: "Policy Issued", date: baseDate });
     nextLead.leadStatus = "Converted";
@@ -128,6 +132,7 @@ export function prepareLeadForSave(lead, updates = {}, options = {}) {
   const clientPayload = policyIssued ? {
     id: `CL-${String(nextLead.id).padStart(4, "0")}`,
     clientId: `CLI-${String(2000 + nextLead.id).padStart(4, "0")}`,
+    candidateId: String(nextLead.id),
     name: nextLead.name,
     mobile: nextLead.mobile || nextLead.phone,
     city: nextLead.city || "",

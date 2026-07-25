@@ -53,6 +53,9 @@ export function sortByPriority(items) {
 }
 
 export function getAllowedStageOptions(stages, currentStage) {
+  if (!currentStage || !stages || stages.length === 0) return stages || [];
+  const idx = stages.indexOf(currentStage);
+  if (idx === -1) return [currentStage, ...stages];
   return stages;
 }
 
@@ -65,6 +68,21 @@ export function getStageConversion(stageCounts) {
       rate: total ? Math.round((item.count / total) * 100) : 0
     }))
   };
+}
+
+export function getRecordType(candidate) {
+  if (!candidate) return "insurance_customer_lead";
+  if (candidate.leadType === "Advisor" || candidate.leadType === "Recruitment") return "advisor";
+  if (candidate.workflowStage === "Active Client") return "client";
+  return "insurance_customer_lead";
+}
+
+export function isEligibleForSignIn(candidate) {
+  if (!candidate) return false;
+  if (candidate.leadType !== "Advisor" && candidate.leadType !== "Recruitment") return false;
+  if (candidate.workflowStage !== "Activation") return false;
+  if (candidate.activationStatus !== "Activated") return false;
+  return true;
 }
 
 export function getDropOffAnalysis(stageCounts) {

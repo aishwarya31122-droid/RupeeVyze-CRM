@@ -26,7 +26,7 @@ function applyWorkflowSideEffects(workflowResult) {
   }
 
   if (shouldCreateClientRecord && clientPayload) {
-    const existingClient = clients.all().find(c => c.clientId === clientPayload.clientId || c.name === clientPayload.name);
+    const existingClient = clients.all().find(c => c.clientId === clientPayload.clientId || (clientPayload.candidateId && c.candidateId === clientPayload.candidateId) || c.name === clientPayload.name);
     if (!existingClient) {
       clients.insert(clientPayload);
     }
@@ -115,7 +115,7 @@ export function update(req, res) {
 
     const b = req.body;
     const updates = {};
-    const fields = ["leadType", "name", "mobile", "phone", "email", "city", "workflowStage", "leadStatus", "assignedTo", "leadSource", "source", "priority", "nextFollowUp", "notes", "policyNumber", "advisorCode", "timeline", "activities", "documents", "communication", "tasks"];
+    const fields = ["leadType", "name", "mobile", "phone", "email", "city", "workflowStage", "leadStatus", "assignedTo", "assignedAdvisorId", "assignedAdvisorName", "leadSource", "source", "priority", "nextFollowUp", "notes", "policyNumber", "advisorCode", "timeline", "activities", "documents", "communication", "tasks"];
     fields.forEach(field => {
       if (b[field] !== undefined) updates[field] = b[field];
     });
@@ -217,7 +217,9 @@ export function bulkCreate(req, res) {
         city: b.city || "",
         workflowStage: b.workflowStage || "New Lead",
         leadStatus: b.leadStatus || "Open",
-        assignedTo: b.assignedTo || "",
+      assignedTo: b.assignedTo || "",
+      assignedAdvisorId: b.assignedAdvisorId || "",
+      assignedAdvisorName: b.assignedAdvisorName || "",
         leadSource: b.leadSource || b.source || "",
         source: b.source || b.leadSource || "",
         priority: b.priority || "Medium",

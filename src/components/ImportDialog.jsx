@@ -94,7 +94,7 @@ const CRM_FIELDS = [
   { key: "city", label: "City", required: false },
   { key: "qualification", label: "Qualification", required: false },
   { key: "source", label: "Source", required: false },
-  { key: "workflowStage", label: "Recruitment Stage", required: false },
+  { key: "workflowStage", label: "Workflow Stage", required: false },
   { key: "nextFollowUp", label: "Follow-up Date", required: false },
   { key: "trainingStatus", label: "Training Status", required: false },
   { key: "examResult", label: "Exam Result", required: false },

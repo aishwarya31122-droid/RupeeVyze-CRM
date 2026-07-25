@@ -38,7 +38,7 @@ export default function AdvisorRecruitment() {
   const advisorRecords = useMemo(
     () =>
       candidates.filter(
-        (c) => c.leadType === "Advisor" || c.leadType === "Recruitment"
+        (c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer" && c.workflowStage !== "Active Client"
       ),
     [candidates]
   );
@@ -77,7 +77,7 @@ export default function AdvisorRecruitment() {
     }
 
     if (filterStage !== "All") {
-      result = result.filter((r) => r.recruitmentStage === filterStage);
+      result = result.filter((r) => r.workflowStage === filterStage);
     }
     if (filterStatus !== "All") {
       result = result.filter((r) => r.status === filterStatus);
@@ -97,8 +97,8 @@ export default function AdvisorRecruitment() {
       }
       if (sortBy === "recruitmentStage") {
         const stages = advisorWorkflowStages;
-        valA = stages.indexOf(a.recruitmentStage || "");
-        valB = stages.indexOf(b.recruitmentStage || "");
+        valA = stages.indexOf(a.workflowStage || "");
+        valB = stages.indexOf(b.workflowStage || "");
       } else {
         valA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         valB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
@@ -173,10 +173,10 @@ export default function AdvisorRecruitment() {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <Box>
         <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>
-          Advisor Recruitment
+          Advisor
         </Typography>
         <Typography variant="body1" sx={{ color: "#475569" }}>
-          Manage all advisor recruitment records
+          Manage all advisor records
         </Typography>
       </Box>
 
@@ -442,9 +442,9 @@ export default function AdvisorRecruitment() {
                     <TableCell>{a.source || ""}</TableCell>
                     <TableCell>
                       <Chip
-                        label={a.recruitmentStage || "New Lead"}
+                        label={a.workflowStage || "New Lead"}
                         size="small"
-                        color={stageColor(a.recruitmentStage)}
+                        color={stageColor(a.workflowStage)}
                         variant="outlined"
                         sx={{ borderRadius: "16px", fontSize: 11 }}
                       />
@@ -487,7 +487,7 @@ export default function AdvisorRecruitment() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Link className="button secondary" to={`/adviser/lead-management/lead/${a.id}`}>View</Link>
+                      <Link className="button secondary" to={`/adviser/profile/${a.id}`}>View</Link>
                     </TableCell>
                   </TableRow>
                 ))

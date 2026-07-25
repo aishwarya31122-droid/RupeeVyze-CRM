@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext.jsx";
 import { useCrm } from "../crmContext.jsx";
-
-const ADVISOR_QUALIFIED_STAGES = new Set(["Activation"]);
+import { isEligibleForSignIn } from "../utils.js";
 
 function Login() {
   const { users, login, setDynamicAdvisors } = useAuth();
@@ -13,12 +12,7 @@ function Login() {
 
   useEffect(() => {
     const advisors = candidates
-      .filter((c) =>
-        (c.leadType === "Advisor" || c.leadType === "Recruitment") &&
-        ADVISOR_QUALIFIED_STAGES.has(c.workflowStage) &&
-        c.activationStatus === "Activated" &&
-        c.name
-      )
+      .filter((c) => isEligibleForSignIn(c) && c.name)
       .map((c) => ({ id: String(c.id), name: c.name, role: "advisor", email: c.email || "" }));
     setDynamicAdvisors(advisors);
   }, [candidates, setDynamicAdvisors]);

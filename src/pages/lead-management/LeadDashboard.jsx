@@ -55,15 +55,9 @@ function LeadDashboard() {
   const candidates = useMemo(() => filterByRole(allCandidates, currentUser), [allCandidates, currentUser]);
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
-  const leads = useMemo(() => candidates.filter((c) => !c.leadType || c.leadType === "Insurance Customer"), [candidates]);
-  const advisorCandidates = useMemo(() => candidates.filter((c) => {
-    const isAdvisorLead = c.leadType === "Advisor" || c.leadType === "Recruitment";
-    const isActivated = c.workflowStage === "Activation" || c.workflowStage === "Business Started";
-    return isAdvisorLead && !isActivated;
-  }), [candidates]);
+  const leads = useMemo(() => candidates.filter((c) => (!c.leadType || c.leadType === "Insurance Customer") && c.workflowStage !== "Active Client"), [candidates]);
 
-  const totalLeads = candidates.length;
-  const advisorLeads = advisorCandidates.length;
+  const totalLeads = leads.length;
   const customerLeads = leads.length;
   const openLeads = leads.filter((l) => l.leadStatus === "Open").length;
   const assignedLeads = leads.filter((l) => l.leadStatus === "Assigned").length;
@@ -87,14 +81,6 @@ function LeadDashboard() {
     return customerWorkflowStages.filter((s) => !["Qualified", "Financial Need Analysis", "Product Recommendation", "Illustration Shared", "Proposal Submitted", "Medical", "Underwriting", "Premium Collected", "Active Client"].includes(s));
   }, [customerWorkflowStages]);
 
-  const advisorFunnelStages = useMemo(() => {
-    return [...advisorWorkflowStages, "Dropped"];
-  }, [advisorWorkflowStages]);
-
-  const advisorFunnelData = useMemo(() => {
-    return advisorFunnelStages.map((stage) => ({ stage, count: advisorCandidates.filter((lead) => lead.workflowStage === stage).length }));
-  }, [advisorCandidates, advisorFunnelStages]);
-
   const insuranceFunnelData = useMemo(() => {
     return insuranceFunnelStages.map((stage) => ({ stage, count: leads.filter((lead) => lead.workflowStage === stage).length }));
   }, [leads, insuranceFunnelStages]);
@@ -103,7 +89,6 @@ function LeadDashboard() {
 
   const kpiCards = [
     { label: "Total Leads", value: totalLeads, icon: PeopleAltOutlinedIcon, color: "#2563eb" },
-    { label: "Advisor Leads", value: advisorLeads, icon: GroupsOutlinedIcon, color: "#0f766e" },
     { label: "Insurance Leads", value: customerLeads, icon: ShieldOutlinedIcon, color: "#7c3aed" },
     { label: "Open Leads", value: openLeads, icon: AssignmentLateOutlinedIcon, color: "#d97706" },
     { label: "Assigned Leads", value: assignedLeads, icon: PersonOutlineOutlinedIcon, color: "#475569" },
@@ -199,11 +184,7 @@ function LeadDashboard() {
       </div>
 
       <div className="grid-2-columns">
-        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Recruitment Funnel</Typography>
-          <FunnelChart stages={advisorFunnelData} />
-        </Paper>
-        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2 }}>
+        <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 2, gridColumn: "1 / -1" }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Sales Funnel</Typography>
           <FunnelChart stages={insuranceFunnelData} />
         </Paper>
@@ -239,7 +220,7 @@ function LeadDashboard() {
                 <Link
                   key={`${item.lead.id}-${index}`}
                   className="activity-item"
-                  to={`/adviser/lead-management/lead/${item.lead.id}`}
+                  to={`/adviser/profile/${item.lead.id}`}
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
                   <div className="activity-dot" style={{ background: "#2563eb" }} />

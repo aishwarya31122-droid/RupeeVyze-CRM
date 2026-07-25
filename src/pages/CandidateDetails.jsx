@@ -17,10 +17,10 @@ import {
   Typography
 } from "@mui/material";
 import { useCrm } from "../crmContext.jsx";
-import { useAuth } from "../authContext.jsx";
+import { useAuth, filterByRole } from "../authContext.jsx";
 import StageSelect from "../components/StageSelect.jsx";
 import CandidateModal from "../components/CandidateModal.jsx";
-import { formatDate, getFollowUpDate } from "../utils.js";
+import { formatDate, getFollowUpDate, getRecordType } from "../utils.js";
 
 const customerTabs = [
   "Overview",
@@ -44,6 +44,16 @@ const advisorTabs = [
   "Recruitment Notes",
   "Recruitment History",
   "Activation"
+];
+
+const clientTabs = [
+  "Overview",
+  "Timeline",
+  "Activities",
+  "Documents",
+  "Communication",
+  "Notes",
+  "History"
 ];
 
 function CandidateDetails() {
@@ -87,16 +97,24 @@ function CandidateDetails() {
     return true;
   }, [candidate, isAdmin, isAdvisor, currentUser]);
 
-  const currentIndex = useMemo(() => candidates.findIndex((item) => String(item.id) === id), [candidates, id]);
-  const previousLead = currentIndex > 0 ? candidates[currentIndex - 1] : null;
-  const nextLead = currentIndex >= 0 && currentIndex < candidates.length - 1 ? candidates[currentIndex + 1] : null;
+  const accessibleCandidates = useMemo(() => filterByRole(candidates, currentUser), [candidates, currentUser]);
+
+  const currentIndex = useMemo(() => accessibleCandidates.findIndex((item) => String(item.id) === id), [accessibleCandidates, id]);
+  const previousLead = currentIndex > 0 ? accessibleCandidates[currentIndex - 1] : null;
+  const nextLead = currentIndex >= 0 && currentIndex < accessibleCandidates.length - 1 ? accessibleCandidates[currentIndex + 1] : null;
 
   const isAdvisorLead = candidate?.leadType === "Advisor" || candidate?.leadType === "Recruitment";
+  const isActiveClient = !isAdvisorLead && candidate?.workflowStage === "Active Client";
+  const recordType = getRecordType(candidate);
 
-  const tabs = useMemo(() => (isAdvisorLead ? advisorTabs : customerTabs), [isAdvisorLead]);
+  const tabs = useMemo(() => {
+    if (recordType === "advisor") return advisorTabs;
+    if (recordType === "client") return clientTabs;
+    return customerTabs;
+  }, [recordType]);
 
   const availableDocumentTypes = useMemo(() => {
-    if (isAdvisorLead) {
+    if (recordType === "advisor") {
       return [
         "Aadhaar Card",
         "PAN Card",
@@ -106,6 +124,20 @@ function CandidateDetails() {
         "Educational Certificate",
         "IRDA Certificate (if applicable)",
         "Address Proof",
+        "Other"
+      ];
+    }
+
+    if (recordType === "client") {
+      return [
+        "Aadhaar Card",
+        "PAN Card",
+        "Proposal Form",
+        "Medical Reports",
+        "Income Proof",
+        "Address Proof",
+        "Policy Documents",
+        "Nominee Proof",
         "Other"
       ];
     }
@@ -121,7 +153,7 @@ function CandidateDetails() {
       "Nominee Proof",
       "Other"
     ];
-  }, [isAdvisorLead]);
+  }, [recordType]);
 
   useEffect(() => {
     if (candidate) {
@@ -295,36 +327,26 @@ function CandidateDetails() {
     );
   }
 
-  if (!canEditClient(candidate)) {
-    return (
-      <div className="detail-card" style={{ padding: "3rem", textAlign: "center" }}>
-        <Typography variant="h5" sx={{ color: "#dc2626", mb: 1 }}>Access Denied</Typography>
-        <Typography variant="body1" sx={{ color: "#64748b", mb: 2 }}>You do not have permission to view this client.</Typography>
-        <Button variant="contained" onClick={() => navigate(-1)}>Go Back</Button>
-      </div>
-    );
-  }
-
   return (
     <div className="detail-card">
       <div className="page-header">
         <div>
           <h1>{candidate.name}</h1>
-          <p>360° Lead Profile • {candidate.leadId || candidate.advisorCode || candidate.email} • {candidate.city || candidate.phone}</p>
+          <p>{recordType === "client" ? "360° Client Profile" : recordType === "advisor" ? "360° Advisor Profile" : "360° Lead Profile"} • {candidate.leadId || candidate.advisorCode || candidate.email} • {candidate.city || candidate.phone}</p>
         </div>
         <div className="page-actions">
           <button type="button" className="button secondary" onClick={() => setEditOpen(true)}>
             Edit
           </button>
-          {canDeleteClient() && (
+          {canDeleteClient(candidate) && (
             <button type="button" className="button secondary" style={{ color: "#dc2626", borderColor: "#dc2626" }} onClick={() => setDeleteConfirmOpen(true)}>
               Delete
             </button>
           )}
-          <button type="button" className="button secondary" onClick={() => previousLead && navigate(`/adviser/lead-management/lead/${previousLead.id}`)} disabled={!previousLead}>
+          <button type="button" className="button secondary" onClick={() => previousLead && navigate(`/adviser/profile/${previousLead.id}`)} disabled={!previousLead}>
             ← Previous Lead
           </button>
-          <button type="button" className="button secondary" onClick={() => nextLead && navigate(`/adviser/lead-management/lead/${nextLead.id}`)} disabled={!nextLead}>
+          <button type="button" className="button secondary" onClick={() => nextLead && navigate(`/adviser/profile/${nextLead.id}`)} disabled={!nextLead}>
             Next Lead →
           </button>
         </div>
@@ -345,39 +367,76 @@ function CandidateDetails() {
       {activeTab === "Overview" && (
         <div className="card detail-card">
           <div className="detail-grid">
-            <div>
-              <h3>Lead Information</h3>
-              <div className="detail-item"><span>Lead ID</span><strong>{candidate.leadId || candidate.id}</strong></div>
-              <div className="detail-item"><span>Name</span><strong>{candidate.name}</strong></div>
-              <div className="detail-item"><span>Lead Type</span><strong>{candidate.leadType}</strong></div>
-              <div className="detail-item"><span>Mobile</span><strong>{candidate.phone}</strong></div>
-              <div className="detail-item"><span>Email</span><strong>{candidate.email}</strong></div>
-              <div className="detail-item"><span>City</span><strong>{candidate.city}</strong></div>
-              <div className="detail-item"><span>Lead Source</span><strong>{candidate.leadSource || candidate.source || "Not specified"}</strong></div>
-            </div>
+            {recordType === "client" ? (
+              <>
+                <div>
+                  <h3>Client Information</h3>
+                  <div className="detail-item"><span>Client ID</span><strong>{candidate.leadId || candidate.id}</strong></div>
+                  <div className="detail-item"><span>Name</span><strong>{candidate.name}</strong></div>
+                  <div className="detail-item"><span>Mobile</span><strong>{candidate.phone}</strong></div>
+                  <div className="detail-item"><span>Email</span><strong>{candidate.email}</strong></div>
+                  <div className="detail-item"><span>City</span><strong>{candidate.city}</strong></div>
+                  <div className="detail-item"><span>Lead Source</span><strong>{candidate.leadSource || candidate.source || "Not specified"}</strong></div>
+                  <div className="detail-item"><span>Policy Type Interest</span><strong>{candidate.policyTypeInterest || "Not specified"}</strong></div>
+                </div>
 
-            <div>
-              <h3>Current Status</h3>
-              <div className="detail-item">
-                <span>Workflow Stage</span>
-                <StageSelect
-                  stage={candidate.workflowStage}
-                  leadType={candidate.leadType}
-                  onChange={(stage) => updateCandidateStage(candidate.id, stage)}
-                />
-              </div>
-              <div className="detail-item"><span>Lead Status</span><strong>{candidate.leadStatus}</strong></div>
-              <div className="detail-item"><span>Assigned To</span><strong>{candidate.assignedTo || "Unassigned"}</strong></div>
-              <div className="detail-item"><span>Priority</span><strong>{candidate.priority || candidate.followUp?.priority || "Medium"}</strong></div>
-              <div className="detail-item"><span>Next Follow-up</span><strong>{formatDate(candidate.nextFollowUp || candidate.followUpDate)}</strong></div>
-            </div>
+                <div>
+                  <h3>Current Status</h3>
+                  <div className="detail-item">
+                    <span>Client Status</span>
+                    <strong>{candidate.workflowStage}</strong>
+                  </div>
+                  <div className="detail-item"><span>Lead Status</span><strong>{candidate.leadStatus}</strong></div>
+                  <div className="detail-item"><span>Assigned Advisor</span><strong>{candidate.assignedAdvisorName || candidate.assignedTo || "Unassigned"}</strong></div>
+                  <div className="detail-item"><span>Priority</span><strong>{candidate.priority || candidate.followUp?.priority || "Medium"}</strong></div>
+                  <div className="detail-item"><span>Next Follow-up</span><strong>{formatDate(candidate.nextFollowUp || candidate.followUpDate)}</strong></div>
+                </div>
 
-            <div>
-              <h3>Business Details</h3>
-              <div className="detail-item"><span>Advisor Name</span><strong>{candidate.advisorName || "Not applicable"}</strong></div>
-              <div className="detail-item"><span>Policy Interest</span><strong>{candidate.policyInterest || "Not applicable"}</strong></div>
-              <div className="detail-item"><span>Notes</span><strong>{candidate.notes || "No notes provided."}</strong></div>
-            </div>
+                <div>
+                  <h3>Policy Details</h3>
+                  <div className="detail-item"><span>Policy Number</span><strong>{candidate.policyNumber || "Not issued"}</strong></div>
+                  <div className="detail-item"><span>Policy Interest</span><strong>{candidate.policyInterest || "Not specified"}</strong></div>
+                  <div className="detail-item"><span>Notes</span><strong>{candidate.notes || "No notes provided."}</strong></div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <h3>Lead Information</h3>
+                  <div className="detail-item"><span>Lead ID</span><strong>{candidate.leadId || candidate.id}</strong></div>
+                  <div className="detail-item"><span>Name</span><strong>{candidate.name}</strong></div>
+                  <div className="detail-item"><span>Lead Type</span><strong>{candidate.leadType}</strong></div>
+                  <div className="detail-item"><span>Mobile</span><strong>{candidate.phone}</strong></div>
+                  <div className="detail-item"><span>Email</span><strong>{candidate.email}</strong></div>
+                  <div className="detail-item"><span>City</span><strong>{candidate.city}</strong></div>
+                  <div className="detail-item"><span>Lead Source</span><strong>{candidate.leadSource || candidate.source || "Not specified"}</strong></div>
+                </div>
+
+                <div>
+                  <h3>Current Status</h3>
+                  <div className="detail-item">
+                    <span>{isAdvisorLead ? "Recruitment Stage" : "Workflow Stage"}</span>
+                    <StageSelect
+                      stage={candidate.workflowStage}
+                      leadType={candidate.leadType}
+                      onChange={(stage) => updateCandidateStage(candidate.id, stage)}
+                      clientFlow={isActiveClient}
+                    />
+                  </div>
+                  <div className="detail-item"><span>Lead Status</span><strong>{candidate.leadStatus}</strong></div>
+                  <div className="detail-item"><span>Assigned To</span><strong>{candidate.assignedAdvisorName || candidate.assignedTo || "Unassigned"}</strong></div>
+                  <div className="detail-item"><span>Priority</span><strong>{candidate.priority || candidate.followUp?.priority || "Medium"}</strong></div>
+                  <div className="detail-item"><span>Next Follow-up</span><strong>{formatDate(candidate.nextFollowUp || candidate.followUpDate)}</strong></div>
+                </div>
+
+                <div>
+                  <h3>Business Details</h3>
+                  <div className="detail-item"><span>Advisor Name</span><strong>{candidate.advisorName || "Not applicable"}</strong></div>
+                  <div className="detail-item"><span>Policy Interest</span><strong>{candidate.policyInterest || "Not applicable"}</strong></div>
+                  <div className="detail-item"><span>Notes</span><strong>{candidate.notes || "No notes provided."}</strong></div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -422,7 +481,7 @@ function CandidateDetails() {
         </div>
       )}
 
-      {activeTab === "Documents" && (
+      {activeTab === "Documents" && recordType === "insurance_customer_lead" && (
         <div className="card">
           <h3>Documents</h3>
 
@@ -567,7 +626,7 @@ function CandidateDetails() {
         </div>
       )}
 
-      {activeTab === "Tasks" && (
+      {activeTab === "Tasks" && recordType === "insurance_customer_lead" && (
         <div className="card">
           <h3>Tasks</h3>
           {(tasks || []).length > 0 ? (
@@ -646,7 +705,7 @@ function CandidateDetails() {
         </div>
       )}
 
-      {activeTab === "Conversion" && (
+      {activeTab === "Conversion" && recordType === "insurance_customer_lead" && (
         <div className="card">
           <h3>Conversion Journey</h3>
           {(candidate.timeline || []).length > 0 ? (
@@ -984,7 +1043,7 @@ function CandidateDetails() {
       {editOpen && (
         <CandidateModal
           candidate={candidate}
-          stageOptions={isAdvisorLead ? [] : undefined}
+          stageOptions={recordType === "insurance_customer_lead" ? undefined : []}
           stageColors={{}}
           onClose={() => setEditOpen(false)}
           onSave={(id, payload) => {
@@ -1007,6 +1066,7 @@ function CandidateDetails() {
                 className="button secondary"
                 style={{ color: "#dc2626", borderColor: "#dc2626" }}
                 onClick={async () => {
+                  if (!canDeleteClient(candidate)) return;
                   await deleteCandidate(candidate.id);
                   setDeleteConfirmOpen(false);
                   navigate(-1);

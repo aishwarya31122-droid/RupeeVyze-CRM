@@ -8,6 +8,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   const { canEditClient, canAssignClient, currentUser } = useAuth();
   const isAdvisor = candidate.leadType === "Advisor" || candidate.leadType === "Recruitment";
   const canEdit = canEditClient(candidate);
+  const isActiveClient = !isAdvisor && candidate.workflowStage === "Active Client";
   const activatedAdvisorOptions = activeAdvisors || [];
   const [form, setForm] = useState({
     name: candidate.name || "",
@@ -23,6 +24,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   });
   const [selectedStage, setSelectedStage] = useState(candidate.workflowStage || candidate.stage || pipelineStages[0]);
   const [successMessage, setSuccessMessage] = useState("");
+  const [advisorSearch, setAdvisorSearch] = useState("");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -114,8 +116,8 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
             </select>
           </label>
           <label>
-            <span>{isAdvisor ? "Recruitment Stage" : "Insurance Stage"}</span>
-            <StageSelect stage={selectedStage} leadType={candidate.leadType} onChange={(value) => setSelectedStage(value)} />
+            <span>{isAdvisor ? "Recruitment Stage" : "Workflow Stage"}</span>
+            <StageSelect stage={selectedStage} leadType={candidate.leadType} onChange={(value) => setSelectedStage(value)} clientFlow={isActiveClient} />
           </label>
           {isAdvisor ? (
             <label>
@@ -140,22 +142,43 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
               </label>
             </>
           )}
-          {!isAdvisor && canAssignClient() && (
+          {isActiveClient && (
             <label>
               <span>Assigned To</span>
               {activatedAdvisorOptions.length === 0 ? (
                 <select name="assignedTo" value="" disabled>
-                  <option value="" disabled>No Activated Advisors Available</option>
+                  <option value="" disabled>No Active Advisors Available</option>
                 </select>
               ) : (
-                <select name="assignedTo" value={form.assignedTo} onChange={handleChange}>
-                  <option value="">None</option>
-                  {activatedAdvisorOptions.map((advisor) => (
-                    <option key={advisor.id} value={advisor.name}>
-                      {advisor.name}{advisor.advisorCode ? ` (${advisor.advisorCode})` : ""}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <input
+                    type="text"
+                    placeholder="Search advisor by name..."
+                    value={advisorSearch}
+                    onChange={(e) => setAdvisorSearch(e.target.value)}
+                    style={{ marginBottom: "0.25rem" }}
+                  />
+                  <select
+                    name="assignedTo"
+                    value={form.assignedTo}
+                    onChange={handleChange}
+                  >
+                    <option value="">None</option>
+                    {activatedAdvisorOptions
+                      .filter((advisor) => {
+                        if (!advisorSearch.trim()) return true;
+                        const q = advisorSearch.toLowerCase();
+                        const nameMatch = (advisor.name || "").toLowerCase().includes(q);
+                        const codeMatch = (advisor.advisorCode || "").toLowerCase().includes(q);
+                        return nameMatch || codeMatch;
+                      })
+                      .map((advisor) => (
+                        <option key={advisor.id} value={advisor.name}>
+                          {advisor.name}{advisor.advisorCode ? ` (${advisor.advisorCode})` : ""}
+                        </option>
+                      ))}
+                  </select>
+                </>
               )}
             </label>
           )}

@@ -1,35 +1,23 @@
 import { useMemo } from "react";
 import { Box, Paper, Tab, Tabs, Typography } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useCrm } from "../../crmContext.jsx";
 
 function LeadLayout({ children }) {
-  const { candidates } = useCrm();
-  const leads = useMemo(() => candidates, [candidates]);
   const location = useLocation();
   const navigate = useNavigate();
-  const currentLeadId = location.pathname.match(/^\/adviser\/lead-management\/lead\/([^/]+)/)?.[1];
-  const profilePath = currentLeadId
-    ? `/adviser/lead-management/lead/${currentLeadId}`
-    : leads[0]
-      ? `/adviser/lead-management/lead/${leads[0].id}`
-      : "/adviser/lead-management/dashboard";
 
   const tabs = useMemo(
     () => [
       { label: "Lead Dashboard", to: "/adviser/lead-management/dashboard" },
       { label: "Pipeline", to: "/adviser/lead-management/pipeline" },
-      { label: "360 Lead Profile", to: profilePath },
       { label: "Tasks & Follow-ups", to: "/adviser/lead-management/tasks" },
       { label: "Leads", to: "/adviser/lead-management/all" }
     ],
-    [profilePath]
+    []
   );
 
   const activeIndex = tabs.findIndex((tab) =>
-    tab.to.startsWith("/adviser/lead-management/lead/")
-      ? location.pathname.startsWith("/adviser/lead-management/lead/") && tab.label === "360 Lead Profile"
-      : location.pathname === tab.to
+    location.pathname === tab.to
   );
 
   return (

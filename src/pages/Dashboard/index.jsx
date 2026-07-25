@@ -11,7 +11,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import HistoryIcon from "@mui/icons-material/History";
 import { useCrm } from "../../crmContext.jsx";
 import { useAuth, filterByRole } from "../../authContext.jsx";
-import { formatDate, getTodayFollowUps, getOverdueFollowUps } from "../../utils.js";
+import { formatDate, getTodayFollowUps, getOverdueFollowUps, isEligibleForSignIn } from "../../utils.js";
 import ImportDialog from "../../components/ImportDialog.jsx";
 
 function Dashboard() {
@@ -31,17 +31,17 @@ function Dashboard() {
     }));
     const advisorCounts = advisorWorkflowStages.map((stage) => ({
       stage,
-      count: candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.workflowStage === stage).length
+      count: candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer" && c.workflowStage !== "Active Client" && c.workflowStage === stage).length
     }));
     return [...customerCounts, ...advisorCounts];
   }, [candidates, pipelineStages, advisorWorkflowStages]);
 
-  const advisorRecords = useMemo(() => candidates.filter((c) => c.leadType === "Advisor" || c.leadType === "Recruitment"), [candidates]);
+  const advisorRecords = useMemo(() => candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer" && c.workflowStage !== "Active Client"), [candidates]);
   const totalAdvisors = advisorRecords.length;
-  const documentsSubmitted = candidates.filter((c) => (c.documents || []).length > 0).length;
-  const trainingCompleted = candidates.filter((c) => ["Training", "Exam", "Code Generation", "Activation", "Business Started"].includes(c.workflowStage)).length;
-  const activatedAdvisors = advisorRecords.filter((c) => (c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")).length;
-  const examResult = candidates.filter((c) => c.workflowStage === "Exam").length;
+  const documentsSubmitted = advisorRecords.filter((c) => (c.documents || []).length > 0).length;
+  const trainingCompleted = advisorRecords.filter((c) => ["Training", "Exam", "Code Generation", "Activation", "Business Started"].includes(c.workflowStage)).length;
+  const activatedAdvisors = advisorRecords.filter((c) => isEligibleForSignIn(c)).length;
+  const examResult = advisorRecords.filter((c) => c.workflowStage === "Exam").length;
   const conversionRate = totalAdvisors > 0 ? Math.round((activatedAdvisors / totalAdvisors) * 100) : 0;
 
   const now = new Date();
@@ -61,11 +61,11 @@ function Dashboard() {
     if (activeFilter === "All") return candidates;
     if (activeFilter === "Today") return todayFollowUps;
     if (activeFilter === "Overdue") return overdueFollowUps;
-    if (activeFilter === "Documents Submitted") return candidates.filter((candidate) => (candidate.documents || []).length > 0);
-    if (activeFilter === "Training Completed") return candidates.filter((candidate) => ["Training", "Exam", "Code Generation", "Activation", "Business Started"].includes(candidate.workflowStage));
-    if (activeFilter === "Activated") return advisorRecords.filter((candidate) => (candidate.workflowStage === "Activation" || candidate.workflowStage === "Business Started") && (candidate.leadStatus === "Active" || candidate.leadStatus === "Active Advisor"));
-    if (activeFilter === "Conversion") return candidates;
-    if (activeFilter === "Exam Passed") return candidates.filter((candidate) => candidate.workflowStage === "Exam");
+    if (activeFilter === "Documents Submitted") return advisorRecords.filter((candidate) => (candidate.documents || []).length > 0);
+    if (activeFilter === "Training Completed") return advisorRecords.filter((candidate) => ["Training", "Exam", "Code Generation", "Activation", "Business Started"].includes(candidate.workflowStage));
+    if (activeFilter === "Activated") return advisorRecords.filter((candidate) => isEligibleForSignIn(candidate));
+    if (activeFilter === "Conversion") return advisorRecords;
+    if (activeFilter === "Exam Passed") return advisorRecords.filter((candidate) => candidate.workflowStage === "Exam");
     return candidates.filter((candidate) => candidate.workflowStage === activeFilter);
   }, [activeFilter, candidates, advisorRecords, todayFollowUps, overdueFollowUps]);
 
