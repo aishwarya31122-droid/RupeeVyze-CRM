@@ -20,7 +20,6 @@ function Login() {
   const handleLogin = () => {
     if (!selected) return;
     const user = users.find((u) => u.id === selected);
-    console.log("[Login] handleLogin:", { selected, found: !!user, userId: user?.id, userName: user?.name, usersCount: users.length });
     if (user) login(user);
     navigate("/adviser/dashboard", { replace: true });
   };

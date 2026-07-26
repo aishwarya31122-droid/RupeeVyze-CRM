@@ -48,8 +48,6 @@ function Layout({ children }) {
     return alertItems.slice(0, 5);
   }, [candidates, isAdvisor, currentUser]);
 
-  console.log("[Layout] currentUser:", currentUser ? { id: currentUser.id, name: currentUser.name, role: currentUser.role } : null);
-
   const handleSearch = (event) => {
     const value = event.target.value;
     setSearch(value);

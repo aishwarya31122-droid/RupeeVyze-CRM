@@ -48,8 +48,7 @@ export default function Policies() {
       return (clients || []).filter((c) =>
         String(c.assignedAdvisorId || "") === String(currentUser.id || "") ||
         assignedClientIds.has(String(c.id)) ||
-        assignedClientIds.has(String(c.candidateId)) ||
-        c.advisorAssigned === currentUser.name
+        assignedClientIds.has(String(c.candidateId))
       );
     }
     return clients || [];

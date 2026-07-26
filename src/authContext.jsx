@@ -14,10 +14,7 @@ export function AuthProvider({ children }) {
   const [dynamicAdvisors, setDynamicAdvisors] = useState([]);
 
   const login = useCallback((user) => {
-    if (user) {
-      console.log("[Auth] login:", { id: user.id, name: user.name, role: user.role });
-      setCurrentUser(user);
-    }
+    if (user) setCurrentUser(user);
   }, []);
 
   const logout = useCallback(() => {
