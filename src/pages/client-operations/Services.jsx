@@ -49,7 +49,7 @@ function Services() {
     if (!isAdvisor || !currentUser) return null;
     return new Set(
       (allCandidates || [])
-        .filter((c) => c.workflowStage === "Active Client" && c.assignedAdvisorId === currentUser.id)
+        .filter((c) => c.workflowStage === "Active Client" && String(c.assignedAdvisorId || "") === String(currentUser.id || ""))
         .map((c) => (c.name || "").toLowerCase())
     );
   }, [allCandidates, currentUser, isAdvisor]);

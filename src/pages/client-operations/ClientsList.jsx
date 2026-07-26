@@ -39,8 +39,10 @@ export default function ClientsList() {
     let list = (allCandidates || []).filter(
       (c) => (c.leadType === "Insurance Customer" || !c.leadType) && c.workflowStage === "Active Client"
     );
+    console.log("[ClientsList] before advisor filter:", { total: list.length, isAdvisor, userId: currentUser?.id, userName: currentUser?.name });
     if (isAdvisor && currentUser) {
-      list = list.filter((c) => c.assignedAdvisorId === currentUser.id);
+      list = list.filter((c) => String(c.assignedAdvisorId || "") === String(currentUser.id || ""));
+      console.log("[ClientsList] after advisor filter:", { filtered: list.length });
     }
     return list.map((c) => ({
       candidateId: String(c.id),

@@ -43,7 +43,7 @@ export default function ClientDetails() {
     if (!client) return false;
     if (isAdmin) return true;
     if (isAdvisor) {
-      return client.assignedAdvisorId === currentUser?.id;
+      return String(client.assignedAdvisorId || "") === String(currentUser?.id || "");
     }
     return true;
   }, [client, isAdmin, isAdvisor, currentUser]);
@@ -134,7 +134,7 @@ export default function ClientDetails() {
                       onClick={async () => {
                         const advisor = activeAdvisors.find((a) => String(a.id) === String(selectedAdvisorId));
                         await updateCandidate(candidate.id, {
-                          assignedAdvisorId: advisor ? (advisor.leadId || String(advisor.id)) : "",
+                          assignedAdvisorId: advisor ? String(advisor.id) : "",
                           assignedAdvisorName: advisor ? advisor.name : "",
                         });
                         setEditing(false);

@@ -84,6 +84,8 @@ export function create(req, res) {
       workflowStage: b.workflowStage || "New Lead",
       leadStatus: b.leadStatus || "Open",
       assignedTo: b.assignedTo || "",
+      assignedAdvisorId: b.assignedAdvisorId || "",
+      assignedAdvisorName: b.assignedAdvisorName || "",
       leadSource: b.leadSource || b.source || "",
       source: b.source || b.leadSource || "",
       priority: b.priority || "Medium",

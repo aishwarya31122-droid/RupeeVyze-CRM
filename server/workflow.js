@@ -133,6 +133,8 @@ export function prepareLeadForSave(lead, updates = {}, options = {}) {
     id: `CL-${String(nextLead.id).padStart(4, "0")}`,
     clientId: `CLI-${String(2000 + nextLead.id).padStart(4, "0")}`,
     candidateId: String(nextLead.id),
+    assignedAdvisorId: nextLead.assignedAdvisorId || "",
+    assignedAdvisorName: nextLead.assignedAdvisorName || "",
     name: nextLead.name,
     mobile: nextLead.mobile || nextLead.phone,
     city: nextLead.city || "",

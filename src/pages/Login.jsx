@@ -13,13 +13,15 @@ function Login() {
   useEffect(() => {
     const advisors = candidates
       .filter((c) => isEligibleForSignIn(c) && c.name)
-      .map((c) => ({ id: c.leadId || String(c.id), name: c.name, role: "advisor", email: c.email || "" }));
+      .map((c) => ({ id: String(c.id), name: c.name, role: "advisor", email: c.email || "" }));
     setDynamicAdvisors(advisors);
   }, [candidates, setDynamicAdvisors]);
 
   const handleLogin = () => {
     if (!selected) return;
-    login(selected);
+    const user = users.find((u) => u.id === selected);
+    console.log("[Login] handleLogin:", { selected, found: !!user, userId: user?.id, userName: user?.name, usersCount: users.length });
+    if (user) login(user);
     navigate("/adviser/dashboard", { replace: true });
   };
 

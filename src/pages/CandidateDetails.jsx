@@ -92,7 +92,7 @@ function CandidateDetails() {
     if (!candidate) return false;
     if (isAdmin) return true;
     if (isAdvisor) {
-      return candidate.assignedAdvisorId === currentUser?.id;
+      return String(candidate.assignedAdvisorId || "") === String(currentUser?.id || "");
     }
     return true;
   }, [candidate, isAdmin, isAdvisor, currentUser]);

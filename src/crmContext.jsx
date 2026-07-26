@@ -331,7 +331,7 @@ export function CrmProvider({ children }) {
 
     if (isAdvisor && currentUser) {
       const target = candidates.find((c) => String(c.id) === String(candidateId));
-      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+      if (target && target.assignedAdvisorId && String(target.assignedAdvisorId) !== String(currentUser.id)) return;
     }
 
     const buildStageUpdate = (c) => {
@@ -469,7 +469,7 @@ export function CrmProvider({ children }) {
   const updateCandidate = useCallback(async (candidateId, updates) => {
     if (isAdvisor && currentUser) {
       const target = candidates.find((c) => String(c.id) === String(candidateId));
-      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+      if (target && target.assignedAdvisorId && String(target.assignedAdvisorId) !== String(currentUser.id)) return;
     }
 
     const applyUpdates = (prev) => {
@@ -507,7 +507,7 @@ export function CrmProvider({ children }) {
   const updateCandidateNote = useCallback(async (candidateId, note) => {
     if (isAdvisor && currentUser) {
       const target = candidates.find((c) => String(c.id) === String(candidateId));
-      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+      if (target && target.assignedAdvisorId && String(target.assignedAdvisorId) !== String(currentUser.id)) return;
     }
 
     try {
@@ -522,7 +522,7 @@ export function CrmProvider({ children }) {
   const markFollowUpDone = useCallback(async (candidateId) => {
     if (isAdvisor && currentUser) {
       const target = candidates.find((c) => String(c.id) === String(candidateId));
-      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+      if (target && target.assignedAdvisorId && String(target.assignedAdvisorId) !== String(currentUser.id)) return;
     }
 
     try {
@@ -543,7 +543,7 @@ export function CrmProvider({ children }) {
   const deleteCandidate = useCallback(async (candidateId) => {
     if (isAdvisor && currentUser) {
       const target = candidates.find((c) => String(c.id) === String(candidateId));
-      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+      if (target && target.assignedAdvisorId && String(target.assignedAdvisorId) !== String(currentUser.id)) return;
     }
 
     try {
@@ -573,8 +573,8 @@ export function CrmProvider({ children }) {
     if (isAdvisor && currentUser) {
       const targetClient = clients.find((c) => String(c.id) === String(clientId) || String(c.clientId) === String(clientId));
       const targetCandidate = candidates.find((c) => String(c.id) === String(targetClient?.candidateId));
-      const owner = targetClient?.assignedAdvisorId || targetClient?.advisorAssigned || targetCandidate?.assignedAdvisorId || "";
-      if (owner && owner !== currentUser.id && owner !== currentUser.name) return;
+      const owner = targetClient?.assignedAdvisorId || targetCandidate?.assignedAdvisorId || "";
+      if (owner && String(owner) !== String(currentUser.id)) return;
     }
 
     try {

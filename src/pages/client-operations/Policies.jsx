@@ -42,11 +42,11 @@ export default function Policies() {
     if (isAdvisor && currentUser) {
       const assignedClientIds = new Set(
         (allCandidates || [])
-          .filter((c) => c.workflowStage === "Active Client" && c.assignedAdvisorId === currentUser.id)
+          .filter((c) => c.workflowStage === "Active Client" && String(c.assignedAdvisorId || "") === String(currentUser.id || ""))
           .map((c) => String(c.id))
       );
       return (clients || []).filter((c) =>
-        c.assignedAdvisorId === currentUser.id ||
+        String(c.assignedAdvisorId || "") === String(currentUser.id || "") ||
         assignedClientIds.has(String(c.id)) ||
         assignedClientIds.has(String(c.candidateId)) ||
         c.advisorAssigned === currentUser.name

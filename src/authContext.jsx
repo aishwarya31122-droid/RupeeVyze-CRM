@@ -13,14 +13,12 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [dynamicAdvisors, setDynamicAdvisors] = useState([]);
 
-  const login = useCallback((userId) => {
-    if (userId === ADMIN_USER.id) {
-      setCurrentUser(ADMIN_USER);
-      return;
+  const login = useCallback((user) => {
+    if (user) {
+      console.log("[Auth] login:", { id: user.id, name: user.name, role: user.role });
+      setCurrentUser(user);
     }
-    const found = dynamicAdvisors.find((u) => u.id === userId);
-    if (found) setCurrentUser(found);
-  }, [dynamicAdvisors]);
+  }, []);
 
   const logout = useCallback(() => {
     setCurrentUser(null);
@@ -43,7 +41,7 @@ export function AuthProvider({ children }) {
   const canEditClient = useCallback(
     (candidate) => {
       if (isAdmin) return true;
-      return candidate?.assignedAdvisorId === currentUser?.id;
+      return String(candidate?.assignedAdvisorId || "") === String(currentUser?.id || "");
     },
     [isAdmin, currentUser]
   );
@@ -51,7 +49,7 @@ export function AuthProvider({ children }) {
   const canDeleteClient = useCallback(
     (candidate) => {
       if (isAdmin) return true;
-      return candidate?.assignedAdvisorId === currentUser?.id;
+      return String(candidate?.assignedAdvisorId || "") === String(currentUser?.id || "");
     },
     [isAdmin, currentUser]
   );
@@ -92,5 +90,5 @@ export function useAuth() {
 export function filterByRole(records, user) {
   if (!user) return [];
   if (user.role === "admin") return records;
-  return records.filter((r) => r.assignedAdvisorId === user.id);
+  return records.filter((r) => String(r.assignedAdvisorId || "") === String(user.id || ""));
 }
