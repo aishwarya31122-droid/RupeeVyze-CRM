@@ -47,7 +47,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
       source: form.leadSource || candidate.leadSource || candidate.source || "",
       leadStatus: form.leadStatus || candidate.leadStatus || "Open",
       assignedTo: selectedAdvisorName,
-      assignedAdvisorId: matchedAdvisor?.id || candidate.assignedAdvisorId || "",
+      assignedAdvisorId: (matchedAdvisor?.leadId || String(matchedAdvisor?.id || "")) || candidate.assignedAdvisorId || "",
       assignedAdvisorName: selectedAdvisorName,
       nextFollowUp: showFollowUp ? (form.followUpDate || candidate.nextFollowUp || candidate.followUpDate || "") : "",
       followUp: {
@@ -142,7 +142,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
               </label>
             </>
           )}
-          {isActiveClient && (
+          {isActiveClient && canAssignClient() && (
             <label>
               <span>Assigned To</span>
               {activatedAdvisorOptions.length === 0 ? (

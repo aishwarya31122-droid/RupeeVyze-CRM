@@ -84,7 +84,7 @@ function CandidateDetails() {
   const [onboardFileError, setOnboardFileError] = useState("");
 
   const candidate = useMemo(
-    () => candidates.find((item) => String(item.id) === id),
+    () => candidates.find((item) => String(item.id) === id || String(item.leadId) === id),
     [candidates, id]
   );
 
@@ -335,9 +335,11 @@ function CandidateDetails() {
           <p>{recordType === "client" ? "360° Client Profile" : recordType === "advisor" ? "360° Advisor Profile" : "360° Lead Profile"} • {candidate.leadId || candidate.advisorCode || candidate.email} • {candidate.city || candidate.phone}</p>
         </div>
         <div className="page-actions">
-          <button type="button" className="button secondary" onClick={() => setEditOpen(true)}>
-            Edit
-          </button>
+          {canEditClient(candidate) && (
+            <button type="button" className="button secondary" onClick={() => setEditOpen(true)}>
+              Edit
+            </button>
+          )}
           {canDeleteClient(candidate) && (
             <button type="button" className="button secondary" style={{ color: "#dc2626", borderColor: "#dc2626" }} onClick={() => setDeleteConfirmOpen(true)}>
               Delete
@@ -424,7 +426,9 @@ function CandidateDetails() {
                     />
                   </div>
                   <div className="detail-item"><span>Lead Status</span><strong>{candidate.leadStatus}</strong></div>
-                  <div className="detail-item"><span>Assigned To</span><strong>{candidate.assignedAdvisorName || candidate.assignedTo || "Unassigned"}</strong></div>
+                  {isAdvisorLead && (
+                    <div className="detail-item"><span>Assigned To</span><strong>{candidate.assignedAdvisorName || candidate.assignedTo || "Unassigned"}</strong></div>
+                  )}
                   <div className="detail-item"><span>Priority</span><strong>{candidate.priority || candidate.followUp?.priority || "Medium"}</strong></div>
                   <div className="detail-item"><span>Next Follow-up</span><strong>{formatDate(candidate.nextFollowUp || candidate.followUpDate)}</strong></div>
                 </div>
@@ -1047,6 +1051,7 @@ function CandidateDetails() {
           stageColors={{}}
           onClose={() => setEditOpen(false)}
           onSave={(id, payload) => {
+            if (!canEditClient(candidate)) return;
             updateCandidate(id, payload);
             setEditOpen(false);
           }}

@@ -36,7 +36,9 @@ function App() {
                   <Route path="/" element={<Navigate to="/adviser/dashboard" replace />} />
                   <Route path="/adviser/dashboard" element={<Dashboard />} />
                   <Route path="/adviser/profile/:id" element={<ProfileRoute />} />
-                  <Route path="/adviser/lead-management/*" element={<LeadManagementModule />} />
+                  <Route path="/adviser/lead-management/*" element={
+                    <ProtectedRoute modulePath="/adviser/lead-management"><LeadManagementModule /></ProtectedRoute>
+                  } />
                   <Route path="/adviser/advisor-operations/*" element={
                     <ProtectedRoute modulePath="/adviser/advisor-operations"><AdvisorOperationsModule /></ProtectedRoute>
                   } />

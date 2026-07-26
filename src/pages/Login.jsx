@@ -13,7 +13,7 @@ function Login() {
   useEffect(() => {
     const advisors = candidates
       .filter((c) => isEligibleForSignIn(c) && c.name)
-      .map((c) => ({ id: String(c.id), name: c.name, role: "advisor", email: c.email || "" }));
+      .map((c) => ({ id: c.leadId || String(c.id), name: c.name, role: "advisor", email: c.email || "" }));
     setDynamicAdvisors(advisors);
   }, [candidates, setDynamicAdvisors]);
 

@@ -80,8 +80,7 @@ export function getRecordType(candidate) {
 export function isEligibleForSignIn(candidate) {
   if (!candidate) return false;
   if (candidate.leadType !== "Advisor" && candidate.leadType !== "Recruitment") return false;
-  if (candidate.workflowStage !== "Activation") return false;
-  if (candidate.activationStatus !== "Activated") return false;
+  if (candidate.workflowStage !== "Activation" && candidate.workflowStage !== "Business Started") return false;
   return true;
 }
 

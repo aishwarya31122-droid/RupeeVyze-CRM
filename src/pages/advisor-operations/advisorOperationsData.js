@@ -27,7 +27,7 @@ export function getActiveAdvisorRows(candidates = [], performanceRecords = []) {
       const isAdvisorRecord = candidate.leadType === "Advisor" || candidate.leadType === "Recruitment";
       const isActivated = candidate.workflowStage === "Activation" || candidate.workflowStage === "Business Started";
       const hasActiveStatus = candidate.leadStatus === "Active" || candidate.leadStatus === "Active Advisor";
-      return isAdvisorRecord && isActivated && hasActiveStatus;
+      return isAdvisorRecord && (isActivated || hasActiveStatus);
     })
     .map((candidate) => {
       const record = (performanceRecords || []).find((item) => {

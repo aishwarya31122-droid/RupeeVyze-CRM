@@ -155,7 +155,7 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
       workflowStage: form.workflowStage || firstStageByLeadType[form.leadType],
       source: form.source || "Referral",
       nextFollowUp: isInsuranceCustomer ? (form.followUpDate || form.nextFollowUpDate || "") : "",
-      assignedAdvisorId: isInsuranceCustomer ? (isAdvisor ? currentUser.id : matchedAdvisor?.id || "") : "",
+      assignedAdvisorId: isInsuranceCustomer ? (isAdvisor ? currentUser.id : (matchedAdvisor?.leadId || String(matchedAdvisor?.id || "")) || "") : "",
       assignedAdvisorName: isInsuranceCustomer ? (isAdvisor ? currentUser.name : selectedAdvisorName) : "",
       assignedTo: isInsuranceCustomer ? selectedAdvisorName : "",
     };

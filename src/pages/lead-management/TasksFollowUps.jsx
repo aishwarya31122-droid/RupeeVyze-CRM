@@ -33,6 +33,7 @@ import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import { formatDate, getOverdueFollowUps, getTodayFollowUps, getUpcomingFollowUps } from "../../utils.js";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth, filterByRole } from "../../authContext.jsx";
 
 const priorityColors = {
   High: "error",
@@ -49,7 +50,9 @@ const statusColors = {
 };
 
 function TasksFollowUps() {
-  const { candidates, updateCandidate } = useCrm();
+  const { candidates: allCandidates, updateCandidate } = useCrm();
+  const { currentUser } = useAuth();
+  const candidates = useMemo(() => filterByRole(allCandidates, currentUser), [allCandidates, currentUser]);
   const leads = useMemo(() => candidates.filter((c) => {
     const isActivatedAdvisor = (c.leadType === "Advisor" || c.leadType === "Recruitment") && (c.workflowStage === "Activation" || c.workflowStage === "Business Started");
     return !isActivatedAdvisor;

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { candidatesApi, clientsApi, settingsApi, teamMembersApi, performanceApi, overridePayoutsApi } from "./api/endpoints.js";
+import { useAuth } from "./authContext.jsx";
 import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, clientWorkflowStages, followUpRequiredStages, sources, stageBadge, advisorStatuses } from "./data/dropdowns.js";
 import { businessConfigs, defaultBusinessSettings } from "./data/config.js";
 import { getActiveAdvisorRows, getPerformanceSummary, getOverrideRecords } from "./pages/advisor-operations/advisorOperationsData.js";
@@ -153,17 +154,21 @@ function normalizeLocalRecord(record, index, existingCount) {
   const assignedTo = record.assignedTo || "";
   const priority = record.priority || "Medium";
   const source = record.source || record.leadSource || "";
+  const leadType = record.leadType || "Insurance Customer";
+  const isAdvisorRecord = leadType === "Advisor" || leadType === "Recruitment";
+  const isActivated = isAdvisorRecord && (workflowStage === "Activation" || workflowStage === "Business Started");
   return {
     id,
     leadId: record.leadId || `LD-${1000 + id}`,
-    leadType: record.leadType || "Insurance Customer",
+    leadType,
     name: record.name || "",
     mobile: phone,
     phone: record.phone || phone,
     email: record.email || "",
     city: record.city || "",
     workflowStage,
-    leadStatus: record.leadStatus || "Open",
+    leadStatus: isActivated ? (record.leadStatus || "Active") : (record.leadStatus || "Open"),
+    activationStatus: isActivated ? (record.activationStatus || "Activated") : (record.activationStatus || ""),
     assignedTo,
     assignedAdvisorId: record.assignedAdvisorId || "",
     assignedAdvisorName: record.assignedAdvisorName || "",
@@ -190,6 +195,7 @@ function normalizeLocalRecord(record, index, existingCount) {
 const CrmContext = createContext(null);
 
 export function CrmProvider({ children }) {
+  const { currentUser, isAdmin, isAdvisor } = useAuth();
   const [candidates, setCandidates] = useState(() => loadLocalCandidates());
   const [clients, setClients] = useState(() => loadLocalClients());
   const [settings, setSettingsState] = useState(() => loadLocalSettings() || defaultBusinessSettings);
@@ -323,6 +329,11 @@ export function CrmProvider({ children }) {
     const validStages = new Set([...advisorWorkflowStages, ...customerWorkflowStages, ...clientWorkflowStages]);
     if (!validStages.has(stage)) return;
 
+    if (isAdvisor && currentUser) {
+      const target = candidates.find((c) => String(c.id) === String(candidateId));
+      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+    }
+
     const buildStageUpdate = (c) => {
       if (String(c.id) !== String(candidateId)) return c;
       const isAdvisorRecord = c.leadType === "Advisor" || c.leadType === "Recruitment";
@@ -331,7 +342,7 @@ export function CrmProvider({ children }) {
         ...c,
         workflowStage: stage,
         ...(lifecycle ? { leadStatus: lifecycle.leadStatus } : {}),
-        ...(isAdvisorRecord && stage === "Activation" ? { activationStatus: "Activated" } : {})
+        ...(isAdvisorRecord && (stage === "Activation" || stage === "Business Started") ? { activationStatus: "Activated" } : {})
       };
     };
 
@@ -342,7 +353,7 @@ export function CrmProvider({ children }) {
       console.warn("API unavailable, stage updated locally:", err.message);
       setCandidates((prev) => prev.map(buildStageUpdate));
     }
-  }, [refreshCrmData]);
+  }, [refreshCrmData, isAdvisor, currentUser, candidates]);
 
   const findDuplicate = useCallback((records, candidate) => {
     const normalize = (s) => (s || "").trim().toLowerCase();
@@ -373,6 +384,11 @@ export function CrmProvider({ children }) {
       createdDate: candidate.createdDate || new Date().toISOString().slice(0, 10),
       nextFollowUp: candidate.nextFollowUp || candidate.followUpDate || ""
     };
+    const isAdvisorLead = payload.leadType === "Advisor" || payload.leadType === "Recruitment";
+    if (isAdvisorLead && (payload.workflowStage === "Activation" || payload.workflowStage === "Business Started")) {
+      payload.activationStatus = "Activated";
+      payload.leadStatus = payload.leadStatus || "Active";
+    }
     try {
       const result = await candidatesApi.create(payload);
       setCandidates((prev) => {
@@ -451,6 +467,11 @@ export function CrmProvider({ children }) {
   }, []);
 
   const updateCandidate = useCallback(async (candidateId, updates) => {
+    if (isAdvisor && currentUser) {
+      const target = candidates.find((c) => String(c.id) === String(candidateId));
+      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+    }
+
     const applyUpdates = (prev) => {
       const updated = prev.map((c) => {
         if (String(c.id) !== String(candidateId)) return c;
@@ -467,7 +488,7 @@ export function CrmProvider({ children }) {
             merged.leadStatus = lifecycle.leadStatus;
           }
         }
-        if (updates.workflowStage === "Activation" && (c.leadType === "Advisor" || c.leadType === "Recruitment")) {
+        if ((updates.workflowStage === "Activation" || updates.workflowStage === "Business Started") && updates.workflowStage !== c.workflowStage && (c.leadType === "Advisor" || c.leadType === "Recruitment")) {
           merged.activationStatus = "Activated";
         }
         return merged;
@@ -481,9 +502,14 @@ export function CrmProvider({ children }) {
       console.warn("API unavailable, candidate updated locally:", err.message);
       setCandidates((prev) => applyUpdates(prev));
     }
-  }, [refreshCrmData]);
+  }, [refreshCrmData, isAdvisor, currentUser, candidates]);
 
   const updateCandidateNote = useCallback(async (candidateId, note) => {
+    if (isAdvisor && currentUser) {
+      const target = candidates.find((c) => String(c.id) === String(candidateId));
+      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+    }
+
     try {
       await candidatesApi.updateNote(candidateId, { note });
       setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId) ? { ...c, notes: note } : c));
@@ -494,6 +520,11 @@ export function CrmProvider({ children }) {
   }, [refreshCrmData]);
 
   const markFollowUpDone = useCallback(async (candidateId) => {
+    if (isAdvisor && currentUser) {
+      const target = candidates.find((c) => String(c.id) === String(candidateId));
+      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+    }
+
     try {
       await candidatesApi.updateFollowUp(candidateId, { status: "Done" });
       setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId)
@@ -510,6 +541,11 @@ export function CrmProvider({ children }) {
   }, [refreshCrmData]);
 
   const deleteCandidate = useCallback(async (candidateId) => {
+    if (isAdvisor && currentUser) {
+      const target = candidates.find((c) => String(c.id) === String(candidateId));
+      if (target && target.assignedAdvisorId && target.assignedAdvisorId !== currentUser.id) return;
+    }
+
     try {
       await candidatesApi.remove(candidateId);
       setCandidates((prev) => prev.filter((c) => String(c.id) !== String(candidateId)));
@@ -517,7 +553,7 @@ export function CrmProvider({ children }) {
       console.warn("API unavailable, candidate deleted locally:", err.message);
       setCandidates((prev) => prev.filter((c) => String(c.id) !== String(candidateId)));
     }
-  }, [refreshCrmData]);
+  }, [refreshCrmData, isAdvisor, currentUser, candidates]);
 
   const addClient = useCallback(async (client) => {
     try {
@@ -534,6 +570,13 @@ export function CrmProvider({ children }) {
   }, [refreshCrmData]);
 
   const updateClient = useCallback(async (clientId, updates) => {
+    if (isAdvisor && currentUser) {
+      const targetClient = clients.find((c) => String(c.id) === String(clientId) || String(c.clientId) === String(clientId));
+      const targetCandidate = candidates.find((c) => String(c.id) === String(targetClient?.candidateId));
+      const owner = targetClient?.assignedAdvisorId || targetClient?.advisorAssigned || targetCandidate?.assignedAdvisorId || "";
+      if (owner && owner !== currentUser.id && owner !== currentUser.name) return;
+    }
+
     try {
       const result = await clientsApi.update(clientId, updates);
       setClients((prev) => prev.map((c) => {

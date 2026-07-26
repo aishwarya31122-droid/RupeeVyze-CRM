@@ -29,6 +29,7 @@ import AssignmentLateIcon from "@mui/icons-material/AssignmentLate";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import InboxIcon from "@mui/icons-material/Inbox";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth } from "../../authContext.jsx";
 
 const statusColors = {
   Open: "warning",
@@ -38,13 +39,23 @@ const statusColors = {
 };
 
 function Services() {
-  const { serviceRequests } = useCrm();
+  const { serviceRequests, candidates: allCandidates } = useCrm();
+  const { currentUser, isAdvisor } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedService, setSelectedService] = useState(null);
 
+  const assignedClientNames = useMemo(() => {
+    if (!isAdvisor || !currentUser) return null;
+    return new Set(
+      (allCandidates || [])
+        .filter((c) => c.workflowStage === "Active Client" && c.assignedAdvisorId === currentUser.id)
+        .map((c) => (c.name || "").toLowerCase())
+    );
+  }, [allCandidates, currentUser, isAdvisor]);
+
   const services = useMemo(() => {
-    return (serviceRequests || []).map((sr) => ({
+    let list = (serviceRequests || []).map((sr) => ({
       ...sr,
       id: sr.id || sr.requestId,
       clientName: sr.clientName || "",
@@ -55,7 +66,11 @@ function Services() {
       createdDate: sr.createdDate || "",
       notes: sr.notes || ""
     }));
-  }, [serviceRequests]);
+    if (assignedClientNames) {
+      list = list.filter((s) => assignedClientNames.has((s.clientName || "").toLowerCase()));
+    }
+    return list;
+  }, [serviceRequests, assignedClientNames]);
 
   const filteredServices = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Box, Button, Card, CardContent, Chip, Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, Typography } from "@mui/material";
+import { Autocomplete, Box, Button, Card, CardContent, Chip, Divider, Grid, Stack, TextField, Typography } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import { useCrm } from "../../crmContext.jsx";
 import { useAuth } from "../../authContext.jsx";
@@ -9,7 +9,7 @@ export default function ClientDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { candidates: allCandidates, activeAdvisors, updateCandidate } = useCrm();
-  const { currentUser, isAdmin, isAdvisor } = useAuth();
+  const { currentUser, isAdmin, isAdvisor, canAssignClient } = useAuth();
   const [editing, setEditing] = useState(false);
   const [selectedAdvisorId, setSelectedAdvisorId] = useState("");
 
@@ -93,29 +93,40 @@ export default function ClientDetails() {
                 <Typography variant="body2"><strong>Email:</strong> {client.email || "—"}</Typography>
                 <Typography variant="body2"><strong>Advisor:</strong> {editing ? "" : (client.advisorAssigned || "Unassigned")}</Typography>
                 {editing && (
-                  <FormControl size="small" fullWidth sx={{ mt: 0.5 }}>
-                    <InputLabel>Assigned To</InputLabel>
-                    <Select
-                      value={selectedAdvisorId}
-                      label="Assigned To"
-                      onChange={(e) => setSelectedAdvisorId(e.target.value)}
-                    >
-                      <MenuItem value="">
-                        <em>None (Unassigned)</em>
-                      </MenuItem>
-                      {activeAdvisors.map((advisor) => (
-                        <MenuItem key={advisor.id} value={String(advisor.id)}>
-                          {advisor.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    size="small"
+                    fullWidth
+                    options={activeAdvisors}
+                    getOptionLabel={(option) => {
+                      const parts = [option.name];
+                      if (option.advisorCode) parts.push(option.advisorCode);
+                      if (option.id) parts.push(`ID: ${option.id}`);
+                      return parts.join(" — ");
+                    }}
+                    isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                    renderOption={(props, option) => (
+                      <li {...props} key={option.id}>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{option.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {[option.advisorCode, option.id ? `ID: ${option.id}` : ""].filter(Boolean).join(" • ")}
+                          </Typography>
+                        </Box>
+                      </li>
+                    )}
+                    value={activeAdvisors.find((a) => String(a.id) === String(selectedAdvisorId)) || null}
+                    onChange={(_, newValue) => setSelectedAdvisorId(newValue ? String(newValue.id) : "")}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Assigned To" placeholder="Search advisor..." />
+                    )}
+                    sx={{ mt: 0.5 }}
+                  />
                 )}
                 <Typography variant="body2"><strong>Lead Source:</strong> {client.leadSource}</Typography>
                 <Typography variant="body2"><strong>Interest:</strong> {client.policyTypeInterest}</Typography>
               </Stack>
               <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                {isAdmin && (editing ? (
+                {canAssignClient() && (editing ? (
                   <>
                     <Button
                       size="small"
@@ -123,7 +134,7 @@ export default function ClientDetails() {
                       onClick={async () => {
                         const advisor = activeAdvisors.find((a) => String(a.id) === String(selectedAdvisorId));
                         await updateCandidate(candidate.id, {
-                          assignedAdvisorId: advisor ? String(advisor.id) : "",
+                          assignedAdvisorId: advisor ? (advisor.leadId || String(advisor.id)) : "",
                           assignedAdvisorName: advisor ? advisor.name : "",
                         });
                         setEditing(false);

@@ -487,7 +487,7 @@ export default function AdvisorRecruitment() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Link className="button secondary" to={`/adviser/profile/${a.id}`}>View</Link>
+                      <Link className="button secondary" to={`/adviser/profile/${a.leadId || a.id}`}>View</Link>
                     </TableCell>
                   </TableRow>
                 ))

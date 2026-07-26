@@ -32,17 +32,27 @@ const statusColors = {
 };
 
 export default function Renewals() {
-  const { clients } = useCrm();
+  const { clients, candidates: allCandidates } = useCrm();
   const { currentUser, isAdvisor } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
   const visibleClients = useMemo(() => {
     if (isAdvisor && currentUser) {
-      return (clients || []).filter((c) => c.advisorAssigned === currentUser.name);
+      const assignedClientIds = new Set(
+        (allCandidates || [])
+          .filter((c) => c.workflowStage === "Active Client" && c.assignedAdvisorId === currentUser.id)
+          .map((c) => String(c.id))
+      );
+      return (clients || []).filter((c) =>
+        c.assignedAdvisorId === currentUser.id ||
+        assignedClientIds.has(String(c.id)) ||
+        assignedClientIds.has(String(c.candidateId)) ||
+        c.advisorAssigned === currentUser.name
+      );
     }
     return clients || [];
-  }, [clients, currentUser, isAdvisor]);
+  }, [clients, allCandidates, currentUser, isAdvisor]);
 
   const renewals = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
