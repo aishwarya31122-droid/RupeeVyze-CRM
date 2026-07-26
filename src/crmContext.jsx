@@ -27,6 +27,12 @@ const DATA_STORAGE_KEYS = [
   STORAGE_KEY_IMPORT_HISTORY
 ];
 
+const RESET_FLAG_KEY = "crm_data_reset_v1";
+if (!localStorage.getItem(RESET_FLAG_KEY)) {
+  DATA_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+  localStorage.setItem(RESET_FLAG_KEY, "1");
+}
+
 function loadLocal(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -225,19 +231,13 @@ export function CrmProvider({ children }) {
 
     if (candsResult.status === "fulfilled") {
       const apiData = candsResult.value;
-      const localData = loadLocalCandidates();
-      if (apiData.length > 0 || localData.length === 0) {
-        setCandidates(apiData);
-        saveLocalCandidates(apiData);
-      }
+      setCandidates(apiData);
+      saveLocalCandidates(apiData);
     }
     if (cltsResult.status === "fulfilled") {
       const apiData = cltsResult.value;
-      const localData = loadLocalClients();
-      if (apiData.length > 0 || localData.length === 0) {
-        setClients(apiData);
-        saveLocalClients(apiData);
-      }
+      setClients(apiData);
+      saveLocalClients(apiData);
     }
     if (setsResult.status === "fulfilled") {
       setSettingsState(setsResult.value);
@@ -246,27 +246,18 @@ export function CrmProvider({ children }) {
     }
     if (teamResult.status === "fulfilled") {
       const apiData = teamResult.value;
-      const localData = loadLocalTeamMembers();
-      if (apiData.length > 0 || localData.length === 0) {
-        setTeamMembers(apiData);
-        saveLocalTeamMembers(apiData);
-      }
+      setTeamMembers(apiData);
+      saveLocalTeamMembers(apiData);
     }
     if (perfResult.status === "fulfilled") {
       const apiData = perfResult.value;
-      const localData = loadLocalPerformance();
-      if (apiData.length > 0 || localData.length === 0) {
-        setPerformanceRecords(apiData);
-        saveLocalPerformance(apiData);
-      }
+      setPerformanceRecords(apiData);
+      saveLocalPerformance(apiData);
     }
     if (overridesResult.status === "fulfilled") {
       const apiData = overridesResult.value;
-      const localData = loadLocalOverrides();
-      if (apiData.length > 0 || localData.length === 0) {
-        setOverridePayoutRecords(apiData);
-        saveLocalOverrides(apiData);
-      }
+      setOverridePayoutRecords(apiData);
+      saveLocalOverrides(apiData);
     }
   }, []);
 
