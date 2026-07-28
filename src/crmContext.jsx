@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { candidatesApi, clientsApi, settingsApi, teamMembersApi, performanceApi, overridePayoutsApi } from "./api/endpoints.js";
 import { useAuth } from "./authContext.jsx";
-import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, clientWorkflowStages, followUpRequiredStages, sources, stageBadge, advisorStatuses } from "./data/dropdowns.js";
+import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, clientWorkflowStages, followUpRequiredStages, sources, stageBadge, advisorStatuses, stageStatusOptions } from "./data/dropdowns.js";
 import { businessConfigs, defaultBusinessSettings } from "./data/config.js";
 import { getActiveAdvisorRows, getPerformanceSummary, getOverrideRecords } from "./pages/advisor-operations/advisorOperationsData.js";
 
@@ -923,6 +923,7 @@ export function CrmProvider({ children }) {
     recruiterNames: derivedRecruiterNames,
     teamMembers,
     stageBadge,
+    stageStatusOptions,
     businessConfigs,
     activeAdvisors,
     performanceSummary,

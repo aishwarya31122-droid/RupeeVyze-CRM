@@ -5,7 +5,7 @@ import FunnelChart from "../../components/FunnelChart.jsx";
 import CandidateForm from "../../components/CandidateForm.jsx";
 import { useCrm } from "../../crmContext.jsx";
 import { useAuth, filterByRole } from "../../authContext.jsx";
-import { formatDate, getTodayFollowUps, getOverdueFollowUps } from "../../utils.js";
+import { formatDate, getTodayFollowUps, getOverdueFollowUps, isDueToday, isDueWithinDays, isOverdueDueDate, isNotConvertedOrLost } from "../../utils.js";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
@@ -17,6 +17,7 @@ import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlin
 import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
 import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
 import PriorityHighOutlinedIcon from "@mui/icons-material/PriorityHighOutlined";
+import TodayOutlinedIcon from "@mui/icons-material/TodayOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 
 function KPI({ label, value, icon: Icon, color }) {
@@ -60,7 +61,7 @@ function LeadDashboard() {
   const totalLeads = leads.length;
   const customerLeads = leads.length;
   const openLeads = leads.filter((l) => l.leadStatus === "Open").length;
-  const assignedLeads = leads.filter((l) => l.leadStatus === "Assigned").length;
+  const assignedLeads = leads.filter((l) => l.assignedAdvisorId || l.assignedTo).length;
   const convertedLeads = leads.filter((l) => l.leadStatus === "Converted").length;
 
   const todaysNewLeads = useMemo(
@@ -70,12 +71,21 @@ function LeadDashboard() {
 
   const todaysFollowUps = useMemo(() => getTodayFollowUps(leads).length, [leads]);
   const overdueFollowUps = useMemo(() => getOverdueFollowUps(leads).length, [leads]);
+
   const upcomingTasks = useMemo(
-    () => leads.reduce((sum, lead) => sum + (lead.tasks?.filter((task) => new Date(task.dueDate) > new Date()).length || 0), 0),
+    () => leads.filter((lead) => isNotConvertedOrLost(lead) && lead.dueDate && isDueWithinDays(lead.dueDate, 7)).length,
     [leads]
   );
 
-  const priorityLeads = leads.filter((lead) => lead.priority === "High" || lead.followUp?.priority === "High").length;
+  const dueToday = useMemo(
+    () => leads.filter((lead) => isNotConvertedOrLost(lead) && isDueToday(lead.dueDate)).length,
+    [leads]
+  );
+
+  const priorityLeads = useMemo(
+    () => leads.filter((lead) => (lead.priority || lead.followUp?.priority || "Medium") === "High").length,
+    [leads]
+  );
 
   const insuranceFunnelStages = useMemo(() => {
     return customerWorkflowStages.filter((s) => !["Qualified", "Financial Need Analysis", "Product Recommendation", "Illustration Shared", "Proposal Submitted", "Medical", "Underwriting", "Premium Collected", "Active Client"].includes(s));
@@ -97,6 +107,7 @@ function LeadDashboard() {
     { label: "Today's Follow-ups", value: todaysFollowUps, icon: EventAvailableOutlinedIcon, color: "#ea580c" },
     { label: "Overdue Follow-ups", value: overdueFollowUps, icon: ScheduleOutlinedIcon, color: "#dc2626" },
     { label: "Upcoming Tasks", value: upcomingTasks, icon: AssignmentTurnedInOutlinedIcon, color: "#9333ea" },
+    { label: "Due Today", value: dueToday, icon: TodayOutlinedIcon, color: "#ea580c" },
     { label: "Priority Leads", value: priorityLeads, icon: PriorityHighOutlinedIcon, color: "#0891b2" },
     { label: "Conversion Rate", value: `${conversionRate}%`, icon: TrendingUpOutlinedIcon, color: "#0f172a" }
   ];

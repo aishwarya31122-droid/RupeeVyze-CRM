@@ -4,6 +4,13 @@ import { Alert, Box, Button, Paper, Snackbar, Typography } from "@mui/material";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import { useCrm } from "../../crmContext.jsx";
 import { useAuth, filterByRole } from "../../authContext.jsx";
+import { formatDate, isDueToday, isOverdueDueDate } from "../../utils.js";
+
+const priorityBadgeStyle = {
+  High: { color: "#dc2626", bg: "#fef2f2" },
+  Medium: { color: "#d97706", bg: "#fffbeb" },
+  Low: { color: "#16a34a", bg: "#f0fdf4" },
+};
 
 function AllLeads() {
   const { candidates: allCandidates, removeDuplicates } = useCrm();
@@ -55,10 +62,12 @@ function AllLeads() {
                 <th>Name</th>
                 <th>Lead Type</th>
                 <th>Workflow Stage</th>
+                <th>Stage Status</th>
                 <th>Lead Status</th>
                 <th>Assigned To</th>
                 <th>Lead Source</th>
                 <th>Priority</th>
+                <th>Due Date</th>
                 <th>Next Follow-up</th>
                 <th>Actions</th>
               </tr>
@@ -66,7 +75,7 @@ function AllLeads() {
             <tbody>
               {insuranceLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>No insurance customer records found</td>
+                  <td colSpan={11} style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>No insurance customer records found</td>
                 </tr>
               ) : (
                 insuranceLeads.map((l) => (
@@ -75,10 +84,29 @@ function AllLeads() {
                     <td>{l.name}</td>
                     <td>{l.leadType}</td>
                     <td>{l.workflowStage}</td>
+                    <td>{l.stageStatus || ""}</td>
                     <td>{l.leadStatus}</td>
                     <td>{l.assignedTo}</td>
                     <td>{l.leadSource || l.source}</td>
-                    <td>{l.priority || l.followUp?.priority}</td>
+                    <td>
+                      {(() => {
+                        const p = l.priority || l.followUp?.priority || "Medium";
+                        const s = priorityBadgeStyle[p] || priorityBadgeStyle.Medium;
+                        return (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", fontWeight: 600, color: s.color, background: s.bg, padding: "2px 8px", borderRadius: "12px" }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.color, display: "inline-block" }} />
+                            {p}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td>
+                      {l.dueDate ? (
+                        <span style={{ color: isOverdueDueDate(l.dueDate) ? "#dc2626" : isDueToday(l.dueDate) ? "#ea580c" : "#0f172a", fontWeight: isOverdueDueDate(l.dueDate) || isDueToday(l.dueDate) ? 600 : 400 }}>
+                          {formatDate(l.dueDate)}
+                        </span>
+                      ) : ""}
+                    </td>
                     <td>{l.nextFollowUp}</td>
                     <td>
                       <Link className="button secondary" to={`/adviser/profile/${l.id}`}>View</Link>

@@ -391,6 +391,7 @@ function CandidateDetails() {
                   <div className="detail-item"><span>Lead Status</span><strong>{candidate.leadStatus}</strong></div>
                   <div className="detail-item"><span>Assigned Advisor</span><strong>{candidate.assignedAdvisorName || candidate.assignedTo || "Unassigned"}</strong></div>
                   <div className="detail-item"><span>Priority</span><strong>{candidate.priority || candidate.followUp?.priority || "Medium"}</strong></div>
+                  <div className="detail-item"><span>Due Date</span><strong>{formatDate(candidate.dueDate) || "Not set"}</strong></div>
                   <div className="detail-item"><span>Next Follow-up</span><strong>{formatDate(candidate.nextFollowUp || candidate.followUpDate)}</strong></div>
                 </div>
 
@@ -430,6 +431,7 @@ function CandidateDetails() {
                     <div className="detail-item"><span>Assigned To</span><strong>{candidate.assignedAdvisorName || candidate.assignedTo || "Unassigned"}</strong></div>
                   )}
                   <div className="detail-item"><span>Priority</span><strong>{candidate.priority || candidate.followUp?.priority || "Medium"}</strong></div>
+                  <div className="detail-item"><span>Due Date</span><strong>{formatDate(candidate.dueDate) || "Not set"}</strong></div>
                   <div className="detail-item"><span>Next Follow-up</span><strong>{formatDate(candidate.nextFollowUp || candidate.followUpDate)}</strong></div>
                 </div>
 

@@ -34,7 +34,7 @@ export const insuranceCustomerStageFields = {
     dateField("followUpDate", "Follow-up Date")
   ],
   "Policy Issued": [
-    text("policyNumber", "Policy Number"),
+    text("policyNumber", "Policy"),
     dateField("policyIssueDate", "Policy Issue Date"),
     text("premiumAmount", "Premium Amount")
   ],

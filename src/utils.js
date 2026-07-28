@@ -17,6 +17,35 @@ export function isToday(value) {
   );
 }
 
+export function getStartOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+export function isDueToday(dueDate) {
+  if (!dueDate) return false;
+  return isToday(dueDate);
+}
+
+export function isOverdueDueDate(dueDate) {
+  if (!dueDate) return false;
+  const due = new Date(dueDate);
+  return due < getStartOfToday();
+}
+
+export function isDueWithinDays(dueDate, days) {
+  if (!dueDate) return false;
+  const due = new Date(dueDate);
+  const startOfToday = getStartOfToday();
+  const endOfRange = new Date(startOfToday);
+  endOfRange.setDate(endOfRange.getDate() + days);
+  return due >= startOfToday && due <= endOfRange;
+}
+
+export function isNotConvertedOrLost(lead) {
+  return lead.leadStatus !== "Converted" && lead.leadStatus !== "Lost";
+}
+
 export function getFollowUpDate(candidate) {
   return candidate.followUpDate || candidate.nextFollowUp || "";
 }

@@ -6,6 +6,9 @@ import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
+import Autocomplete from "@mui/material/Autocomplete";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
 import { useCrm } from "../crmContext.jsx";
 import { useAuth } from "../authContext.jsx";
@@ -16,6 +19,7 @@ import {
   insuranceCustomerStageFields,
   advisorStageFields,
 } from "../data/stageConfig.js";
+import { stageStatusOptions } from "../data/dropdowns.js";
 
 const stageConfigByLeadType = {
   "Insurance Customer": insuranceCustomerStageFields,
@@ -37,6 +41,8 @@ const baseFields = {
   qualification: "",
   leadType: "Insurance Customer",
   workflowStage: insuranceCustomerStages[0],
+  dueDate: "",
+  priority: "Medium",
   notes: "",
 };
 
@@ -56,12 +62,12 @@ const createEmptyForm = (leadType) => {
 const STAGE_FIELDS_BASE = new Set([
   "name", "mobile", "email", "city", "qualification",
   "source", "leadType", "workflowStage", "notes", "assignedTo",
-  "nextFollowUp",
+  "nextFollowUp", "dueDate", "priority", "stageStatus",
 ]);
 
 export default function CandidateForm({ open, onClose, onAdd, pipelineStages: propPipelineStages, sources: propSources }) {
-  const { candidates } = useCrm();
-  const { currentUser, isAdvisor } = useAuth();
+  const { candidates, activeAdvisors } = useCrm();
+  const { currentUser, isAdvisor, canAssignClient } = useAuth();
   const [form, setForm] = useState(() => createEmptyForm());
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
@@ -116,6 +122,7 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
       const withDefaults = {
         ...prev,
         workflowStage: value,
+        stageStatus: "",
         ...getStageDefaultValues(config, value),
       };
       return clearHiddenStageFields(withDefaults, config, value);
@@ -146,7 +153,7 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
 
     const selectedAdvisorName = isAdvisor ? currentUser.name : form.assignedTo || "";
     const matchedAdvisor = selectedAdvisorName
-      ? candidates.find((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.name === selectedAdvisorName)
+      ? activeAdvisors.find((a) => a.name === selectedAdvisorName)
       : null;
 
     const record = {
@@ -155,6 +162,9 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
       workflowStage: form.workflowStage || firstStageByLeadType[form.leadType],
       source: form.source || "Referral",
       nextFollowUp: isInsuranceCustomer ? (form.followUpDate || form.nextFollowUpDate || "") : "",
+      dueDate: form.dueDate || "",
+      priority: form.priority || "Medium",
+      stageStatus: form.stageStatus || "",
       assignedAdvisorId: isInsuranceCustomer ? (isAdvisor ? currentUser.id : (matchedAdvisor ? String(matchedAdvisor.id) : "")) : "",
       assignedAdvisorName: isInsuranceCustomer ? (isAdvisor ? currentUser.name : selectedAdvisorName) : "",
       assignedTo: isInsuranceCustomer ? selectedAdvisorName : "",
@@ -268,6 +278,83 @@ export default function CandidateForm({ open, onClose, onAdd, pipelineStages: pr
             </MenuItem>
           ))}
         </TextField>
+
+        {isInsuranceCustomer && stageStatusOptions[form.workflowStage] && (
+          <TextField
+            select
+            fullWidth
+            margin="dense"
+            label="Stage Status"
+            name="stageStatus"
+            value={form.stageStatus}
+            onChange={handle}
+          >
+            {stageStatusOptions[form.workflowStage].map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+
+        {isInsuranceCustomer && canAssignClient() && (
+          <Autocomplete
+            size="small"
+            fullWidth
+            margin="dense"
+            options={activeAdvisors}
+            getOptionLabel={(option) => {
+              const parts = [option.name];
+              if (option.advisorCode) parts.push(option.advisorCode);
+              return parts.join(" — ");
+            }}
+            isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{option.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {[option.advisorCode, option.id ? `ID: ${option.id}` : ""].filter(Boolean).join(" • ")}
+                  </Typography>
+                </Box>
+              </li>
+            )}
+            value={activeAdvisors.find((a) => a.name === form.assignedTo) || null}
+            onChange={(_, newValue) => {
+              setForm((prev) => ({ ...prev, assignedTo: newValue ? newValue.name : "" }));
+              if (errors.assignedTo) setErrors((prev) => ({ ...prev, assignedTo: "" }));
+            }}
+            renderInput={(params) => (
+              <TextField {...params} label="Assigned To" placeholder="Search advisor..." margin="dense" />
+            )}
+            sx={{ mt: 1 }}
+          />
+        )}
+
+        <TextField
+          select
+          fullWidth
+          margin="dense"
+          label="Priority"
+          name="priority"
+          value={form.priority}
+          onChange={handle}
+        >
+          <MenuItem value="High">High</MenuItem>
+          <MenuItem value="Medium">Medium</MenuItem>
+          <MenuItem value="Low">Low</MenuItem>
+        </TextField>
+
+        <TextField
+          fullWidth
+          margin="dense"
+          label="Due Date"
+          name="dueDate"
+          type="date"
+          value={form.dueDate}
+          onChange={handle}
+          InputLabelProps={{ shrink: true }}
+        />
 
         <StageForm
           stageConfig={stageConfig}

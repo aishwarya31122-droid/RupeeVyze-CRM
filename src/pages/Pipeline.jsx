@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Box, Button, Paper, Typography } from "@mui/material";
 import { useCrm } from "../crmContext.jsx";
 import { useAuth, filterByRole } from "../authContext.jsx";
+import { isDueToday, isDueWithinDays, isOverdueDueDate } from "../utils.js";
 import CandidateCard from "../components/CandidateCard.jsx";
 import CandidateModal from "../components/CandidateModal.jsx";
 import CandidateForm from "../components/CandidateForm.jsx";
@@ -16,6 +17,7 @@ function Pipeline({ detailsPrefix }) {
   const [sourceFilter, setSourceFilter] = useState("All Sources");
   const [recruiterFilter, setRecruiterFilter] = useState("All Recruiters");
   const [cityFilter, setCityFilter] = useState("All Cities");
+  const [priorityDueFilter, setPriorityDueFilter] = useState("All");
   const [activeCandidate, setActiveCandidate] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -37,9 +39,19 @@ function Pipeline({ detailsPrefix }) {
       const matchesSource = sourceFilter === "All Sources" || candidate.source === sourceFilter || candidate.leadSource === sourceFilter;
       const matchesRecruiter = recruiterFilter === "All Recruiters" || candidate.recruitedBy === recruiterFilter || candidate.assignedTo === recruiterFilter;
       const matchesCity = cityFilter === "All Cities" || candidate.city === cityFilter;
-      return matchesSearch && matchesStage && matchesSource && matchesRecruiter && matchesCity;
+      let matchesPriorityDue = true;
+      if (priorityDueFilter === "High Priority") {
+        matchesPriorityDue = (candidate.priority || candidate.followUp?.priority || "Medium") === "High";
+      } else if (priorityDueFilter === "Due Today") {
+        matchesPriorityDue = isDueToday(candidate.dueDate);
+      } else if (priorityDueFilter === "Upcoming Due") {
+        matchesPriorityDue = isDueWithinDays(candidate.dueDate, 7);
+      } else if (priorityDueFilter === "Overdue") {
+        matchesPriorityDue = isOverdueDueDate(candidate.dueDate);
+      }
+      return matchesSearch && matchesStage && matchesSource && matchesRecruiter && matchesCity && matchesPriorityDue;
     });
-  }, [candidates, search, stageFilter, sourceFilter, recruiterFilter, cityFilter]);
+  }, [candidates, search, stageFilter, sourceFilter, recruiterFilter, cityFilter, priorityDueFilter]);
 
   const exportCsv = () => {
     const rows = [
@@ -118,6 +130,13 @@ function Pipeline({ detailsPrefix }) {
             {recruiterNames.map((name) => (
               <option key={name}>{name}</option>
             ))}
+          </select>
+          <select className="filter" value={priorityDueFilter} onChange={(e) => setPriorityDueFilter(e.target.value)}>
+            <option>All</option>
+            <option>High Priority</option>
+            <option>Due Today</option>
+            <option>Upcoming Due</option>
+            <option>Overdue</option>
           </select>
         </div>
       </Paper>
