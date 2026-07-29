@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Autocomplete, Box, Button, Card, CardContent, Chip, Divider, Grid, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Divider, Grid, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import { useCrm } from "../../crmContext.jsx";
 import { useAuth } from "../../authContext.jsx";
@@ -11,7 +11,8 @@ export default function ClientDetails() {
   const { candidates: allCandidates, activeAdvisors, updateCandidate } = useCrm();
   const { currentUser, isAdmin, isAdvisor, canAssignClient } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [selectedAdvisorId, setSelectedAdvisorId] = useState("");
+  const [selectedAdvisorName, setSelectedAdvisorName] = useState("");
+  const [manualAssignedTo, setManualAssignedTo] = useState("");
 
   const candidate = useMemo(() => (allCandidates || []).find((c) => String(c.id) === String(id) || String(c.leadId) === String(id)), [allCandidates, id]);
 
@@ -93,34 +94,32 @@ export default function ClientDetails() {
                 <Typography variant="body2"><strong>Email:</strong> {client.email || "—"}</Typography>
                 <Typography variant="body2"><strong>Advisor:</strong> {editing ? "" : (client.advisorAssigned || "Unassigned")}</Typography>
                 {editing && (
-                  <Autocomplete
-                    size="small"
-                    fullWidth
-                    options={activeAdvisors}
-                    getOptionLabel={(option) => {
-                      const parts = [option.name];
-                      if (option.advisorCode) parts.push(option.advisorCode);
-                      if (option.id) parts.push(`ID: ${option.id}`);
-                      return parts.join(" — ");
-                    }}
-                    isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
-                    renderOption={(props, option) => (
-                      <li {...props} key={option.id}>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{option.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {[option.advisorCode, option.id ? `ID: ${option.id}` : ""].filter(Boolean).join(" • ")}
-                          </Typography>
-                        </Box>
-                      </li>
-                    )}
-                    value={activeAdvisors.find((a) => String(a.id) === String(selectedAdvisorId)) || null}
-                    onChange={(_, newValue) => setSelectedAdvisorId(newValue ? String(newValue.id) : "")}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Assigned To" placeholder="Search advisor..." />
-                    )}
-                    sx={{ mt: 0.5 }}
-                  />
+                  <>
+                    <TextField
+                      select
+                      fullWidth
+                      size="small"
+                      label="Select Active Advisor"
+                      value={selectedAdvisorName}
+                      onChange={(e) => setSelectedAdvisorName(e.target.value)}
+                      sx={{ mt: 0.5, mb: 1 }}
+                    >
+                      <MenuItem value="">None</MenuItem>
+                      {activeAdvisors.map((advisor) => (
+                        <MenuItem key={advisor.id} value={advisor.name}>
+                          {advisor.name}{advisor.advisorCode ? ` (${advisor.advisorCode})` : ""}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Enter Advisor Name Manually"
+                      placeholder="Enter advisor name manually"
+                      value={manualAssignedTo}
+                      onChange={(e) => setManualAssignedTo(e.target.value)}
+                    />
+                  </>
                 )}
                 <Typography variant="body2"><strong>Lead Source:</strong> {client.leadSource}</Typography>
                 <Typography variant="body2"><strong>Interest:</strong> {client.policyTypeInterest}</Typography>
@@ -132,10 +131,12 @@ export default function ClientDetails() {
                       size="small"
                       variant="contained"
                       onClick={async () => {
-                        const advisor = activeAdvisors.find((a) => String(a.id) === String(selectedAdvisorId));
+                        const effective = manualAssignedTo.trim() !== "" ? manualAssignedTo : selectedAdvisorName;
+                        const advisor = activeAdvisors.find((a) => a.name === effective);
                         await updateCandidate(candidate.id, {
+                          assignedTo: effective,
                           assignedAdvisorId: advisor ? String(advisor.id) : "",
-                          assignedAdvisorName: advisor ? advisor.name : "",
+                          assignedAdvisorName: effective,
                         });
                         setEditing(false);
                       }}
@@ -148,7 +149,10 @@ export default function ClientDetails() {
                   </>
                 ) : (
                   <Button size="small" variant="outlined" onClick={() => {
-                    setSelectedAdvisorId(client.assignedAdvisorId || "");
+                    const assigned = client.advisorAssigned || "";
+                    const match = activeAdvisors.some((a) => a.name === assigned);
+                    setSelectedAdvisorName(match ? assigned : "");
+                    setManualAssignedTo(match ? "" : assigned);
                     setEditing(true);
                   }}>
                     Edit
@@ -172,6 +176,46 @@ export default function ClientDetails() {
           </Card>
         </Grid>
       </Grid>
+
+      <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0" }}>
+        <CardContent>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Policy Details</Typography>
+          {candidate.policyNumber ? (
+            <Grid container spacing={1.5}>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Policy Number:</strong> {candidate.policyNumber}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Insurance Company:</strong> {candidate.insuranceCompany || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Policy Type:</strong> {candidate.policyType || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Premium Frequency:</strong> {candidate.premiumFrequency || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Start Date:</strong> {candidate.policyStartDate || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>End Date:</strong> {candidate.policyEndDate || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Sum Assured:</strong> {candidate.sumAssured || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Nominee:</strong> {candidate.nomineeName || "—"}</Typography></Grid>
+              <Grid item xs={12}><Typography variant="body2"><strong>Remarks:</strong> {candidate.policyRemarks || "—"}</Typography></Grid>
+            </Grid>
+          ) : (
+            <Typography variant="body2" color="text.secondary">No Policy Details Available</Typography>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0" }}>
+        <CardContent>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Premium Details</Typography>
+          {candidate.premiumAmount ? (
+            <Grid container spacing={1.5}>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Premium Amount:</strong> {candidate.premiumAmount}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Collection Date:</strong> {candidate.collectionDate || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Payment Mode:</strong> {candidate.paymentMode || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Transaction ID:</strong> {candidate.transactionReference || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Receipt Number:</strong> {candidate.receiptNumber || "—"}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography variant="body2"><strong>Collected By:</strong> {candidate.collectedBy || "—"}</Typography></Grid>
+              <Grid item xs={12}><Typography variant="body2"><strong>Remarks:</strong> {candidate.premiumRemarks || "—"}</Typography></Grid>
+            </Grid>
+          ) : (
+            <Typography variant="body2" color="text.secondary">No Premium Details Available</Typography>
+          )}
+        </CardContent>
+      </Card>
 
       <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0" }}>
         <CardContent>

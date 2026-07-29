@@ -98,7 +98,25 @@ const CRM_FIELDS = [
   { key: "nextFollowUp", label: "Follow-up Date", required: false },
   { key: "trainingStatus", label: "Training Status", required: false },
   { key: "examResult", label: "Exam Result", required: false },
-  { key: "notes", label: "Notes", required: false }
+  { key: "notes", label: "Notes", required: false },
+  { key: "assignedTo", label: "Assigned To", required: false },
+  { key: "policyIssued", label: "Policy Issued", required: false },
+  { key: "policyNumber", label: "Policy Number", required: false },
+  { key: "policyType", label: "Policy Type", required: false },
+  { key: "insuranceCompany", label: "Insurance Company", required: false },
+  { key: "policyStartDate", label: "Policy Start Date", required: false },
+  { key: "policyEndDate", label: "Policy End Date", required: false },
+  { key: "sumAssured", label: "Sum Assured", required: false },
+  { key: "policyTerm", label: "Policy Term", required: false },
+  { key: "nomineeName", label: "Nominee Name", required: false },
+  { key: "relationship", label: "Relationship", required: false },
+  { key: "premiumCollected", label: "Premium Collected", required: false },
+  { key: "premiumAmount", label: "Premium Amount", required: false },
+  { key: "collectionDate", label: "Collection Date", required: false },
+  { key: "paymentMode", label: "Payment Mode", required: false },
+  { key: "transactionReference", label: "Transaction Reference", required: false },
+  { key: "receiptNumber", label: "Receipt Number", required: false },
+  { key: "collectedBy", label: "Collected By", required: false }
 ];
 
 const TYPE_CRM_FIELDS = {
@@ -176,7 +194,27 @@ const ALIAS_MAP = {
   "follow-up": "nextFollowUp", "followup": "nextFollowUp", "next follow up": "nextFollowUp",
   "training status": "trainingStatus", "training": "trainingStatus",
   "exam result": "examResult", "exam": "examResult", "result": "examResult",
-  "notes": "notes", "remarks": "notes", "comments": "notes", "description": "notes"
+  "notes": "notes", "remarks": "notes", "comments": "notes", "description": "notes",
+  "assigned to": "assignedTo", "assignedto": "assignedTo", "recruiter": "assignedTo",
+  "policy issued": "policyIssued", "policyissued": "policyIssued",
+  "policy number": "policyNumber", "policynumber": "policyNumber",
+  "policy type": "policyType", "policytype": "policyType",
+  "insurance company": "insuranceCompany", "insurancecompany": "insuranceCompany",
+  "policy start date": "policyStartDate", "policystartdate": "policyStartDate",
+  "policy end date": "policyEndDate", "policyenddate": "policyEndDate",
+  "sum assured": "sumAssured", "sumassured": "sumAssured",
+  "policy term": "policyTerm", "policyterm": "policyTerm",
+  "premium frequency": "premiumFrequency", "premiumfrequency": "premiumFrequency",
+  "policy status": "policyStatus", "policystatus": "policyStatus",
+  "nominee name": "nomineeName", "nomineename": "nomineeName",
+  "relationship": "relationship",
+  "premium collected": "premiumCollected", "premiumcollected": "premiumCollected",
+  "premium amount": "premiumAmount", "premiumamount": "premiumAmount",
+  "collection date": "collectionDate", "collectiondate": "collectionDate",
+  "payment mode": "paymentMode", "paymentmode": "paymentMode",
+  "transaction reference": "transactionReference", "transactionreference": "transactionReference",
+  "receipt number": "receiptNumber", "receiptnumber": "receiptNumber",
+  "collected by": "collectedBy", "collectedby": "collectedBy"
 };
 
 const TYPE_ALIAS_MAPS = {

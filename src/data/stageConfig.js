@@ -33,11 +33,7 @@ export const insuranceCustomerStageFields = {
     select("discussionStatus", "Discussion Status", ["Pending", "Completed"]),
     dateField("followUpDate", "Follow-up Date")
   ],
-  "Policy Issued": [
-    text("policyNumber", "Policy"),
-    dateField("policyIssueDate", "Policy Issue Date"),
-    text("premiumAmount", "Premium Amount")
-  ],
+  "Policy Issued": [],
   "Lost": [
     textarea("lostReason", "Lost Reason")
   ]

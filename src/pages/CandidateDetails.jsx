@@ -433,6 +433,18 @@ function CandidateDetails() {
                   <div className="detail-item"><span>Priority</span><strong>{candidate.priority || candidate.followUp?.priority || "Medium"}</strong></div>
                   <div className="detail-item"><span>Due Date</span><strong>{formatDate(candidate.dueDate) || "Not set"}</strong></div>
                   <div className="detail-item"><span>Next Follow-up</span><strong>{formatDate(candidate.nextFollowUp || candidate.followUpDate)}</strong></div>
+                  {!isAdvisorLead && (
+                    <>
+                      <div className="detail-item">
+                        <span>Policy Status</span>
+                        <strong>{candidate.policyIssued === "Yes" ? "Issued ✅" : "Pending"}</strong>
+                      </div>
+                      <div className="detail-item">
+                        <span>Premium</span>
+                        <strong>{candidate.premiumCollected === "Yes" ? "Collected" : "Pending"}</strong>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div>
@@ -441,6 +453,34 @@ function CandidateDetails() {
                   <div className="detail-item"><span>Policy Interest</span><strong>{candidate.policyInterest || "Not applicable"}</strong></div>
                   <div className="detail-item"><span>Notes</span><strong>{candidate.notes || "No notes provided."}</strong></div>
                 </div>
+
+                {!isAdvisorLead && candidate.policyIssued === "Yes" && (
+                  <div>
+                    <h3>Policy Details</h3>
+                    <div className="detail-item"><span>Policy Number</span><strong>{candidate.policyNumber || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Insurance Company</span><strong>{candidate.insuranceCompany || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Policy Type</span><strong>{candidate.policyType || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Policy Start Date</span><strong>{candidate.policyStartDate || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Policy End Date</span><strong>{candidate.policyEndDate || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Premium Frequency</span><strong>{candidate.premiumFrequency || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Sum Assured</span><strong>{candidate.sumAssured || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Nominee Name</span><strong>{candidate.nomineeName || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Remarks</span><strong>{candidate.policyRemarks || "Not Available"}</strong></div>
+                  </div>
+                )}
+
+                {!isAdvisorLead && candidate.premiumCollected === "Yes" && (
+                  <div>
+                    <h3>Premium Details</h3>
+                    <div className="detail-item"><span>Premium Amount</span><strong>{candidate.premiumAmount || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Collection Date</span><strong>{candidate.collectionDate || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Payment Mode</span><strong>{candidate.paymentMode || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Transaction ID</span><strong>{candidate.transactionReference || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Receipt Number</span><strong>{candidate.receiptNumber || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Collected By</span><strong>{candidate.collectedBy || "Not Available"}</strong></div>
+                    <div className="detail-item"><span>Remarks</span><strong>{candidate.premiumRemarks || "Not Available"}</strong></div>
+                  </div>
+                )}
               </>
             )}
           </div>

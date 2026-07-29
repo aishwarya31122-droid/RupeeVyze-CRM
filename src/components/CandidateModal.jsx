@@ -1,8 +1,24 @@
 import React, { useState } from "react";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import Collapse from "@mui/material/Collapse";
+import Paper from "@mui/material/Paper";
+import Alert from "@mui/material/Alert";
 import { useCrm } from "../crmContext.jsx";
 import { useAuth } from "../authContext.jsx";
 import { stageStatusOptions } from "../data/dropdowns.js";
 import StageSelect from "./StageSelect.jsx";
+import PolicyDetailsForm from "./PolicyDetailsForm.jsx";
+import PremiumDetailsForm from "./PremiumDetailsForm.jsx";
 
 export default function CandidateModal({ candidate, onClose, onStageUpdate, onNoteSave, onSave }) {
   const { pipelineStages, sources, followUpRequiredStages, activeAdvisors, advisorStatuses } = useCrm();
@@ -11,6 +27,12 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   const canEdit = canEditClient(candidate);
   const isActiveClient = !isAdvisor && candidate.workflowStage === "Active Client";
   const activatedAdvisorOptions = activeAdvisors || [];
+  const initialAssignedTo = candidate.assignedTo || "";
+  const initialMatch = activatedAdvisorOptions.some((a) => a.name === initialAssignedTo);
+  const [manualAssignedTo, setManualAssignedTo] = useState(initialMatch ? "" : initialAssignedTo);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [policyExpanded, setPolicyExpanded] = useState(candidate.policyIssued === "Yes");
+  const [premiumExpanded, setPremiumExpanded] = useState(candidate.premiumCollected === "Yes");
   const [form, setForm] = useState({
     name: candidate.name || "",
     mobile: candidate.mobile || candidate.phone || "",
@@ -19,26 +41,69 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
     leadSource: candidate.leadSource || candidate.source || "",
     workflowStage: candidate.workflowStage || pipelineStages[0],
     leadStatus: candidate.leadStatus || "Open",
-    assignedTo: candidate.assignedTo || "",
+    assignedTo: initialMatch ? initialAssignedTo : "",
     followUpDate: candidate.nextFollowUp || candidate.followUpDate || "",
     dueDate: candidate.dueDate || "",
     priority: candidate.priority || "Medium",
     stageStatus: candidate.stageStatus || "",
-    notes: candidate.notes || ""
+    notes: candidate.notes || "",
+    policyIssued: candidate.policyIssued || "No",
+    policyNumber: candidate.policyNumber || "",
+    policyType: candidate.policyType || "",
+    insuranceCompany: candidate.insuranceCompany || "",
+    policyStartDate: candidate.policyStartDate || "",
+    policyEndDate: candidate.policyEndDate || "",
+    sumAssured: candidate.sumAssured || "",
+    premiumFrequency: candidate.premiumFrequency || "",
+    nomineeName: candidate.nomineeName || "",
+    policyRemarks: candidate.policyRemarks || "",
+    premiumCollected: candidate.premiumCollected || "No",
+    premiumAmount: candidate.premiumAmount || "",
+    collectionDate: candidate.collectionDate || "",
+    paymentMode: candidate.paymentMode || "",
+    transactionReference: candidate.transactionReference || "",
+    receiptNumber: candidate.receiptNumber || "",
+    collectedBy: candidate.collectedBy || "",
+    premiumRemarks: candidate.premiumRemarks || ""
   });
   const [selectedStage, setSelectedStage] = useState(candidate.workflowStage || candidate.stage || pipelineStages[0]);
   const [successMessage, setSuccessMessage] = useState("");
-  const [advisorSearch, setAdvisorSearch] = useState("");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    if (name === "policyIssued") setPolicyExpanded(value === "Yes");
+    if (name === "premiumCollected") setPremiumExpanded(value === "Yes");
   };
 
   const handleSave = () => {
+    const errs = {};
+    if (selectedStage === "Policy Issued" && form.policyIssued === "Yes") {
+      if (!form.policyNumber.trim()) errs.policyNumber = "Required";
+      if (!form.policyType.trim()) errs.policyType = "Required";
+      if (!form.insuranceCompany.trim()) errs.insuranceCompany = "Required";
+      if (!form.policyStartDate.trim()) errs.policyStartDate = "Required";
+      if (!form.policyEndDate.trim()) errs.policyEndDate = "Required";
+      if (!form.premiumFrequency.trim()) errs.premiumFrequency = "Required";
+      if (!form.sumAssured.trim()) errs.sumAssured = "Required";
+      if (!form.nomineeName.trim()) errs.nomineeName = "Required";
+    }
+    if (selectedStage === "Premium Collected" && form.premiumCollected === "Yes") {
+      if (!form.premiumAmount.trim()) errs.premiumAmount = "Required";
+      if (!form.collectionDate.trim()) errs.collectionDate = "Required";
+      if (!form.paymentMode.trim()) errs.paymentMode = "Required";
+      if (!form.transactionReference.trim()) errs.transactionReference = "Required";
+    }
+    if (Object.keys(errs).length > 0) {
+      setValidationErrors(errs);
+      return;
+    }
+    setValidationErrors({});
+
+    const effectiveAssignedTo = manualAssignedTo.trim() !== "" ? manualAssignedTo : form.assignedTo;
     const stageForFollowUp = selectedStage || form.workflowStage;
     const showFollowUp = followUpRequiredStages.has(stageForFollowUp);
-    const selectedAdvisorName = form.assignedTo || candidate.assignedTo || "";
+    const selectedAdvisorName = effectiveAssignedTo || candidate.assignedTo || "";
     const matchedAdvisor = selectedAdvisorName
       ? activatedAdvisorOptions.find((a) => a.name === selectedAdvisorName)
       : null;
@@ -62,7 +127,25 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
         type: candidate.followUp?.type || "Phone Call",
         priority: candidate.followUp?.priority || "Medium",
         status: candidate.followUp?.status || "Pending"
-      }
+      },
+      policyIssued: form.policyIssued,
+      policyNumber: form.policyNumber,
+      policyType: form.policyType,
+      insuranceCompany: form.insuranceCompany,
+      policyStartDate: form.policyStartDate,
+      policyEndDate: form.policyEndDate,
+      premiumFrequency: form.premiumFrequency,
+      sumAssured: form.sumAssured,
+      nomineeName: form.nomineeName,
+      policyRemarks: form.policyRemarks,
+      premiumCollected: form.premiumCollected,
+      premiumAmount: form.premiumAmount,
+      collectionDate: form.collectionDate,
+      paymentMode: form.paymentMode,
+      transactionReference: form.transactionReference,
+      receiptNumber: form.receiptNumber,
+      collectedBy: form.collectedBy,
+      premiumRemarks: form.premiumRemarks
     };
 
     if (onSave) {
@@ -81,164 +164,197 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   const showFollowUp = followUpRequiredStages.has(selectedStage);
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content edit-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div>
-            <p className="section-kicker">Edit Lead</p>
-            <h2>{candidate.name}</h2>
-          </div>
-          <button onClick={onClose}>Close</button>
-        </div>
+    <Dialog
+      open
+      fullWidth
+      maxWidth={false}
+      onClose={onClose}
+      sx={{
+        "& .MuiDialog-paper": {
+          maxWidth: "760px",
+          width: "100%",
+          borderRadius: 3,
+          maxHeight: "85vh",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          bgcolor: "#fff",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          px: 3,
+          py: 2.5,
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Box>
+            <Typography variant="caption" color="primary" fontWeight={700} sx={{ letterSpacing: "0.08em", fontSize: "0.7rem", mb: 0.25, display: "block" }}>
+              EDIT LEAD
+            </Typography>
+            <Typography variant="h4" fontWeight={700} sx={{ fontSize: "1.5rem", color: "#0f172a", lineHeight: 1.2 }}>
+              {candidate.name}
+            </Typography>
+          </Box>
+          <IconButton onClick={onClose} size="small" sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1.5, color: "text.secondary", mt: 0.5 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </IconButton>
+        </Box>
+      </DialogTitle>
 
+      <DialogContent sx={{ px: 3, py: 2.5, "&::-webkit-scrollbar": { width: 6 }, "&::-webkit-scrollbar-thumb": { bgcolor: "#cbd5e1", borderRadius: 3 } }}>
         {successMessage && (
-          <div style={{ margin: "0 1rem", padding: "0.75rem 1rem", background: "#dcfce7", color: "#166534", borderRadius: "0.5rem", fontWeight: 600, fontSize: "0.875rem" }}>
-            {successMessage}
-          </div>
+          <Alert severity="success" sx={{ mb: 2.5 }}>{successMessage}</Alert>
         )}
 
-        <div className="modal-grid">
-          <label>
-            <span>Name</span>
-            <input name="name" value={form.name} onChange={handleChange} />
-          </label>
-          <label>
-            <span>Mobile Number</span>
-            <input name="mobile" value={form.mobile} onChange={handleChange} />
-          </label>
-          <label>
-            <span>Email</span>
-            <input name="email" value={form.email} onChange={handleChange} />
-          </label>
-          <label>
-            <span>City</span>
-            <input name="city" value={form.city} onChange={handleChange} />
-          </label>
-          <label>
-            <span>Lead Source</span>
-            <select name="leadSource" value={form.leadSource} onChange={handleChange}>
+        <Grid container spacing={2.5}>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Name" name="name" value={form.name} onChange={handleChange} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Mobile Number" name="mobile" value={form.mobile} onChange={handleChange} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Email" name="email" value={form.email} onChange={handleChange} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="City" name="city" value={form.city} onChange={handleChange} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField select fullWidth label="Lead Source" name="leadSource" value={form.leadSource} onChange={handleChange}>
               {sources.map((source) => (
-                <option key={source}>{source}</option>
+                <MenuItem key={source} value={source}>{source}</MenuItem>
               ))}
-            </select>
-          </label>
-          <label>
-            <span>{isAdvisor ? "Recruitment Stage" : "Workflow Stage"}</span>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="body2" fontWeight={500} sx={{ fontSize: "0.875rem", color: "text.secondary", mb: 0.5 }}>
+              {isAdvisor ? "Recruitment Stage" : "Workflow Stage"}
+            </Typography>
             <StageSelect stage={selectedStage} leadType={candidate.leadType} onChange={(value) => { setSelectedStage(value); setForm((prev) => ({ ...prev, stageStatus: "" })); }} clientFlow={isActiveClient} />
-          </label>
-          {!isAdvisor && stageStatusOptions[selectedStage] && (
-            <label>
-              <span>Stage Status</span>
-              <select name="stageStatus" value={form.stageStatus} onChange={handleChange}>
-                <option value="">Select...</option>
-                {stageStatusOptions[selectedStage].map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-          )}
+          </Grid>
+
           {isAdvisor ? (
             <>
-              <label>
-                <span>Status</span>
-                <select name="leadStatus" value={form.leadStatus} onChange={handleChange}>
+              <Grid item xs={12} sm={6}>
+                <TextField select fullWidth label="Status" name="leadStatus" value={form.leadStatus} onChange={handleChange}>
                   {advisorStatuses.map((status) => (
-                    <option key={status} value={status}>{status}</option>
+                    <MenuItem key={status} value={status}>{status}</MenuItem>
                   ))}
-                </select>
-              </label>
-              <label>
-                <span>Priority</span>
-                <select name="priority" value={form.priority} onChange={handleChange}>
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </select>
-              </label>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField select fullWidth label="Priority" name="priority" value={form.priority} onChange={handleChange}>
+                  <MenuItem value="High">High</MenuItem>
+                  <MenuItem value="Medium">Medium</MenuItem>
+                  <MenuItem value="Low">Low</MenuItem>
+                </TextField>
+              </Grid>
             </>
           ) : (
             <>
-              <label>
-                <span>Lead Status</span>
-                <select name="leadStatus" value={form.leadStatus} onChange={handleChange}>
-                  <option>Open</option>
-                  <option>Assigned</option>
-                  <option>In Progress</option>
-                  <option>Converted</option>
-                  <option>Lost</option>
-                </select>
-              </label>
-              <label>
-                <span>Priority</span>
-                <select name="priority" value={form.priority} onChange={handleChange}>
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </select>
-              </label>
-              {canAssignClient() && (
-                <label>
-                  <span>Assigned To</span>
-                  {activatedAdvisorOptions.length === 0 ? (
-                    <select name="assignedTo" value="" disabled>
-                      <option value="" disabled>No Active Advisors Available</option>
-                    </select>
-                  ) : (
-                    <>
-                      <input
-                        type="text"
-                        placeholder="Search advisor by name..."
-                        value={advisorSearch}
-                        onChange={(e) => setAdvisorSearch(e.target.value)}
-                        style={{ marginBottom: "0.25rem" }}
-                      />
-                      <select
-                        name="assignedTo"
-                        value={form.assignedTo}
-                        onChange={handleChange}
-                      >
-                        <option value="">None</option>
-                        {activatedAdvisorOptions
-                          .filter((advisor) => {
-                            if (!advisorSearch.trim()) return true;
-                            const q = advisorSearch.toLowerCase();
-                            const nameMatch = (advisor.name || "").toLowerCase().includes(q);
-                            const codeMatch = (advisor.advisorCode || "").toLowerCase().includes(q);
-                            return nameMatch || codeMatch;
-                          })
-                          .map((advisor) => (
-                            <option key={advisor.id} value={advisor.name}>
-                              {advisor.name}{advisor.advisorCode ? ` (${advisor.advisorCode})` : ""}
-                            </option>
-                          ))}
-                      </select>
-                    </>
-                  )}
-                </label>
+              {stageStatusOptions[selectedStage] && (
+                <Grid item xs={12} sm={6}>
+                  <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
+                    <MenuItem value="">Select...</MenuItem>
+                    {stageStatusOptions[selectedStage].map((option) => (
+                      <MenuItem key={option} value={option}>{option}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
               )}
+              <Grid item xs={12} sm={6}>
+                <TextField select fullWidth label="Lead Status" name="leadStatus" value={form.leadStatus} onChange={handleChange}>
+                  <MenuItem value="Open">Open</MenuItem>
+                  <MenuItem value="Assigned">Assigned</MenuItem>
+                  <MenuItem value="In Progress">In Progress</MenuItem>
+                  <MenuItem value="Converted">Converted</MenuItem>
+                  <MenuItem value="Lost">Lost</MenuItem>
+                </TextField>
+              </Grid>
             </>
           )}
-          {!isAdvisor && showFollowUp && (
-            <label>
-              <span>Follow-up Date</span>
-              <input type="date" name="followUpDate" value={form.followUpDate} onChange={handleChange} />
-            </label>
-          )}
-          <label>
-            <span>Due Date</span>
-            <input type="date" name="dueDate" value={form.dueDate} onChange={handleChange} />
-          </label>
-          <label className="full-width">
-            <span>Notes</span>
-            <textarea name="notes" value={form.notes} onChange={handleChange} />
-          </label>
-        </div>
 
-        <div className="modal-actions">
-          <button className="secondary" onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={handleSave}>Save Changes</button>
-        </div>
-      </div>
-    </div>
+          {isAdvisor ? (
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" fontWeight={500} sx={{ fontSize: "0.875rem", color: "text.secondary", mb: 0.5 }}>Assigned To</Typography>
+              <TextField select fullWidth label="Select Active Advisor" name="assignedTo" value={form.assignedTo} onChange={handleChange} sx={{ mb: 1 }}>
+                <MenuItem value="">None</MenuItem>
+                {activatedAdvisorOptions.map((advisor) => (
+                  <MenuItem key={advisor.id} value={advisor.name}>
+                    {advisor.name}{advisor.advisorCode ? ` (${advisor.advisorCode})` : ""}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField fullWidth label="Enter Advisor Name Manually" placeholder="Enter advisor name manually" value={manualAssignedTo} onChange={(e) => setManualAssignedTo(e.target.value)} />
+            </Grid>
+          ) : canAssignClient() ? (
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" fontWeight={500} sx={{ fontSize: "0.875rem", color: "text.secondary", mb: 0.5 }}>Assigned To</Typography>
+              <TextField select fullWidth label="Select Active Advisor" name="assignedTo" value={form.assignedTo} onChange={handleChange} sx={{ mb: 1 }}>
+                <MenuItem value="">None</MenuItem>
+                {activatedAdvisorOptions.map((advisor) => (
+                  <MenuItem key={advisor.id} value={advisor.name}>
+                    {advisor.name}{advisor.advisorCode ? ` (${advisor.advisorCode})` : ""}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField fullWidth label="Enter Advisor Name Manually" placeholder="Enter advisor name manually" value={manualAssignedTo} onChange={(e) => setManualAssignedTo(e.target.value)} />
+            </Grid>
+          ) : null}
+
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Due Date" type="date" name="dueDate" value={form.dueDate} onChange={handleChange} InputLabelProps={{ shrink: true }} />
+          </Grid>
+          {!isAdvisor && showFollowUp && (
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth label="Follow-up Date" type="date" name="followUpDate" value={form.followUpDate} onChange={handleChange} InputLabelProps={{ shrink: true }} />
+            </Grid>
+          )}
+        </Grid>
+
+        {!isAdvisor && selectedStage === "Policy Issued" && (
+          <Box sx={{ mt: 3 }}>
+            <PolicyDetailsForm
+              form={form}
+              handleChange={handleChange}
+              validationErrors={validationErrors}
+              policyExpanded={policyExpanded}
+              setPolicyExpanded={setPolicyExpanded}
+            />
+          </Box>
+        )}
+        {!isAdvisor && selectedStage === "Premium Collected" && (
+          <Box sx={{ mt: 2 }}>
+            <PremiumDetailsForm
+              form={form}
+              handleChange={handleChange}
+              validationErrors={validationErrors}
+              premiumExpanded={premiumExpanded}
+              setPremiumExpanded={setPremiumExpanded}
+            />
+          </Box>
+        )}
+
+        <Box sx={{ mt: 3 }}>
+          <TextField fullWidth label="Notes" name="notes" value={form.notes} onChange={handleChange} multiline rows={3} />
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ position: "sticky", bottom: 0, bgcolor: "#fff", borderTop: "1px solid", borderColor: "divider", px: 3, py: 2, justifyContent: "flex-end", gap: 1.5 }}>
+        <Button onClick={onClose} disabled={!!successMessage} variant="outlined" color="inherit" sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3 }}>
+          Cancel
+        </Button>
+        <Button variant="contained" onClick={handleSave} disabled={!!successMessage} sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3, boxShadow: 2 }}>
+          Save Changes
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

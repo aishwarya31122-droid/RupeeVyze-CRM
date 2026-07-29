@@ -26,6 +26,12 @@ export default function CandidateCard({ candidate, onOpen, stageColor, detailsPr
         <span className="badge" style={{ backgroundColor: stageColor }}>
           {candidate.workflowStage}
         </span>
+        {candidate.policyIssued === "Yes" && (
+          <span className="badge" style={{ backgroundColor: "#16a34a" }}>Issued</span>
+        )}
+        {candidate.premiumCollected === "Yes" && (
+          <span className="badge" style={{ backgroundColor: "#2563eb" }}>Premium Received</span>
+        )}
       </div>
       <p>{candidate.leadSource || candidate.source} · {candidate.recruitedBy || candidate.assignedTo}</p>
       {candidate.stageStatus && (

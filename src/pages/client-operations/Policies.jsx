@@ -54,6 +54,17 @@ export default function Policies() {
     return clients || [];
   }, [clients, allCandidates, currentUser, isAdvisor]);
 
+  const activeClientCandidates = useMemo(() => {
+    let list = (allCandidates || []).filter(
+      (c) => (c.leadType === "Insurance Customer" || !c.leadType)
+        && c.workflowStage === "Active Client"
+    );
+    if (isAdvisor && currentUser) {
+      list = list.filter((c) => String(c.assignedAdvisorId || "") === String(currentUser.id || ""));
+    }
+    return list;
+  }, [allCandidates, currentUser, isAdvisor]);
+
   const policies = useMemo(() => {
     const fromClients = visibleClients.flatMap((client) => (
       (client.policies || []).map((policy) => ({
@@ -73,15 +84,34 @@ export default function Policies() {
       renewalDate: policy.renewalDate || policy.endDate || "",
       status: policy.status || "Active"
     }));
+    const fromCandidates = activeClientCandidates
+      .filter((c) => c.policyNumber)
+      .map((c) => ({
+        policyNumber: c.policyNumber || "",
+        policyType: c.policyType || "",
+        clientName: c.name || "",
+        advisor: c.assignedAdvisorName || c.assignedTo || "",
+        sumAssured: c.sumAssured || "",
+        premium: c.premiumAmount || "",
+        issueDate: c.policyStartDate || "",
+        renewalDate: c.policyEndDate || "",
+        status: "Active"
+      }));
     const policyKeys = new Set(fromClients.map((p) => String(p.policyNumber || p.id || "").toLowerCase()));
-    const newFromContext = fromContext.filter((p) => {
+    const mergedContext = fromContext.filter((p) => {
       const key = String(p.policyNumber || p.id || "").toLowerCase();
       if (!key || policyKeys.has(key)) return false;
       policyKeys.add(key);
       return true;
     });
-    return [...fromClients, ...newFromContext];
-  }, [visibleClients, contextPolicies]);
+    const mergedCandidates = fromCandidates.filter((p) => {
+      const key = String(p.policyNumber || "").toLowerCase();
+      if (!key || policyKeys.has(key)) return false;
+      policyKeys.add(key);
+      return true;
+    });
+    return [...fromClients, ...mergedContext, ...mergedCandidates];
+  }, [visibleClients, contextPolicies, activeClientCandidates]);
 
   const filteredPolicies = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();

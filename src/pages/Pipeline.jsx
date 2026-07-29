@@ -55,7 +55,11 @@ function Pipeline({ detailsPrefix }) {
 
   const exportCsv = () => {
     const rows = [
-      ["Name", "Phone", "Email", "City", "Source", "Recruiter", "Stage", "Follow-up Date", "Notes"],
+      ["Name", "Phone", "Email", "City", "Source", "Recruiter", "Stage", "Follow-up Date", "Notes",
+       "Assigned To", "Policy Issued", "Policy Number", "Insurance Company", "Policy Type",
+       "Policy Start Date", "Policy End Date", "Premium Frequency", "Sum Assured", "Nominee Name",
+       "Premium Collected", "Premium Amount", "Collection Date", "Payment Mode", "Transaction ID",
+       "Receipt Number", "Collected By"],
       ...filteredCandidates.map((candidate) => [
         candidate.name,
         candidate.mobile || candidate.phone,
@@ -65,7 +69,24 @@ function Pipeline({ detailsPrefix }) {
         candidate.assignedTo || candidate.recruitedBy || "",
         candidate.workflowStage,
         candidate.nextFollowUp || candidate.followUpDate || "",
-        candidate.notes
+        candidate.notes,
+        candidate.assignedTo || "",
+        candidate.policyIssued || "",
+        candidate.policyNumber || "",
+        candidate.insuranceCompany || "",
+        candidate.policyType || "",
+        candidate.policyStartDate || "",
+        candidate.policyEndDate || "",
+        candidate.premiumFrequency || "",
+        candidate.sumAssured || "",
+        candidate.nomineeName || "",
+        candidate.premiumCollected || "",
+        candidate.premiumAmount || "",
+        candidate.collectionDate || "",
+        candidate.paymentMode || "",
+        candidate.transactionReference || "",
+        candidate.receiptNumber || "",
+        candidate.collectedBy || ""
       ])
     ];
 
