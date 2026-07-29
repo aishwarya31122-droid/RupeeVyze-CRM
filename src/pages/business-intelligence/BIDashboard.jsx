@@ -11,59 +11,138 @@ import {
   XAxis, YAxis, PieChart, Pie, Cell, Legend, FunnelChart, Funnel, LabelList
 } from "recharts";
 import { useCrm } from "../../crmContext.jsx";
+import { useAuth } from "../../authContext.jsx";
 
 const colors = ["#2563eb", "#0f766e", "#d97706", "#7c3aed", "#dc2626", "#64748b", "#0ea5e9", "#d946ef"];
-const FUNNEL_COLORS = ["#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe"];
 
-function EmptyChart({ text }) {
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-      <Typography variant="body2" color="text.secondary">{text || "No data available"}</Typography>
-    </Box>
-  );
-}
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const monthKey = (d) => d ? `${d.slice(0, 4)}-${d.slice(5, 7)}` : "";
+const monthLabel = (mk) => {
+  const [, m] = mk.split("-");
+  return MONTHS[parseInt(m, 10) - 1] || mk;
+};
+
+const insuranceCustomerStages = [
+  "New Lead", "Qualified", "Financial Need Analysis", "Product Recommendation",
+  "Illustration Shared", "Proposal Submitted", "Medical", "Underwriting",
+  "Policy Issued", "Premium Collected", "Active Client"
+];
+
+const recruitmentStages = [
+  "New Lead", "Qualified", "Interview", "Documents", "NAAF Generated",
+  "Training", "Exam", "Code Generated", "Activation", "Dropped"
+];
+
+const POLICY_TYPES = ["Term Insurance", "Health Insurance", "ULIP", "Other"];
 
 export default function BIDashboard() {
   const { candidates, clients, policies, claims, performanceRecords, activeAdvisors } = useCrm();
+  const { currentUser, isAdmin, isAdvisor } = useAuth();
+
+  const advisorFilteredCandidates = useMemo(() => {
+    if (isAdmin || !isAdvisor || !currentUser) return candidates;
+    return (candidates || []).filter((c) =>
+      String(c.assignedAdvisorId || "") === String(currentUser.id || "")
+    );
+  }, [candidates, currentUser, isAdmin, isAdvisor]);
+
+  const insuranceLeads = useMemo(() =>
+    (advisorFilteredCandidates || []).filter((c) =>
+      c.leadType === "Insurance Customer" || !c.leadType
+    ), [advisorFilteredCandidates]);
+
+  const activeClientCandidates = useMemo(() =>
+    insuranceLeads.filter((c) => c.workflowStage === "Active Client")
+  , [insuranceLeads]);
+
+  const advisorLeads = useMemo(() =>
+    (advisorFilteredCandidates || []).filter((c) =>
+      c.leadType === "Advisor" || c.leadType === "Recruitment"
+    ), [advisorFilteredCandidates]);
 
   const metrics = useMemo(() => {
-    const totalClients = clients.length;
-    const activeClients = clients.filter((c) => c.finalStatus === "Active Client").length;
-    const premium = clients.reduce((sum, c) => sum + Number(c.annualPremiumBudget?.replace(/[^0-9]/g, "") || 0), 0);
-    const policyCount = policies.length || clients.reduce((sum, c) => sum + (c.policies || []).length, 0);
-    const recruitment = candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer").length;
-    const advisorRecords = candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer");
-    const converted = advisorRecords.filter((c) => (c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")).length;
-    const conversionRate = advisorRecords.length > 0 ? Math.round((converted / advisorRecords.length) * 100) : 0;
+    const totalActiveClients = activeClientCandidates.length;
+    const clientCountViaClients = (clients || []).filter((c) => c.finalStatus === "Active Client").length;
+    const uniqueClientCount = Math.max(totalActiveClients, clientCountViaClients);
+
+    const policyCandidates = activeClientCandidates.filter((c) => c.policyNumber);
+    const policyContext = (policies || []).filter((p) => p.status === "Active" || p.status === "In Force" || p.status === "Issued");
+    const policyFromClients = (clients || []).flatMap((c) => (c.policies || [])).filter((p) => p.status === "Active" || p.status === "In Force" || p.status === "Issued");
+    const policyKeys = new Set();
+    let totalPolicies = 0;
+    policyContext.forEach((p) => { const k = String(p.policyNumber || ""); if (k && !policyKeys.has(k)) { policyKeys.add(k); totalPolicies++; } });
+    policyFromClients.forEach((p) => { const k = String(p.policyNumber || ""); if (k && !policyKeys.has(k)) { policyKeys.add(k); totalPolicies++; } });
+    policyCandidates.forEach((c) => { const k = String(c.policyNumber || ""); if (k && !policyKeys.has(k)) { policyKeys.add(k); totalPolicies++; } });
+
+    const revenueFromCandidates = activeClientCandidates.reduce((sum, c) => sum + Number(c.premiumAmount || 0), 0);
+    const revenueFromPolicies = (policies || []).reduce((sum, p) => sum + Number(p.premium || p.annualPremium || 0), 0);
+    const revenueFromClients = (clients || []).reduce((sum, c) => sum + Number(c.annualPremiumBudget?.replace(/[^0-9]/g, "") || 0), 0);
+    const totalRevenue = revenueFromCandidates + revenueFromPolicies + revenueFromClients;
+
+    const totalRecruitment = advisorLeads.length;
+    const activatedAdvisors = advisorLeads.filter((c) =>
+      (c.workflowStage === "Activation" || c.workflowStage === "Business Started") &&
+      (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")
+    ).length;
+
+    const totalInsuranceLeads = insuranceLeads.length;
+    const conversionRate = totalInsuranceLeads > 0
+      ? Math.round((totalActiveClients / totalInsuranceLeads) * 100)
+      : 0;
+
+    const allClaims = claims.length > 0
+      ? claims
+      : (clients || []).flatMap((c) => c.claims || []);
+    const totalClaims = allClaims.length;
 
     return {
-      revenue: premium,
-      policies: policyCount,
-      clients: totalClients,
-      recruitment,
-      conversion: converted,
+      revenue: totalRevenue,
+      policies: totalPolicies,
+      clients: uniqueClientCount,
+      recruitment: totalRecruitment,
       conversionRate,
-      activeClients,
-      totalLeads: candidates.filter((c) => c.leadType !== "Advisor" && c.leadType !== "Recruitment").length
+      claims: totalClaims,
+      activeAdvisors: activeAdvisors.length,
+      totalLeads: (candidates || []).length
     };
-  }, [candidates, clients, policies]);
+  }, [insuranceLeads, activeClientCandidates, advisorLeads, clients, policies, claims, activeAdvisors, candidates]);
 
   const monthlyTrend = useMemo(() => {
-    const grouped = (clients || []).reduce((acc, client) => {
-      const month = (client.dateReceived || "").slice(0, 7);
-      if (!month) return acc;
-      if (!acc[month]) acc[month] = { month, revenue: 0, policies: 0, clients: 0 };
-      acc[month].revenue += Number(client.annualPremiumBudget?.replace(/[^0-9]/g, "") || 0);
-      acc[month].policies += (client.policies || []).length;
-      acc[month].clients += 1;
-      return acc;
-    }, {});
-    return Object.values(grouped).sort((a, b) => a.month.localeCompare(b.month));
-  }, [clients]);
+    const grouped = {};
+
+    (candidates || []).forEach((c) => {
+      const mk = monthKey(c.createdDate);
+      if (!mk) return;
+      if (!grouped[mk]) grouped[mk] = { month: mk, leads: 0, clients: 0, policies: 0, revenue: 0 };
+      grouped[mk].leads += 1;
+      if (c.workflowStage === "Active Client") grouped[mk].clients += 1;
+      if (c.policyNumber) grouped[mk].policies += 1;
+      if (c.premiumAmount) grouped[mk].revenue += Number(c.premiumAmount);
+    });
+
+    (policies || []).forEach((p) => {
+      const mk = monthKey(p.issueDate || p.startDate || "");
+      if (!mk) return;
+      if (!grouped[mk]) grouped[mk] = { month: mk, leads: 0, clients: 0, policies: 0, revenue: 0 };
+      grouped[mk].policies += 1;
+      grouped[mk].revenue += Number(p.premium || p.annualPremium || 0);
+    });
+
+    (clients || []).forEach((c) => {
+      const mk = monthKey(c.dateReceived || "");
+      if (!mk) return;
+      if (!grouped[mk]) grouped[mk] = { month: mk, leads: 0, clients: 0, policies: 0, revenue: 0 };
+      grouped[mk].clients += 1;
+    });
+
+    return Object.values(grouped)
+      .map((d) => ({ ...d, month: monthLabel(d.month) }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+  }, [candidates, policies, clients]);
 
   const sourceData = useMemo(() => {
-    const counts = candidates.reduce((acc, candidate) => {
-      const source = candidate.leadSource || candidate.source || "Unknown";
+    const counts = (candidates || []).reduce((acc, c) => {
+      const source = c.leadSource || c.source || "Unknown";
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {});
@@ -71,55 +150,70 @@ export default function BIDashboard() {
   }, [candidates]);
 
   const recruitmentFunnel = useMemo(() => {
-    const advisorOnly = candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer");
-    const stageCounts = advisorOnly.reduce((acc, c) => {
+    const stageOrder = recruitmentStages.reduce((acc, s, i) => { acc[s] = i; return acc; }, {});
+    const stageCounts = advisorLeads.reduce((acc, c) => {
       const stage = c.workflowStage || "Unknown";
       acc[stage] = (acc[stage] || 0) + 1;
       return acc;
     }, {});
     return Object.entries(stageCounts)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [candidates]);
+      .sort((a, b) => {
+        const ai = stageOrder[a.name] ?? 99;
+        const bi = stageOrder[b.name] ?? 99;
+        return ai - bi;
+      });
+  }, [advisorLeads]);
 
   const salesFunnel = useMemo(() => {
-    const advisorLeads = candidates.filter((c) => c.leadType !== "Advisor" && c.leadType !== "Recruitment" && c.workflowStage !== "Active Client");
-    const statusCounts = advisorLeads.reduce((acc, c) => {
-      const status = c.leadStatus || "Open";
-      acc[status] = (acc[status] || 0) + 1;
+    const stageOrder = insuranceCustomerStages.reduce((acc, s, i) => { acc[s] = i; return acc; }, {});
+    const preClient = insuranceLeads.filter((c) => c.workflowStage !== "Active Client");
+    const stageCounts = preClient.reduce((acc, c) => {
+      const stage = c.workflowStage || "Unknown";
+      acc[stage] = (acc[stage] || 0) + 1;
       return acc;
     }, {});
-    return Object.entries(statusCounts)
+    return Object.entries(stageCounts)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [candidates]);
+      .sort((a, b) => {
+        const ai = stageOrder[a.name] ?? 99;
+        const bi = stageOrder[b.name] ?? 99;
+        return ai - bi;
+      });
+  }, [insuranceLeads]);
 
   const advisorPerformance = useMemo(() => {
-    const advisorOnly = candidates.filter((c) => (c.leadType === "Advisor" || c.leadType === "Recruitment") && c.leadType !== "Insurance Customer");
-    const perfMap = advisorOnly.reduce((acc, c) => {
-      const advisor = c.assignedTo || "Unassigned";
-      if (!acc[advisor]) acc[advisor] = { name: advisor, total: 0, converted: 0, premium: 0 };
-      acc[advisor].total += 1;
-      if ((c.workflowStage === "Activation" || c.workflowStage === "Business Started") && (c.leadStatus === "Active" || c.leadStatus === "Active Advisor")) {
-        acc[advisor].converted += 1;
-      }
-      return acc;
-    }, {});
-    const advisorList = Object.values(perfMap).filter((a) => a.total > 0);
-    advisorList.forEach((a) => {
-      a.conversionRate = a.total > 0 ? Math.round((a.converted / a.total) * 100) : 0;
-    });
-    clients.forEach((c) => {
-      const advisor = c.advisorAssigned || c.assignedTo || "Unassigned";
-      if (perfMap[advisor]) {
-        perfMap[advisor].premium += Number(c.annualPremiumBudget?.replace(/[^0-9]/g, "") || 0);
-      }
-    });
-    return advisorList.sort((a, b) => b.converted - a.converted).slice(0, 10);
-  }, [candidates, clients]);
+    const advisorList = isAdmin || !isAdvisor
+      ? activeAdvisors
+      : activeAdvisors.filter((a) => String(a.id || "") === String(currentUser?.id || "") || String(a.name || "") === String(currentUser?.name || ""));
+
+    return advisorList.map((advisor) => {
+      const advisorName = advisor.name || "";
+      const assigned = (candidates || []).filter((c) => {
+        const matchesDirect = c.assignedAdvisorName === advisorName || c.assignedTo === advisorName;
+        const matchesId = String(c.assignedAdvisorId || "") === String(advisor.id || "");
+        return matchesDirect || matchesId;
+      });
+      const insuranceAssigned = assigned.filter((c) => c.leadType === "Insurance Customer" || !c.leadType);
+      const converted = insuranceAssigned.filter((c) => c.workflowStage === "Active Client");
+      const withPolicy = insuranceAssigned.filter((c) => c.policyNumber);
+      const premiumGen = insuranceAssigned.reduce((sum, c) => sum + Number(c.premiumAmount || 0), 0);
+
+      return {
+        name: advisorName,
+        total: insuranceAssigned.length,
+        converted: converted.length,
+        policies: withPolicy.length,
+        premium: premiumGen,
+        conversionRate: insuranceAssigned.length > 0
+          ? Math.round((converted.length / insuranceAssigned.length) * 100)
+          : 0
+      };
+    }).filter((a) => a.total > 0 || a.converted > 0 || a.policies > 0);
+  }, [activeAdvisors, candidates, currentUser, isAdmin, isAdvisor]);
 
   const claimsSummary = useMemo(() => {
-    const allClaims = claims.length > 0 ? claims : clients.flatMap((c) => c.claims || []);
+    const allClaims = claims.length > 0 ? claims : (clients || []).flatMap((c) => c.claims || []);
     const byStatus = allClaims.reduce((acc, cl) => {
       const status = cl.status || cl.claimStatus || "Pending";
       acc[status] = (acc[status] || 0) + 1;
@@ -134,19 +228,42 @@ export default function BIDashboard() {
   }, [claims, clients]);
 
   const policySummary = useMemo(() => {
-    const allPolicies = policies.length > 0 ? policies : clients.flatMap((c) => c.policies || []);
-    const byType = allPolicies.reduce((acc, p) => {
-      const type = p.type || p.policyType || "Unknown";
+    const allPolicies = [];
+
+    (policies || []).forEach((p) => allPolicies.push(p));
+    (clients || []).forEach((c) => (c.policies || []).forEach((p) => allPolicies.push(p)));
+    activeClientCandidates.filter((c) => c.policyNumber).forEach((c) => {
+      allPolicies.push({
+        policyType: c.policyType || "Other",
+        premium: c.premiumAmount || 0,
+        policyNumber: c.policyNumber
+      });
+    });
+
+    const seen = new Set();
+    const unique = allPolicies.filter((p) => {
+      const k = String(p.policyNumber || "");
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    const byType = unique.reduce((acc, p) => {
+      let type = p.policyType || p.type || "Other";
+      if (!POLICY_TYPES.includes(type)) type = "Other";
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {});
-    const totalPremium = allPolicies.reduce((sum, p) => sum + Number(p.premium || p.annualPremium || 0), 0);
+
+    POLICY_TYPES.forEach((t) => { if (!byType[t]) byType[t] = 0; });
+
+    const totalPremium = unique.reduce((sum, p) => sum + Number(p.premium || p.annualPremium || 0), 0);
     return {
       chartData: Object.entries(byType).map(([name, value]) => ({ name, value })),
-      total: allPolicies.length,
+      total: unique.length,
       totalPremium
     };
-  }, [policies, clients]);
+  }, [policies, clients, activeClientCandidates]);
 
   const cards = [
     { label: "Revenue", value: `₹${metrics.revenue.toLocaleString("en-IN")}`, icon: AttachMoneyIcon, color: "#2563eb" },
@@ -154,10 +271,12 @@ export default function BIDashboard() {
     { label: "Clients", value: metrics.clients, icon: PeopleIcon, color: "#d97706" },
     { label: "Recruitment", value: metrics.recruitment, icon: TrendingUpIcon, color: "#7c3aed" },
     { label: "Conversion Rate", value: `${metrics.conversionRate}%`, icon: TrendingUpIcon, color: "#16a34a" },
-    { label: "Claims", value: claimsSummary.total, icon: GavelIcon, color: "#dc2626" },
-    { label: "Active Advisors", value: activeAdvisors.length, icon: SupportAgentIcon, color: "#0ea5e9" },
+    { label: "Claims", value: metrics.claims, icon: GavelIcon, color: "#dc2626" },
+    { label: "Active Advisors", value: metrics.activeAdvisors, icon: SupportAgentIcon, color: "#0ea5e9" },
     { label: "Total Leads", value: metrics.totalLeads, icon: PeopleIcon, color: "#64748b" }
   ];
+
+  const emptyMsg = "Data will appear once CRM activity starts.";
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -197,17 +316,21 @@ export default function BIDashboard() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Monthly Trends</Typography>
             <Box sx={{ height: 280 }}>
               {monthlyTrend.length === 0 ? (
-                <EmptyChart />
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">{emptyMsg}</Typography>
+                </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value, name) => name === "Revenue" ? `₹${Number(value).toLocaleString("en-IN")}` : value} />
+                    <Tooltip formatter={(value, name) => name === "revenue" ? `₹${Number(value).toLocaleString("en-IN")}` : value} />
                     <Legend />
-                    <Line type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} name="Revenue" />
-                    <Line type="monotone" dataKey="policies" stroke="#16a34a" strokeWidth={2} name="Policies" />
+                    <Line type="monotone" dataKey="leads" stroke="#d97706" strokeWidth={2} name="New Leads" />
+                    <Line type="monotone" dataKey="clients" stroke="#16a34a" strokeWidth={2} name="Converted Clients" />
+                    <Line type="monotone" dataKey="policies" stroke="#2563eb" strokeWidth={2} name="Policies Issued" />
+                    <Line type="monotone" dataKey="revenue" stroke="#7c3aed" strokeWidth={2} name="Revenue Generated" />
                   </LineChart>
                 </ResponsiveContainer>
               )}
@@ -219,7 +342,9 @@ export default function BIDashboard() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Lead Source Analysis</Typography>
             <Box sx={{ height: 280 }}>
               {sourceData.length === 0 ? (
-                <EmptyChart />
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">{emptyMsg}</Typography>
+                </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -242,7 +367,9 @@ export default function BIDashboard() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Recruitment Funnel</Typography>
             <Box sx={{ height: 300 }}>
               {recruitmentFunnel.length === 0 ? (
-                <EmptyChart />
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">{emptyMsg}</Typography>
+                </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <FunnelChart>
@@ -262,7 +389,9 @@ export default function BIDashboard() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Sales Funnel</Typography>
             <Box sx={{ height: 300 }}>
               {salesFunnel.length === 0 ? (
-                <EmptyChart />
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">{emptyMsg}</Typography>
+                </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <FunnelChart>
@@ -285,17 +414,20 @@ export default function BIDashboard() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Advisor Performance</Typography>
             <Box sx={{ height: 300 }}>
               {advisorPerformance.length === 0 ? (
-                <EmptyChart />
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">{emptyMsg}</Typography>
+                </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={advisorPerformance} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis />
-                    <Tooltip formatter={(value, name) => name === "Premium" ? `₹${Number(value).toLocaleString("en-IN")}` : value} />
+                    <Tooltip formatter={(value, name) => name === "premium" ? `₹${Number(value).toLocaleString("en-IN")}` : value} />
                     <Legend />
-                    <Bar dataKey="total" fill="#2563eb" name="Total Leads" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="converted" fill="#16a34a" name="Converted" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="total" fill="#2563eb" name="Assigned Leads" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="converted" fill="#16a34a" name="Converted Clients" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="policies" fill="#d97706" name="Policies Issued" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -307,7 +439,9 @@ export default function BIDashboard() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Claims Summary</Typography>
             <Box sx={{ height: 300 }}>
               {claimsSummary.chartData.length === 0 ? (
-                <EmptyChart text="No claims data" />
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">{emptyMsg}</Typography>
+                </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -342,7 +476,9 @@ export default function BIDashboard() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Policy Summary</Typography>
             <Box sx={{ height: 280 }}>
               {policySummary.chartData.length === 0 ? (
-                <EmptyChart text="No policy data" />
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">{emptyMsg}</Typography>
+                </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={policySummary.chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -372,7 +508,9 @@ export default function BIDashboard() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Advisor Conversion Rates</Typography>
             <Box sx={{ height: 280 }}>
               {advisorPerformance.length === 0 ? (
-                <EmptyChart />
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                  <Typography variant="body2" color="text.secondary">{emptyMsg}</Typography>
+                </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={advisorPerformance} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
