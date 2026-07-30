@@ -93,7 +93,6 @@ export const adviserStatuses = ["Lead", "Prospect", "Activated", "Dropped"];
 
 export const stageStatusOptions = {
   "New Lead": ["Open", "Contact Pending"],
-  "Qualified": ["Completed", "Not Completed"],
   "Financial Need Analysis": ["Completed", "Not Completed"],
   "Product Recommendation": ["Completed", "Not Completed"],
   "Illustration Shared": ["Yes", "No"],

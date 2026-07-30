@@ -1,5 +1,7 @@
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
+import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
 
 function shouldShowField(field, formValues, allStageFields, currentStage) {
   if (!field.dependsOn) return true;
@@ -75,6 +77,17 @@ export default function StageForm({ stageConfig, stage, form, errors, onChange }
     if (field.type === "textarea") {
       return (
         <TextField {...commonProps} label={field.label} multiline rows={field.rows || 2} />
+      );
+    }
+
+    if (field.type === "section") {
+      return (
+        <div key={field.name} style={{ width: "100%" }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 1, fontSize: "0.9rem", color: "#1e293b" }}>
+            {field.label}
+          </Typography>
+          <Divider sx={{ mb: 1 }} />
+        </div>
       );
     }
 

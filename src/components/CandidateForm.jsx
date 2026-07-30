@@ -11,6 +11,8 @@ import Alert from "@mui/material/Alert";
 import Collapse from "@mui/material/Collapse";
 import { useCrm } from "../crmContext.jsx";
 import { useAuth } from "../authContext.jsx";
+import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
 import { getStageDefaultValues, clearHiddenStageFields, getStageFields } from "./StageForm.jsx";
 import {
   insuranceCustomerStages,
@@ -263,6 +265,17 @@ export default function CandidateForm({ open, onClose, onAdd }) {
   const stageFieldComponent = (field) => {
     if (!shouldShowField(field, form)) return null;
 
+    if (field.type === "section") {
+      return (
+        <div style={{ width: "100%" }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>
+            {field.label}
+          </Typography>
+          <Divider sx={{ mb: 1 }} />
+        </div>
+      );
+    }
+
     const commonProps = {
       fullWidth: true,
       name: field.name,
@@ -461,7 +474,7 @@ export default function CandidateForm({ open, onClose, onAdd }) {
           {stageFields.map((field) => {
             if (!shouldShowField(field, form)) return null;
             return (
-              <Grid item xs={12} sm={6} key={field.name}>
+              <Grid item xs={12} sm={field.type === "section" ? 12 : 6} key={field.name}>
                 {stageFieldComponent(field)}
               </Grid>
             );

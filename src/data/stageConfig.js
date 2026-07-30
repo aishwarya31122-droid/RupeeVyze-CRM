@@ -12,6 +12,9 @@ export const insuranceCustomerStageFields = {
   "New Lead": [
     select("leadSource", "Lead Source", sources)
   ],
+  "Qualified": [
+    select("qualified", "Qualified", ["Yes", "No"])
+  ],
   "Contacted": [
     select("contactStatus", "Contact Status", ["Connected", "Not Connected", "Wrong Number", "Switched Off", "Busy"]),
     dateField("followUpDate", "Follow-up Date")
@@ -52,30 +55,48 @@ export const advisorStageFields = {
     dateField("followUpDate", "Follow-up Date")
   ],
   "KYC Pending": [
-    select("kycStatus", "KYC Status", ["Pending", "Submitted", "In Progress"])
+    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("kycReceived", "KYC Documents Received", ["Yes", "No"])
   ],
   "KYC Complete": [
-    select("kycStatus", "KYC Status", ["Verified", "Rejected", "Completed"])
+    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("kycVerified", "KYC Verified", ["Yes", "No"])
   ],
   "Training": [
-    select("trainingStatus", "Training Status", ["Pending", "In Progress", "Completed"]),
-    dateField("trainingCompletionDate", "Training Completion Date")
+    dateField("trainingCompletionDate", "Training Completion Date"),
+    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("trainingCompleted", "Training Completed", ["Yes", "No"])
   ],
   "Exam": [
-    select("examStatus", "Exam Status", ["Not Scheduled", "Scheduled", "Completed", "Passed", "Failed"]),
-    { type: "date", name: "examDate", label: "Exam Date", dependsOn: { field: "examStatus", value: "Scheduled" } }
+    dateField("examDate", "Exam Date"),
+    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("examPassed", "Exam Passed", ["Yes", "No"])
   ],
   "Code Generation": [
-    select("codeStatus", "Code Status", ["Pending", "Generated"]),
-    { type: "text", name: "advisorCode", label: "Advisor Code", dependsOn: { field: "codeStatus", value: "Generated" } },
-    { type: "date", name: "codeGenerationDate", label: "Code Generation Date", dependsOn: { field: "codeStatus", value: "Generated" } }
+    { type: "text", name: "advisorCode", label: "Advisor Code" },
+    { type: "date", name: "codeGenerationDate", label: "Code Generation Date" },
+    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("advisorCodeGenerated", "Advisor Code Generated", ["Yes", "No"])
   ],
   "Activation": [
-    select("activationStatus", "Activation Status", ["Pending", "Activated"]),
-    { type: "date", name: "activationDate", label: "Activation Date", dependsOn: { field: "activationStatus", value: "Activated" } }
+    dateField("activationDate", "Activation Date"),
+    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("advisorActivated", "Advisor Activated", ["Yes", "No"])
   ],
   "Business Started": [
     dateField("businessStartDate", "Business Start Date"),
-    select("businessStatus", "Business Status", ["Pending", "Active", "Inactive"])
+    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("businessStarted", "Business Started", ["Yes", "No"]),
+    { type: "section", name: "businessDetailsSection", label: "Business Details", dependsOn: { field: "businessStarted", value: "Yes" } },
+    text("advisorCode", "Advisor Code", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    text("branch", "Branch / Office", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    text("reportingManager", "Reporting Manager", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    dateField("joiningDate", "Joining Date", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    text("businessLocation", "Business Location", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    text("bankName", "Bank Name", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    text("accountNumber", "Account Number", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    text("ifscCode", "IFSC Code", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    text("upiId", "UPI ID", { dependsOn: { field: "businessStarted", value: "Yes" } }),
+    textarea("remarks", "Remarks", { dependsOn: { field: "businessStarted", value: "Yes" } })
   ]
 };

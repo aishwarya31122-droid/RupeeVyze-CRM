@@ -9,6 +9,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Collapse from "@mui/material/Collapse";
 import Paper from "@mui/material/Paper";
@@ -30,6 +31,28 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   const initialAssignedTo = candidate.assignedTo || "";
   const initialMatch = activatedAdvisorOptions.some((a) => a.name === initialAssignedTo);
   const [manualAssignedTo, setManualAssignedTo] = useState(initialMatch ? "" : initialAssignedTo);
+  const advisorStagesWithYesNo = new Set([
+    "KYC Pending", "KYC Complete", "Training", "Exam",
+    "Code Generation", "Activation", "Business Started"
+  ]);
+  const stageYesNoField = {
+    "KYC Pending": "kycReceived",
+    "KYC Complete": "kycVerified",
+    "Training": "trainingCompleted",
+    "Exam": "examPassed",
+    "Code Generation": "advisorCodeGenerated",
+    "Activation": "advisorActivated",
+    "Business Started": "businessStarted"
+  };
+  const stageYesNoLabel = {
+    "KYC Pending": "KYC Documents Received",
+    "KYC Complete": "KYC Verified",
+    "Training": "Training Completed",
+    "Exam": "Exam Passed",
+    "Code Generation": "Advisor Code Generated",
+    "Activation": "Advisor Activated",
+    "Business Started": "Business Started"
+  };
   const [validationErrors, setValidationErrors] = useState({});
   const [policyExpanded, setPolicyExpanded] = useState(candidate.policyIssued === "Yes");
   const [premiumExpanded, setPremiumExpanded] = useState(candidate.premiumCollected === "Yes");
@@ -64,7 +87,25 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
     transactionReference: candidate.transactionReference || "",
     receiptNumber: candidate.receiptNumber || "",
     collectedBy: candidate.collectedBy || "",
-    premiumRemarks: candidate.premiumRemarks || ""
+    premiumRemarks: candidate.premiumRemarks || "",
+    qualified: candidate.qualified || "",
+    kycReceived: candidate.kycReceived || "",
+    kycVerified: candidate.kycVerified || "",
+    trainingCompleted: candidate.trainingCompleted || "",
+    examPassed: candidate.examPassed || "",
+    advisorCodeGenerated: candidate.advisorCodeGenerated || "",
+    advisorActivated: candidate.advisorActivated || "",
+    businessStarted: candidate.businessStarted || "",
+    advisorCode: candidate.advisorCode || "",
+    branch: candidate.branch || "",
+    reportingManager: candidate.reportingManager || "",
+    joiningDate: candidate.joiningDate || "",
+    businessLocation: candidate.businessLocation || "",
+    bankName: candidate.bankName || "",
+    accountNumber: candidate.accountNumber || "",
+    ifscCode: candidate.ifscCode || "",
+    upiId: candidate.upiId || "",
+    remarks: candidate.remarks || ""
   });
   const [selectedStage, setSelectedStage] = useState(candidate.workflowStage || candidate.stage || pipelineStages[0]);
   const [successMessage, setSuccessMessage] = useState("");
@@ -256,10 +297,76 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                   <MenuItem value="Low">Low</MenuItem>
                 </TextField>
               </Grid>
+              {advisorStagesWithYesNo.has(selectedStage) && (
+                <>
+                  <Grid item xs={12} sm={6}>
+                    <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
+                      <MenuItem value="">Select...</MenuItem>
+                      <MenuItem value="Open">Open</MenuItem>
+                      <MenuItem value="In Progress">In Progress</MenuItem>
+                      <MenuItem value="Completed">Completed</MenuItem>
+                      <MenuItem value="On Hold">On Hold</MenuItem>
+                    </TextField>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField select fullWidth label={stageYesNoLabel[selectedStage]} name={stageYesNoField[selectedStage]} value={form[stageYesNoField[selectedStage]] || ""} onChange={handleChange}>
+                      <MenuItem value="">Select...</MenuItem>
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  </Grid>
+                </>
+              )}
+              {selectedStage === "Business Started" && form.businessStarted === "Yes" && (
+                <>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>Business Details</Typography>
+                    <Divider sx={{ mb: 1 }} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="Advisor Code" name="advisorCode" value={form.advisorCode || ""} onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="Branch / Office" name="branch" value={form.branch || ""} onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="Reporting Manager" name="reportingManager" value={form.reportingManager || ""} onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="Joining Date" type="date" name="joiningDate" value={form.joiningDate || ""} onChange={handleChange} InputLabelProps={{ shrink: true }} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="Business Location" name="businessLocation" value={form.businessLocation || ""} onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="Bank Name" name="bankName" value={form.bankName || ""} onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="Account Number" name="accountNumber" value={form.accountNumber || ""} onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="IFSC Code" name="ifscCode" value={form.ifscCode || ""} onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth label="UPI ID" name="upiId" value={form.upiId || ""} onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField fullWidth label="Remarks" name="remarks" value={form.remarks || ""} onChange={handleChange} multiline rows={2} />
+                  </Grid>
+                </>
+              )}
             </>
           ) : (
             <>
-              {stageStatusOptions[selectedStage] && (
+              {selectedStage === "Qualified" ? (
+                <Grid item xs={12} sm={6}>
+                  <TextField select fullWidth label="Qualified" name="qualified" value={form.qualified || ""} onChange={handleChange}>
+                    <MenuItem value="">Select...</MenuItem>
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </TextField>
+                </Grid>
+              ) : stageStatusOptions[selectedStage] ? (
                 <Grid item xs={12} sm={6}>
                   <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
                     <MenuItem value="">Select...</MenuItem>
@@ -268,7 +375,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                     ))}
                   </TextField>
                 </Grid>
-              )}
+              ) : null}
               <Grid item xs={12} sm={6}>
                 <TextField select fullWidth label="Lead Status" name="leadStatus" value={form.leadStatus} onChange={handleChange}>
                   <MenuItem value="Open">Open</MenuItem>

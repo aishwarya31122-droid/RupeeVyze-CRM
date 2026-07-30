@@ -29,8 +29,8 @@ const insuranceCustomerStages = [
 ];
 
 const recruitmentStages = [
-  "New Lead", "Qualified", "Interview", "Documents", "NAAF Generated",
-  "Training", "Exam", "Code Generated", "Activation", "Dropped"
+  "New Lead", "First Contact", "Interested", "KYC Pending", "KYC Complete",
+  "Training", "Exam", "Code Generation", "Activation", "Business Started", "Dropped"
 ];
 
 const POLICY_TYPES = ["Term Insurance", "Health Insurance", "ULIP", "Other"];
