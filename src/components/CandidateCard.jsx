@@ -35,7 +35,7 @@ export default function CandidateCard({ candidate, onOpen, stageColor, detailsPr
       </div>
       <p>{candidate.leadSource || candidate.source} · {candidate.recruitedBy || candidate.assignedTo}</p>
       {candidate.stageStatus && (
-        <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748b" }}>Status: {candidate.stageStatus}</p>
+        <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748b" }}>Stage Status: {candidate.stageStatus}</p>
       )}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "6px 0", flexWrap: "wrap" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", fontWeight: 600, color: pc.color, background: pc.bg, padding: "2px 8px", borderRadius: "12px" }}>

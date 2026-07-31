@@ -31,14 +31,16 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   const initialAssignedTo = candidate.assignedTo || "";
   const initialMatch = activatedAdvisorOptions.some((a) => a.name === initialAssignedTo);
   const [manualAssignedTo, setManualAssignedTo] = useState(initialMatch ? "" : initialAssignedTo);
+  const advisorStagesWithStageStatus = new Set([
+    "KYC Pending", "KYC Complete", "Training"
+  ]);
   const advisorStagesWithYesNo = new Set([
-    "KYC Pending", "KYC Complete", "Training", "Exam",
+    "KYC Pending", "KYC Complete", "Exam",
     "Code Generation", "Activation", "Business Started"
   ]);
   const stageYesNoField = {
     "KYC Pending": "kycReceived",
     "KYC Complete": "kycVerified",
-    "Training": "trainingCompleted",
     "Exam": "examPassed",
     "Code Generation": "advisorCodeGenerated",
     "Activation": "advisorActivated",
@@ -47,7 +49,6 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   const stageYesNoLabel = {
     "KYC Pending": "KYC Documents Received",
     "KYC Complete": "KYC Verified",
-    "Training": "Training Completed",
     "Exam": "Exam Passed",
     "Code Generation": "Advisor Code Generated",
     "Activation": "Advisor Activated",
@@ -112,7 +113,23 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "advisorCodeGenerated" && value !== "Yes") next.advisorCode = "";
+      if (name === "businessStarted" && value !== "Yes") {
+        next.advisorCode = "";
+        next.branch = "";
+        next.reportingManager = "";
+        next.joiningDate = "";
+        next.businessLocation = "";
+        next.bankName = "";
+        next.accountNumber = "";
+        next.ifscCode = "";
+        next.upiId = "";
+        next.remarks = "";
+      }
+      return next;
+    });
     if (name === "policyIssued") setPolicyExpanded(value === "Yes");
     if (name === "premiumCollected") setPremiumExpanded(value === "Yes");
   };
@@ -297,25 +314,30 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                   <MenuItem value="Low">Low</MenuItem>
                 </TextField>
               </Grid>
+              {advisorStagesWithStageStatus.has(selectedStage) && (
+                <Grid item xs={12} sm={6}>
+                  <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
+                    <MenuItem value="">Select...</MenuItem>
+                    <MenuItem value="Open">Open</MenuItem>
+                    <MenuItem value="In Progress">In Progress</MenuItem>
+                    <MenuItem value="Completed">Completed</MenuItem>
+                    <MenuItem value="On Hold">On Hold</MenuItem>
+                  </TextField>
+                </Grid>
+              )}
               {advisorStagesWithYesNo.has(selectedStage) && (
-                <>
-                  <Grid item xs={12} sm={6}>
-                    <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
-                      <MenuItem value="">Select...</MenuItem>
-                      <MenuItem value="Open">Open</MenuItem>
-                      <MenuItem value="In Progress">In Progress</MenuItem>
-                      <MenuItem value="Completed">Completed</MenuItem>
-                      <MenuItem value="On Hold">On Hold</MenuItem>
-                    </TextField>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField select fullWidth label={stageYesNoLabel[selectedStage]} name={stageYesNoField[selectedStage]} value={form[stageYesNoField[selectedStage]] || ""} onChange={handleChange}>
-                      <MenuItem value="">Select...</MenuItem>
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  </Grid>
-                </>
+                <Grid item xs={12} sm={6}>
+                  <TextField select fullWidth label={stageYesNoLabel[selectedStage]} name={stageYesNoField[selectedStage]} value={form[stageYesNoField[selectedStage]] || ""} onChange={handleChange}>
+                    <MenuItem value="">Select...</MenuItem>
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </TextField>
+                </Grid>
+              )}
+              {selectedStage === "Code Generation" && form.advisorCodeGenerated === "Yes" && (
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth label="Advisor Code" name="advisorCode" value={form.advisorCode || ""} onChange={handleChange} />
+                </Grid>
               )}
               {selectedStage === "Business Started" && form.businessStarted === "Yes" && (
                 <>
@@ -366,6 +388,14 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                     <MenuItem value="No">No</MenuItem>
                   </TextField>
                 </Grid>
+              ) : selectedStage === "Active Client" ? (
+                <Grid item xs={12} sm={6}>
+                  <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
+                    <MenuItem value="">Select...</MenuItem>
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </TextField>
+                </Grid>
               ) : stageStatusOptions[selectedStage] ? (
                 <Grid item xs={12} sm={6}>
                   <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
@@ -376,19 +406,10 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                   </TextField>
                 </Grid>
               ) : null}
-              <Grid item xs={12} sm={6}>
-                <TextField select fullWidth label="Lead Status" name="leadStatus" value={form.leadStatus} onChange={handleChange}>
-                  <MenuItem value="Open">Open</MenuItem>
-                  <MenuItem value="Assigned">Assigned</MenuItem>
-                  <MenuItem value="In Progress">In Progress</MenuItem>
-                  <MenuItem value="Converted">Converted</MenuItem>
-                  <MenuItem value="Lost">Lost</MenuItem>
-                </TextField>
-              </Grid>
             </>
           )}
 
-          {isAdvisor ? (
+          {canAssignClient() && (
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" fontWeight={500} sx={{ fontSize: "0.875rem", color: "text.secondary", mb: 0.5 }}>Assigned To</Typography>
               <TextField select fullWidth label="Select Active Advisor" name="assignedTo" value={form.assignedTo} onChange={handleChange} sx={{ mb: 1 }}>
@@ -401,20 +422,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
               </TextField>
               <TextField fullWidth label="Enter Advisor Name Manually" placeholder="Enter advisor name manually" value={manualAssignedTo} onChange={(e) => setManualAssignedTo(e.target.value)} />
             </Grid>
-          ) : canAssignClient() ? (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" fontWeight={500} sx={{ fontSize: "0.875rem", color: "text.secondary", mb: 0.5 }}>Assigned To</Typography>
-              <TextField select fullWidth label="Select Active Advisor" name="assignedTo" value={form.assignedTo} onChange={handleChange} sx={{ mb: 1 }}>
-                <MenuItem value="">None</MenuItem>
-                {activatedAdvisorOptions.map((advisor) => (
-                  <MenuItem key={advisor.id} value={advisor.name}>
-                    {advisor.name}{advisor.advisorCode ? ` (${advisor.advisorCode})` : ""}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField fullWidth label="Enter Advisor Name Manually" placeholder="Enter advisor name manually" value={manualAssignedTo} onChange={(e) => setManualAssignedTo(e.target.value)} />
-            </Grid>
-          ) : null}
+          )}
 
           <Grid item xs={12} sm={6}>
             <TextField fullWidth label="Due Date" type="date" name="dueDate" value={form.dueDate} onChange={handleChange} InputLabelProps={{ shrink: true }} />

@@ -43,13 +43,9 @@ export function AuthProvider({ children }) {
     [isAdmin, currentUser]
   );
 
-  const canDeleteClient = useCallback(
-    (candidate) => {
-      if (isAdmin) return true;
-      return String(candidate?.assignedAdvisorId || "") === String(currentUser?.id || "");
-    },
-    [isAdmin, currentUser]
-  );
+  const canDeleteClient = useCallback(() => {
+    return isAdmin;
+  }, [isAdmin]);
 
   const canAssignClient = useCallback(() => isAdmin, [isAdmin]);
 

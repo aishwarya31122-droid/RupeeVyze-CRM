@@ -171,7 +171,6 @@ export default function ClientsList() {
                     <TableCell>
                       <Stack direction="row" spacing={1}>
                         <Link className="button secondary" to={`/adviser/profile/${client.candidateId}`}>View</Link>
-                        <Link className="button secondary" to={`/adviser/client-operations/clients/${client.candidateId}`}>Edit</Link>
                       </Stack>
                     </TableCell>
                   </TableRow>

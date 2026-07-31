@@ -55,37 +55,32 @@ export const advisorStageFields = {
     dateField("followUpDate", "Follow-up Date")
   ],
   "KYC Pending": [
-    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("stageStatus", "Stage Status", ["Open", "In Progress", "Completed", "On Hold"]),
     select("kycReceived", "KYC Documents Received", ["Yes", "No"])
   ],
   "KYC Complete": [
-    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    select("stageStatus", "Stage Status", ["Open", "In Progress", "Completed", "On Hold"]),
     select("kycVerified", "KYC Verified", ["Yes", "No"])
   ],
   "Training": [
     dateField("trainingCompletionDate", "Training Completion Date"),
-    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
-    select("trainingCompleted", "Training Completed", ["Yes", "No"])
+    select("stageStatus", "Stage Status", ["Open", "In Progress", "Completed", "On Hold"])
   ],
   "Exam": [
     dateField("examDate", "Exam Date"),
-    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
     select("examPassed", "Exam Passed", ["Yes", "No"])
   ],
   "Code Generation": [
-    { type: "text", name: "advisorCode", label: "Advisor Code" },
+    { type: "text", name: "advisorCode", label: "Advisor Code", dependsOn: { field: "advisorCodeGenerated", value: "Yes" } },
     { type: "date", name: "codeGenerationDate", label: "Code Generation Date" },
-    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
     select("advisorCodeGenerated", "Advisor Code Generated", ["Yes", "No"])
   ],
   "Activation": [
     dateField("activationDate", "Activation Date"),
-    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
     select("advisorActivated", "Advisor Activated", ["Yes", "No"])
   ],
   "Business Started": [
     dateField("businessStartDate", "Business Start Date"),
-    select("stageStatus", "Status", ["Open", "In Progress", "Completed", "On Hold"]),
     select("businessStarted", "Business Started", ["Yes", "No"]),
     { type: "section", name: "businessDetailsSection", label: "Business Details", dependsOn: { field: "businessStarted", value: "Yes" } },
     text("advisorCode", "Advisor Code", { dependsOn: { field: "businessStarted", value: "Yes" } }),

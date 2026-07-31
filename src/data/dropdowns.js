@@ -99,8 +99,6 @@ export const stageStatusOptions = {
   "Proposal Submitted": ["Yes", "No"],
   "Medical": ["Completed", "Not Completed"],
   "Underwriting": ["Pending", "Approved", "Rejected"],
-  "Policy Issued": ["Yes", "No"],
-  "Premium Collected": ["Yes", "No"],
   "Active Client": ["Active"],
   "Lost": ["Lost"],
 };

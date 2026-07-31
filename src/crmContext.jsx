@@ -496,9 +496,15 @@ export function CrmProvider({ children }) {
   }, []);
 
   const updateCandidate = useCallback(async (candidateId, updates) => {
-    if (isAdvisor && currentUser) {
+    if (isAdvisor) {
       const target = candidates.find((c) => String(c.id) === String(candidateId));
-      if (target && target.assignedAdvisorId && String(target.assignedAdvisorId) !== String(currentUser.id)) return;
+      if (!target) return;
+      if (target.assignedAdvisorId && String(target.assignedAdvisorId) !== String(currentUser?.id)) return;
+      const safe = { ...updates };
+      delete safe.assignedTo;
+      delete safe.assignedAdvisorId;
+      delete safe.assignedAdvisorName;
+      updates = safe;
     }
 
     const applyUpdates = (prev) => {
@@ -570,10 +576,7 @@ export function CrmProvider({ children }) {
   }, [refreshCrmData]);
 
   const deleteCandidate = useCallback(async (candidateId) => {
-    if (isAdvisor && currentUser) {
-      const target = candidates.find((c) => String(c.id) === String(candidateId));
-      if (target && target.assignedAdvisorId && String(target.assignedAdvisorId) !== String(currentUser.id)) return;
-    }
+    if (isAdvisor) return;
 
     try {
       await candidatesApi.remove(candidateId);

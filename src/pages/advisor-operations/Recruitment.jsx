@@ -97,7 +97,23 @@ function Recruitment() {
 
   const handleAdvisorField = (e) => {
     const { name, value } = e.target;
-    setAdvisorForm((prev) => ({ ...prev, [name]: value }));
+    setAdvisorForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "advisorCodeGenerated" && value !== "Yes") next.advisorCode = "";
+      if (name === "businessStarted" && value !== "Yes") {
+        next.advisorCode = "";
+        next.branch = "";
+        next.reportingManager = "";
+        next.joiningDate = "";
+        next.businessLocation = "";
+        next.bankName = "";
+        next.accountNumber = "";
+        next.ifscCode = "";
+        next.upiId = "";
+        next.remarks = "";
+      }
+      return next;
+    });
     if (advisorErrors[name]) {
       setAdvisorErrors((prev) => ({ ...prev, [name]: "" }));
     }
