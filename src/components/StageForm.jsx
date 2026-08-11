@@ -21,7 +21,7 @@ export function getStageDefaultValues(stageConfig, stage) {
   const fields = getStageFields(stageConfig, stage);
   const values = {};
   for (const f of fields) {
-    values[f.name] = "";
+    values[f.name] = f.type === "file" ? null : "";
   }
   return values;
 }
@@ -34,7 +34,7 @@ export function clearHiddenStageFields(form, stageConfig, stage) {
   }
   const cleaned = { ...form };
   for (const key of Object.keys(cleaned)) {
-    if (!visibleFields.has(key) && key !== "name" && key !== "mobile" && key !== "email" && key !== "city" && key !== "qualification" && key !== "source" && key !== "leadType" && key !== "workflowStage" && key !== "notes") {
+    if (!visibleFields.has(key) && key !== "name" && key !== "mobile" && key !== "email" && key !== "city" && key !== "qualification" && key !== "source" && key !== "leadType" && key !== "workflowStage" && key !== "notes" && key !== "proposalAttachment") {
       cleaned[key] = "";
     }
   }

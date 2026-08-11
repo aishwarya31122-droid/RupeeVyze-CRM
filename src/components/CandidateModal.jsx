@@ -106,7 +106,10 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
     accountNumber: candidate.accountNumber || "",
     ifscCode: candidate.ifscCode || "",
     upiId: candidate.upiId || "",
-    remarks: candidate.remarks || ""
+    remarks: candidate.remarks || "",
+    medicalCompletionDate: candidate.medicalCompletionDate || "",
+    underwritingCompletionDate: candidate.underwritingCompletionDate || "",
+    proposalAttachment: candidate.proposalAttachment || null
   });
   const [selectedStage, setSelectedStage] = useState(candidate.workflowStage || candidate.stage || pipelineStages[0]);
   const [successMessage, setSuccessMessage] = useState("");
@@ -128,10 +131,52 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
         next.upiId = "";
         next.remarks = "";
       }
+      if (name === "stageStatus") {
+        if (selectedStage === "Medical" && value !== "Completed") {
+          next.medicalCompletionDate = "";
+        }
+        if (selectedStage === "Underwriting" && value !== "Completed") {
+          next.underwritingCompletionDate = "";
+        }
+      }
       return next;
     });
     if (name === "policyIssued") setPolicyExpanded(value === "Yes");
     if (name === "premiumCollected") setPremiumExpanded(value === "Yes");
+  };
+
+  const handleFileUpload = (event, fieldName) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png"
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      setValidationErrors((prev) => ({ ...prev, [fieldName]: "Only PDF, DOC, DOCX, JPG, JPEG, PNG files are supported." }));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({
+        ...prev,
+        [fieldName]: {
+          fileName: file.name,
+          fileType: file.type,
+          fileURL: reader.result,
+          uploadedAt: new Date().toISOString()
+        }
+      }));
+      setValidationErrors((prev) => ({ ...prev, [fieldName]: "" }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFile = (fieldName) => {
+    setForm((prev) => ({ ...prev, [fieldName]: null }));
   };
 
   const handleSave = () => {
@@ -196,6 +241,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
       sumAssured: form.sumAssured,
       nomineeName: form.nomineeName,
       policyRemarks: form.policyRemarks,
+      proposalAttachment: form.proposalAttachment || null,
       premiumCollected: form.premiumCollected,
       premiumAmount: form.premiumAmount,
       collectionDate: form.collectionDate,
@@ -295,7 +341,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
             <Typography variant="body2" fontWeight={500} sx={{ fontSize: "0.875rem", color: "text.secondary", mb: 0.5 }}>
               {isAdvisor ? "Recruitment Stage" : "Workflow Stage"}
             </Typography>
-            <StageSelect stage={selectedStage} leadType={candidate.leadType} onChange={(value) => { setSelectedStage(value); setForm((prev) => ({ ...prev, stageStatus: "" })); }} clientFlow={isActiveClient} />
+            <StageSelect stage={selectedStage} leadType={candidate.leadType} onChange={(value) => { setSelectedStage(value); setForm((prev) => ({ ...prev, stageStatus: "", medicalCompletionDate: "", underwritingCompletionDate: "" })); }} clientFlow={isActiveClient} />
           </Grid>
 
           {isAdvisor ? (
@@ -397,14 +443,110 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                   </TextField>
                 </Grid>
               ) : stageStatusOptions[selectedStage] ? (
-                <Grid item xs={12} sm={6}>
-                  <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
-                    <MenuItem value="">Select...</MenuItem>
-                    {stageStatusOptions[selectedStage].map((option) => (
-                      <MenuItem key={option} value={option}>{option}</MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
+                <>
+                  {!["Proposal Submitted", "Medical", "Underwriting"].includes(selectedStage) && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>
+                        {selectedStage} Details
+                      </Typography>
+                      <Divider sx={{ mb: 1 }} />
+                    </Grid>
+                  )}
+                  <Grid item xs={12} sm={6}>
+                    <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
+                      <MenuItem value="">Select...</MenuItem>
+                      {stageStatusOptions[selectedStage].map((option) => (
+                        <MenuItem key={option} value={option}>{option}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                      {selectedStage === "Proposal Submitted" && (
+                        <>
+                          <Grid item xs={12}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>
+                              Proposal Document
+                            </Typography>
+                            <Divider sx={{ mb: 1 }} />
+                          </Grid>
+                          <Grid item xs={12}>
+                            <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2, bgcolor: "#f8fafc" }}>
+                              {!form.proposalAttachment?.fileName ? (
+                                <Button component="label" variant="outlined" sx={{ textTransform: "none", width: "fit-content" }}>
+                                  📎 Attach Proposal
+                                  <input
+                                    hidden
+                                    type="file"
+                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                    onChange={(e) => handleFileUpload(e, "proposalAttachment")}
+                                  />
+                                </Button>
+                              ) : (
+                                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{form.proposalAttachment.fileName}</Typography>
+                                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                                      <Button
+                                        variant="text"
+                                        size="small"
+                                        href={form.proposalAttachment.fileURL}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        download={form.proposalAttachment.fileName}
+                                        sx={{ textTransform: "none" }}
+                                      >
+                                        View
+                                      </Button>
+                                      <Button component="label" variant="text" size="small" sx={{ textTransform: "none" }}>
+                                        Replace
+                                        <input
+                                          hidden
+                                          type="file"
+                                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                          onChange={(e) => handleFileUpload(e, "proposalAttachment")}
+                                        />
+                                      </Button>
+                                      <Button
+                                        variant="text"
+                                        size="small"
+                                        onClick={() => removeFile("proposalAttachment")}
+                                        sx={{ textTransform: "none" }}
+                                      >
+                                        Remove
+                                      </Button>
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              )}
+                              {!form.proposalAttachment?.fileName && (
+                                <Typography variant="body2" sx={{ color: "#64748b", mt: 1 }}>
+                                  Supported formats: PDF, DOC, DOCX, JPG, JPEG, PNG
+                                </Typography>
+                              )}
+                              {validationErrors.proposalAttachment && (
+                                <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                                  {validationErrors.proposalAttachment}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Grid>
+                        </>
+                      )}
+                  {selectedStage === "Underwriting" && form.stageStatus === "Completed" && (
+                    <>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Underwriting Completion Date"
+                          name="underwritingCompletionDate"
+                          type="date"
+                          value={form.underwritingCompletionDate || ""}
+                          onChange={handleChange}
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      </Grid>
+                    </>
+                  )}
+                </>
               ) : null}
             </>
           )}
@@ -436,6 +578,10 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
 
         {!isAdvisor && selectedStage === "Policy Issued" && (
           <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>
+              Policy Details
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
             <PolicyDetailsForm
               form={form}
               handleChange={handleChange}
@@ -447,6 +593,10 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
         )}
         {!isAdvisor && selectedStage === "Premium Collected" && (
           <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>
+              Premium Collection Details
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
             <PremiumDetailsForm
               form={form}
               handleChange={handleChange}

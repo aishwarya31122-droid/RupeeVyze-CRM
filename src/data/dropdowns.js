@@ -97,8 +97,8 @@ export const stageStatusOptions = {
   "Product Recommendation": ["Completed", "Not Completed"],
   "Illustration Shared": ["Yes", "No"],
   "Proposal Submitted": ["Yes", "No"],
-  "Medical": ["Completed", "Not Completed"],
-  "Underwriting": ["Pending", "Approved", "Rejected"],
+  "Medical": ["Pending", "Completed"],
+  "Underwriting": ["Pending", "Completed"],
   "Active Client": ["Active"],
   "Lost": ["Lost"],
 };

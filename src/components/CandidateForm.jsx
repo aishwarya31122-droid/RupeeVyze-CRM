@@ -63,6 +63,9 @@ const baseFields = {
   receiptNumber: "",
   collectedBy: "",
   premiumRemarks: "",
+  medicalCompletionDate: "",
+  underwritingCompletionDate: "",
+  proposalAttachment: null,
 };
 
 const createEmptyForm = (leadType) => {
@@ -86,7 +89,7 @@ const STAGE_FIELDS_BASE = new Set([
   "policyStartDate", "policyEndDate", "sumAssured", "premiumFrequency",
   "nomineeName", "policyRemarks", "premiumCollected", "premiumAmount",
   "collectionDate", "paymentMode", "transactionReference", "receiptNumber",
-  "collectedBy", "premiumRemarks",
+  "collectedBy", "premiumRemarks", "proposalAttachment",
 ]);
 
 function shouldShowField(field, formValues) {
@@ -139,11 +142,53 @@ export default function CandidateForm({ open, onClose, onAdd }) {
         next.upiId = "";
         next.remarks = "";
       }
+      if (name === "stageStatus") {
+        if (prev.workflowStage === "Medical" && value !== "Completed") {
+          next.medicalCompletionDate = "";
+        }
+        if (prev.workflowStage === "Underwriting" && value !== "Completed") {
+          next.underwritingCompletionDate = "";
+        }
+      }
       return next;
     });
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+  };
+
+  const handleFileUpload = (event, fieldName) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png"
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      setErrors((prev) => ({ ...prev, [fieldName]: "Only PDF, DOC, DOCX, JPG, JPEG, PNG files are supported." }));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({
+        ...prev,
+        [fieldName]: {
+          fileName: file.name,
+          fileType: file.type,
+          fileURL: reader.result,
+          uploadedAt: new Date().toISOString()
+        }
+      }));
+      setErrors((prev) => ({ ...prev, [fieldName]: "" }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFile = (fieldName) => {
+    setForm((prev) => ({ ...prev, [fieldName]: null }));
   };
 
   const handleLeadTypeChange = (e) => {
@@ -256,6 +301,9 @@ export default function CandidateForm({ open, onClose, onAdd }) {
       sumAssured: form.sumAssured,
       nomineeName: form.nomineeName,
       policyRemarks: form.policyRemarks,
+      medicalCompletionDate: form.medicalCompletionDate || "",
+      underwritingCompletionDate: form.underwritingCompletionDate || "",
+      proposalAttachment: form.proposalAttachment || null,
       premiumCollected: form.premiumCollected,
       premiumAmount: form.premiumAmount,
       collectionDate: form.collectionDate,
@@ -315,6 +363,70 @@ export default function CandidateForm({ open, onClose, onAdd }) {
     if (field.type === "date") {
       return (
         <TextField {...commonProps} label={field.label} type="date" InputLabelProps={{ shrink: true }} />
+      );
+    }
+
+    if (field.type === "file") {
+      const file = form[field.name];
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {field.name === "proposalAttachment" && (
+            <>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>
+                Proposal Document
+              </Typography>
+              <Divider sx={{ mb: 1 }} />
+            </>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, border: field.name === "proposalAttachment" ? "1px solid rgba(148,163,184,0.35)" : undefined, borderRadius: field.name === "proposalAttachment" ? 12 : undefined, padding: field.name === "proposalAttachment" ? 14 : undefined, background: field.name === "proposalAttachment" ? "#f8fafc" : undefined }}>
+            {!file?.fileName ? (
+              <Button component="label" variant="outlined" sx={{ textTransform: "none", width: "fit-content" }}>
+                📎 Attach Proposal
+                <input
+                  hidden
+                  type="file"
+                  accept={field.accept?.join(",")}
+                  onChange={(e) => handleFileUpload(e, field.name)}
+                />
+              </Button>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                  <span style={{ fontSize: "0.9rem", fontWeight: 600 }}>{file.fileName}</span>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <Button
+                      variant="text"
+                      size="small"
+                      href={file.fileURL}
+                      target="_blank"
+                      rel="noreferrer"
+                      download={file.fileName}
+                      sx={{ textTransform: "none" }}
+                    >
+                      View
+                    </Button>
+                    <Button component="label" variant="text" size="small" sx={{ textTransform: "none" }}>
+                      Replace
+                      <input
+                        hidden
+                        type="file"
+                        accept={field.accept?.join(",")}
+                        onChange={(e) => handleFileUpload(e, field.name)}
+                      />
+                    </Button>
+                    <Button variant="text" size="small" onClick={() => removeFile(field.name)} sx={{ textTransform: "none" }}>
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!file?.fileName && (
+              <span style={{ fontSize: "0.85rem", color: "#64748b" }}>Supported formats: PDF, DOC, DOCX, JPG, JPEG, PNG</span>
+            )}
+            {errors[field.name] && <div style={{ color: "#d32f2f", fontSize: "0.75rem" }}>{errors[field.name]}</div>}
+          </div>
+        </div>
       );
     }
 
@@ -486,6 +598,24 @@ export default function CandidateForm({ open, onClose, onAdd }) {
                 ))}
               </TextField>
             </Grid>
+          )}
+          {isInsuranceCustomer && [
+            "Proposal Submitted",
+            "Medical",
+            "Underwriting",
+            "Policy Issued",
+            "Premium Collected"
+          ].includes(form.workflowStage) && (
+            <>
+              {(form.workflowStage === "Policy Issued" || form.workflowStage === "Premium Collected") && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>
+                    {form.workflowStage === "Policy Issued" ? "Policy Details" : "Premium Collection Details"}
+                  </Typography>
+                  <Divider sx={{ mb: 1 }} />
+                </Grid>
+              )}
+            </>
           )}
           {stageFields.map((field) => {
             if (!shouldShowField(field, form)) return null;

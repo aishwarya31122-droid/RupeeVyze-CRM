@@ -32,9 +32,18 @@ export const insuranceCustomerStageFields = {
     dateField("proposalSharedDate", "Proposal Shared Date"),
     dateField("followUpDate", "Follow-up Date")
   ],
+  "Proposal Submitted": [
+    { type: "file", name: "proposalAttachment", label: "Proposal Attachment", accept: [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"] }
+  ],
   "Policy Discussion": [
     select("discussionStatus", "Discussion Status", ["Pending", "Completed"]),
     dateField("followUpDate", "Follow-up Date")
+  ],
+  "Medical": [
+    dateField("medicalCompletionDate", "Medical Completion Date", { dependsOn: { field: "stageStatus", value: "Completed" } })
+  ],
+  "Underwriting": [
+    dateField("underwritingCompletionDate", "Underwriting Completion Date", { dependsOn: { field: "stageStatus", value: "Completed" } })
   ],
   "Policy Issued": [],
   "Lost": [

@@ -393,6 +393,32 @@ function CandidateDetails() {
                   <div className="detail-item"><span>Priority</span><strong>{candidate.priority || candidate.followUp?.priority || "Medium"}</strong></div>
                   <div className="detail-item"><span>Due Date</span><strong>{formatDate(candidate.dueDate) || "Not set"}</strong></div>
                   <div className="detail-item"><span>Next Follow-up</span><strong>{formatDate(candidate.nextFollowUp || candidate.followUpDate)}</strong></div>
+                  {candidate.workflowStage === "Medical" && (
+                    <>
+                      <div className="detail-item"><span>Stage Status</span><strong>{candidate.stageStatus || "Pending"}</strong></div>
+                      {candidate.stageStatus === "Completed" && (
+                        <div className="detail-item"><span>Medical Completion Date</span><strong>{formatDate(candidate.medicalCompletionDate) || "Not set"}</strong></div>
+                      )}
+                    </>
+                  )}
+                  {candidate.workflowStage === "Underwriting" && (
+                    <>
+                      <div className="detail-item"><span>Stage Status</span><strong>{candidate.stageStatus || "Pending"}</strong></div>
+                      {candidate.stageStatus === "Completed" && (
+                        <div className="detail-item"><span>Underwriting Completion Date</span><strong>{formatDate(candidate.underwritingCompletionDate) || "Not set"}</strong></div>
+                      )}
+                    </>
+                  )}
+                  {candidate.workflowStage === "Proposal Submitted" && candidate.proposalAttachment?.fileName && (
+                    <div className="detail-item">
+                      <span>Proposal Attachment</span>
+                      <strong>
+                        <a href={candidate.proposalAttachment.fileURL} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+                          {candidate.proposalAttachment.fileName}
+                        </a>
+                      </strong>
+                    </div>
+                  )}
                 </div>
 
                 <div>
