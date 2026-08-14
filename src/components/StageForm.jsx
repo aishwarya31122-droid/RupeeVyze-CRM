@@ -34,7 +34,7 @@ export function clearHiddenStageFields(form, stageConfig, stage) {
   }
   const cleaned = { ...form };
   for (const key of Object.keys(cleaned)) {
-    if (!visibleFields.has(key) && key !== "name" && key !== "mobile" && key !== "email" && key !== "city" && key !== "qualification" && key !== "source" && key !== "leadType" && key !== "workflowStage" && key !== "notes" && key !== "proposalAttachment") {
+    if (!visibleFields.has(key) && key !== "name" && key !== "mobile" && key !== "email" && key !== "city" && key !== "qualification" && key !== "source" && key !== "leadType" && key !== "workflowStage" && key !== "notes" && key !== "proposalAttachment" && key !== "kycDocument") {
       cleaned[key] = "";
     }
   }

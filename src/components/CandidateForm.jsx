@@ -150,6 +150,14 @@ export default function CandidateForm({ open, onClose, onAdd }) {
           next.underwritingCompletionDate = "";
         }
       }
+      if (name === "examPassed") {
+        if (value !== "Completed") next.examCompletionDate = "";
+        if (value !== "Scheduled") next.examScheduledDate = "";
+      }
+      if (name === "trainingCompleted" && value !== "Yes") next.trainingCompletionDate = "";
+      if (name === "stageStatus" && prev.workflowStage === "Proposal Submitted" && value !== "Yes") {
+        setErrors((prevErrors) => ({ ...prevErrors, proposalAttachment: "" }));
+      }
       return next;
     });
     if (errors[name]) {
@@ -249,6 +257,24 @@ export default function CandidateForm({ open, onClose, onAdd }) {
     if (!form.qualification.trim()) newErrors.qualification = "Qualification is required.";
     if (!form.workflowStage) newErrors.workflowStage = "Stage is required";
 
+    if (form.workflowStage === "Proposal Submitted" && form.stageStatus === "Yes") {
+      if (!form.proposalAttachment?.fileName) newErrors.proposalAttachment = "Proposal attachment is required when Proposal Submitted is Yes.";
+    }
+    if (form.workflowStage === "Medical" && form.stageStatus === "Completed") {
+      if (!form.medicalCompletionDate?.trim()) newErrors.medicalCompletionDate = "Medical Completion Date is required when Medical is Completed.";
+    }
+    if (form.workflowStage === "Exam" && form.examPassed === "Completed") {
+      if (!form.examCompletionDate?.trim()) newErrors.examCompletionDate = "Exam Completion Date is required when Exam Status is Completed.";
+    }
+    if (form.workflowStage === "Exam" && form.examPassed === "Scheduled") {
+      if (!form.examScheduledDate?.trim()) newErrors.examScheduledDate = "Exam Scheduled Date is required when Exam Status is Scheduled.";
+    }
+    if (form.workflowStage === "Training" && form.trainingCompleted === "Yes") {
+      if (!form.trainingCompletionDate?.trim()) newErrors.trainingCompletionDate = "Training Completion Date is required when Training is Yes.";
+    }
+    if (form.workflowStage === "Code Generation" && form.advisorCodeGenerated === "Yes") {
+      if (!form.advisorCode?.trim()) newErrors.advisorCode = "Advisor Code is required when Code Generation is Yes.";
+    }
     if (form.workflowStage === "Policy Issued" && form.policyIssued === "Yes") {
       if (!form.policyNumber.trim()) newErrors.policyNumber = "Required";
       if (!form.policyType.trim()) newErrors.policyType = "Required";
@@ -314,6 +340,11 @@ export default function CandidateForm({ open, onClose, onAdd }) {
       premiumRemarks: form.premiumRemarks,
     };
 
+    if (record.workflowStage === "Interested" && record.interestLevel === "No") {
+      record.workflowStage = "Dropped";
+      record.leadStatus = "Dropped";
+    }
+
     try {
       await onAdd(record);
 
@@ -368,6 +399,9 @@ export default function CandidateForm({ open, onClose, onAdd }) {
 
     if (field.type === "file") {
       const file = form[field.name];
+      if (field.name === "proposalAttachment" && form.stageStatus !== "Yes") {
+        return null;
+      }
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {field.name === "proposalAttachment" && (
@@ -378,7 +412,17 @@ export default function CandidateForm({ open, onClose, onAdd }) {
               <Divider sx={{ mb: 1 }} />
             </>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, border: field.name === "proposalAttachment" ? "1px solid rgba(148,163,184,0.35)" : undefined, borderRadius: field.name === "proposalAttachment" ? 12 : undefined, padding: field.name === "proposalAttachment" ? 14 : undefined, background: field.name === "proposalAttachment" ? "#f8fafc" : undefined }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              border: field.name === "proposalAttachment" ? `1px solid ${errors[field.name] ? "#d32f2f" : "rgba(148,163,184,0.35)"}` : undefined,
+              borderRadius: field.name === "proposalAttachment" ? 12 : undefined,
+              padding: field.name === "proposalAttachment" ? 14 : undefined,
+              background: field.name === "proposalAttachment" ? "#f8fafc" : undefined,
+            }}
+          >
             {!file?.fileName ? (
               <Button component="label" variant="outlined" sx={{ textTransform: "none", width: "fit-content" }}>
                 📎 Attach Proposal

@@ -140,16 +140,30 @@ function Recruitment() {
     if (!advisorForm.city.trim()) errs.city = "City is required";
     if (!advisorForm.qualification.trim()) errs.qualification = "Qualification is required.";
     if (!advisorForm.workflowStage) errs.workflowStage = "Workflow Stage is required";
+    if (advisorForm.workflowStage === "Exam" && advisorForm.examPassed === "Completed" && !advisorForm.examCompletionDate?.trim()) {
+      errs.examCompletionDate = "Exam Completion Date is required when Exam Status is Completed.";
+    }
+    if (advisorForm.workflowStage === "Exam" && advisorForm.examPassed === "Scheduled" && !advisorForm.examScheduledDate?.trim()) {
+      errs.examScheduledDate = "Exam Scheduled Date is required when Exam Status is Scheduled.";
+    }
+    if (advisorForm.workflowStage === "Code Generation" && advisorForm.advisorCodeGenerated === "Yes" && !advisorForm.advisorCode?.trim()) {
+      errs.advisorCode = "Advisor Code is required when Code Generation is Yes.";
+    }
     setAdvisorErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    handleAddLead({
+    const advisorData = {
       ...advisorForm,
       leadType: "Advisor",
       leadId: `LD-${1000 + candidates.length + 1}`,
       leadStatus: "Open",
       leadSource: advisorForm.source,
-    });
+    };
+    if (advisorData.workflowStage === "Interested" && advisorData.interestLevel === "No") {
+      advisorData.workflowStage = "Dropped";
+      advisorData.leadStatus = "Dropped";
+    }
+    handleAddLead(advisorData);
   };
 
   const advisorLeads = useMemo(

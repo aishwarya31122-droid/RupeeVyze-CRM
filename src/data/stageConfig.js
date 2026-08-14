@@ -60,24 +60,25 @@ export const advisorStageFields = {
     dateField("followUpDate", "Follow-up Date")
   ],
   "Interested": [
-    select("interestLevel", "Interest Level", ["High", "Medium", "Low"]),
+    select("interestLevel", "Interested", ["Yes", "No"]),
     dateField("followUpDate", "Follow-up Date")
   ],
   "KYC Pending": [
-    select("stageStatus", "Stage Status", ["Open", "In Progress", "Completed", "On Hold"]),
-    select("kycReceived", "KYC Documents Received", ["Yes", "No"])
+    select("kycReceived", "KYC Document Received", ["Yes", "No"]),
+    { type: "file", name: "kycDocument", label: "KYC Document", accept: [".pdf", ".jpg", ".jpeg", ".png"], dependsOn: { field: "kycReceived", value: "No" } }
   ],
   "KYC Complete": [
     select("stageStatus", "Stage Status", ["Open", "In Progress", "Completed", "On Hold"]),
     select("kycVerified", "KYC Verified", ["Yes", "No"])
   ],
   "Training": [
-    dateField("trainingCompletionDate", "Training Completion Date"),
-    select("stageStatus", "Stage Status", ["Open", "In Progress", "Completed", "On Hold"])
+    select("trainingCompleted", "Training", ["Yes", "No"]),
+    dateField("trainingCompletionDate", "Training Completion Date", { dependsOn: { field: "trainingCompleted", value: "Yes" } })
   ],
   "Exam": [
-    dateField("examDate", "Exam Date"),
-    select("examPassed", "Exam Passed", ["Yes", "No"])
+    dateField("examCompletionDate", "Exam Completion Date", { dependsOn: { field: "examPassed", value: "Completed" } }),
+    dateField("examScheduledDate", "Exam Scheduled Date", { dependsOn: { field: "examPassed", value: "Scheduled" } }),
+    select("examPassed", "Exam Status", ["Completed", "Not Completed", "Scheduled"])
   ],
   "Code Generation": [
     { type: "text", name: "advisorCode", label: "Advisor Code", dependsOn: { field: "advisorCodeGenerated", value: "Yes" } },

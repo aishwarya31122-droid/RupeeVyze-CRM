@@ -31,25 +31,21 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
   const initialAssignedTo = candidate.assignedTo || "";
   const initialMatch = activatedAdvisorOptions.some((a) => a.name === initialAssignedTo);
   const [manualAssignedTo, setManualAssignedTo] = useState(initialMatch ? "" : initialAssignedTo);
-  const advisorStagesWithStageStatus = new Set([
-    "KYC Pending", "KYC Complete", "Training"
-  ]);
+  const advisorStagesWithStageStatus = new Set(["KYC Complete"]);
   const advisorStagesWithYesNo = new Set([
-    "KYC Pending", "KYC Complete", "Exam",
+    "KYC Pending", "KYC Complete",
     "Code Generation", "Activation", "Business Started"
   ]);
   const stageYesNoField = {
     "KYC Pending": "kycReceived",
     "KYC Complete": "kycVerified",
-    "Exam": "examPassed",
     "Code Generation": "advisorCodeGenerated",
     "Activation": "advisorActivated",
     "Business Started": "businessStarted"
   };
   const stageYesNoLabel = {
-    "KYC Pending": "KYC Documents Received",
+    "KYC Pending": "KYC Document Received",
     "KYC Complete": "KYC Verified",
-    "Exam": "Exam Passed",
     "Code Generation": "Advisor Code Generated",
     "Activation": "Advisor Activated",
     "Business Started": "Business Started"
@@ -90,10 +86,14 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
     collectedBy: candidate.collectedBy || "",
     premiumRemarks: candidate.premiumRemarks || "",
     qualified: candidate.qualified || "",
+    interestLevel: candidate.interestLevel || "",
     kycReceived: candidate.kycReceived || "",
     kycVerified: candidate.kycVerified || "",
+    kycDocument: candidate.kycDocument || null,
     trainingCompleted: candidate.trainingCompleted || "",
     examPassed: candidate.examPassed || "",
+    examCompletionDate: candidate.examCompletionDate || "",
+    examScheduledDate: candidate.examScheduledDate || "",
     advisorCodeGenerated: candidate.advisorCodeGenerated || "",
     advisorActivated: candidate.advisorActivated || "",
     businessStarted: candidate.businessStarted || "",
@@ -119,6 +119,8 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
     setForm((prev) => {
       const next = { ...prev, [name]: value };
       if (name === "advisorCodeGenerated" && value !== "Yes") next.advisorCode = "";
+      if (name === "kycReceived" && value !== "Yes") next.kycDocument = null;
+      if (name === "trainingCompleted" && value !== "Yes") next.trainingCompletionDate = "";
       if (name === "businessStarted" && value !== "Yes") {
         next.advisorCode = "";
         next.branch = "";
@@ -138,6 +140,28 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
         if (selectedStage === "Underwriting" && value !== "Completed") {
           next.underwritingCompletionDate = "";
         }
+        if (selectedStage === "Proposal Submitted" && value !== "Yes") {
+          setValidationErrors((prevErrors) => ({ ...prevErrors, proposalAttachment: "" }));
+        }
+      }
+      if (name === "examPassed") {
+        if (value !== "Completed") {
+          next.examCompletionDate = "";
+          setValidationErrors((prevErrors) => ({ ...prevErrors, examCompletionDate: "" }));
+        }
+        if (value !== "Scheduled") {
+          next.examScheduledDate = "";
+          setValidationErrors((prevErrors) => ({ ...prevErrors, examScheduledDate: "" }));
+        }
+      }
+      if (name === "examScheduledDate") {
+        setValidationErrors((prevErrors) => ({ ...prevErrors, examScheduledDate: "" }));
+      }
+      if (name === "advisorCodeGenerated") {
+        setValidationErrors((prevErrors) => ({ ...prevErrors, advisorCode: "" }));
+      }
+      if (name === "advisorCode") {
+        setValidationErrors((prevErrors) => ({ ...prevErrors, advisorCode: "" }));
       }
       return next;
     });
@@ -181,6 +205,36 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
 
   const handleSave = () => {
     const errs = {};
+    if (selectedStage === "Proposal Submitted" && form.stageStatus === "Yes") {
+      if (!form.proposalAttachment?.fileName) {
+        errs.proposalAttachment = "Proposal attachment is required when Proposal Submitted is Yes.";
+      }
+    }
+    if (selectedStage === "Medical" && form.stageStatus === "Completed") {
+      if (!form.medicalCompletionDate?.trim()) {
+        errs.medicalCompletionDate = "Medical Completion Date is required when Medical is Completed.";
+      }
+    }
+    if (selectedStage === "Exam" && form.examPassed === "Completed") {
+      if (!form.examCompletionDate?.trim()) {
+        errs.examCompletionDate = "Exam Completion Date is required when Exam Status is Completed.";
+      }
+    }
+    if (selectedStage === "Exam" && form.examPassed === "Scheduled") {
+      if (!form.examScheduledDate?.trim()) {
+        errs.examScheduledDate = "Exam Scheduled Date is required when Exam Status is Scheduled.";
+      }
+    }
+    if (selectedStage === "Training" && form.trainingCompleted === "Yes") {
+      if (!form.trainingCompletionDate?.trim()) {
+        errs.trainingCompletionDate = "Training Completion Date is required when Training is Yes.";
+      }
+    }
+    if (selectedStage === "Code Generation" && form.advisorCodeGenerated === "Yes") {
+      if (!form.advisorCode?.trim()) {
+        errs.advisorCode = "Advisor Code is required when Code Generation is Yes.";
+      }
+    }
     if (selectedStage === "Policy Issued" && form.policyIssued === "Yes") {
       if (!form.policyNumber.trim()) errs.policyNumber = "Required";
       if (!form.policyType.trim()) errs.policyType = "Required";
@@ -204,6 +258,8 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
     setValidationErrors({});
 
     const effectiveAssignedTo = manualAssignedTo.trim() !== "" ? manualAssignedTo : form.assignedTo;
+    const isInterestedNo = selectedStage === "Interested" && form.interestLevel === "No";
+    const effectiveStage = isInterestedNo ? "Dropped" : selectedStage;
     const stageForFollowUp = selectedStage || form.workflowStage;
     const showFollowUp = followUpRequiredStages.has(stageForFollowUp);
     const selectedAdvisorName = effectiveAssignedTo || candidate.assignedTo || "";
@@ -214,10 +270,10 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
       ...form,
       mobile: form.mobile || candidate.mobile || candidate.phone || "",
       phone: form.mobile || candidate.mobile || candidate.phone || "",
-      workflowStage: selectedStage,
+      workflowStage: effectiveStage,
       leadSource: form.leadSource || candidate.leadSource || candidate.source || "",
       source: form.leadSource || candidate.leadSource || candidate.source || "",
-      leadStatus: form.leadStatus || candidate.leadStatus || "Open",
+      leadStatus: isInterestedNo ? "Dropped" : (form.leadStatus || candidate.leadStatus || "Open"),
       assignedTo: selectedAdvisorName,
       assignedAdvisorId: matchedAdvisor ? String(matchedAdvisor.id) : (candidate.assignedAdvisorId || ""),
       assignedAdvisorName: selectedAdvisorName,
@@ -346,13 +402,15 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
 
           {isAdvisor ? (
             <>
-              <Grid item xs={12} sm={6}>
-                <TextField select fullWidth label="Status" name="leadStatus" value={form.leadStatus} onChange={handleChange}>
-                  {advisorStatuses.map((status) => (
-                    <MenuItem key={status} value={status}>{status}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
+              {selectedStage !== "Exam" && selectedStage !== "Interested" && selectedStage !== "KYC Pending" && selectedStage !== "KYC Complete" && selectedStage !== "Training" && (
+                <Grid item xs={12} sm={6}>
+                  <TextField select fullWidth label="Status" name="leadStatus" value={form.leadStatus} onChange={handleChange}>
+                    {advisorStatuses.map((status) => (
+                      <MenuItem key={status} value={status}>{status}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              )}
               <Grid item xs={12} sm={6}>
                 <TextField select fullWidth label="Priority" name="priority" value={form.priority} onChange={handleChange}>
                   <MenuItem value="High">High</MenuItem>
@@ -371,6 +429,109 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                   </TextField>
                 </Grid>
               )}
+              {selectedStage === "Exam" && (
+                <>
+                  <Grid item xs={12} sm={6}>
+                    <TextField select fullWidth label="Exam Status" name="examPassed" value={form.examPassed || ""} onChange={handleChange}>
+                      <MenuItem value="">Select...</MenuItem>
+                      <MenuItem value="Completed">Completed</MenuItem>
+                      <MenuItem value="Not Completed">Not Completed</MenuItem>
+                      <MenuItem value="Scheduled">Scheduled</MenuItem>
+                    </TextField>
+                  </Grid>
+                  {form.examPassed === "Scheduled" && (
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Exam Scheduled Date"
+                        name="examScheduledDate"
+                        type="date"
+                        value={form.examScheduledDate || ""}
+                        onChange={handleChange}
+                        InputLabelProps={{ shrink: true }}
+                        error={Boolean(validationErrors.examScheduledDate)}
+                        helperText={validationErrors.examScheduledDate || ""}
+                      />
+                    </Grid>
+                  )}
+                </>
+              )}
+              {selectedStage === "Interested" && (
+                <Grid item xs={12} sm={6}>
+                  <TextField select fullWidth label="Interested" name="interestLevel" value={form.interestLevel || ""} onChange={handleChange} helperText={form.interestLevel === "No" ? "Selecting No will close the application when saved." : ""}>
+                    <MenuItem value="">Select...</MenuItem>
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </TextField>
+                </Grid>
+              )}
+              {selectedStage === "Training" && (
+                <>
+                  <Grid item xs={12} sm={6}>
+                    <TextField select fullWidth label="Training" name="trainingCompleted" value={form.trainingCompleted || ""} onChange={handleChange}>
+                      <MenuItem value="">Select...</MenuItem>
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  </Grid>
+                  {form.trainingCompleted === "Yes" && (
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Training Completion Date"
+                        name="trainingCompletionDate"
+                        type="date"
+                        value={form.trainingCompletionDate || ""}
+                        onChange={handleChange}
+                        InputLabelProps={{ shrink: true }}
+                        error={Boolean(validationErrors.trainingCompletionDate)}
+                        helperText={validationErrors.trainingCompletionDate || ""}
+                      />
+                    </Grid>
+                  )}
+                </>
+              )}
+              {selectedStage === "KYC Pending" && (form.kycReceived === "Yes" || form.kycReceived === "No") && (
+                <Grid item xs={12}>
+                  <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2, bgcolor: "#f8fafc" }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, fontSize: "0.9rem", color: "#1e293b" }}>
+                      KYC Document
+                    </Typography>
+                    {form.kycReceived === "Yes" && form.kycDocument?.fileName ? (
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{form.kycDocument.fileName}</Typography>
+                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                          <Button variant="text" size="small" href={form.kycDocument.fileURL} target="_blank" rel="noreferrer" download={form.kycDocument.fileName} sx={{ textTransform: "none" }}>
+                            View
+                          </Button>
+                          <Button component="label" variant="text" size="small" sx={{ textTransform: "none" }}>
+                            Replace
+                            <input
+                              hidden
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => handleFileUpload(e, "kycDocument")}
+                            />
+                          </Button>
+                          <Button variant="text" size="small" onClick={() => removeFile("kycDocument")} sx={{ textTransform: "none" }}>
+                            Remove
+                          </Button>
+                        </Box>
+                      </Box>
+                    ) : (
+                      <Button component="label" variant="outlined" sx={{ textTransform: "none", width: "fit-content" }}>
+                        Upload KYC Document
+                        <input
+                          hidden
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload(e, "kycDocument")}
+                        />
+                      </Button>
+                    )}
+                  </Box>
+                </Grid>
+              )}
               {advisorStagesWithYesNo.has(selectedStage) && (
                 <Grid item xs={12} sm={6}>
                   <TextField select fullWidth label={stageYesNoLabel[selectedStage]} name={stageYesNoField[selectedStage]} value={form[stageYesNoField[selectedStage]] || ""} onChange={handleChange}>
@@ -382,7 +543,15 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
               )}
               {selectedStage === "Code Generation" && form.advisorCodeGenerated === "Yes" && (
                 <Grid item xs={12} sm={6}>
-                  <TextField fullWidth label="Advisor Code" name="advisorCode" value={form.advisorCode || ""} onChange={handleChange} />
+                  <TextField
+                    fullWidth
+                    label="Advisor Code"
+                    name="advisorCode"
+                    value={form.advisorCode || ""}
+                    onChange={handleChange}
+                    error={Boolean(validationErrors.advisorCode)}
+                    helperText={validationErrors.advisorCode || ""}
+                  />
                 </Grid>
               )}
               {selectedStage === "Business Started" && form.businessStarted === "Yes" && (
@@ -460,7 +629,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                       ))}
                     </TextField>
                   </Grid>
-                      {selectedStage === "Proposal Submitted" && (
+                      {selectedStage === "Proposal Submitted" && form.stageStatus === "Yes" && (
                         <>
                           <Grid item xs={12}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>
@@ -469,7 +638,7 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                             <Divider sx={{ mb: 1 }} />
                           </Grid>
                           <Grid item xs={12}>
-                            <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2, bgcolor: "#f8fafc" }}>
+                            <Box sx={{ border: validationErrors.proposalAttachment ? "1px solid #d32f2f" : "1px solid", borderColor: validationErrors.proposalAttachment ? "#d32f2f" : "divider", borderRadius: 2, p: 2, bgcolor: "#f8fafc" }}>
                               {!form.proposalAttachment?.fileName ? (
                                 <Button component="label" variant="outlined" sx={{ textTransform: "none", width: "fit-content" }}>
                                   📎 Attach Proposal
@@ -531,6 +700,32 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                           </Grid>
                         </>
                       )}
+                  {selectedStage === "Medical" && form.stageStatus === "Completed" && (
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Medical Completion Date"
+                        name="medicalCompletionDate"
+                        type="date"
+                        value={form.medicalCompletionDate || ""}
+                        onChange={handleChange}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Grid>
+                  )}
+                  {selectedStage === "Exam" && form.examPassed === "Completed" && (
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Exam Completion Date"
+                        name="examCompletionDate"
+                        type="date"
+                        value={form.examCompletionDate || ""}
+                        onChange={handleChange}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Grid>
+                  )}
                   {selectedStage === "Underwriting" && form.stageStatus === "Completed" && (
                     <>
                       <Grid item xs={12} sm={6}>
