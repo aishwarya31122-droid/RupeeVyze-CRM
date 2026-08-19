@@ -69,6 +69,7 @@ export const advisorStageFields = {
   ],
   "KYC Complete": [
     select("stageStatus", "Stage Status", ["Open", "In Progress", "Completed", "On Hold"]),
+    dateField("kycCompletedDate", "KYC Completed Date", { dependsOn: { field: "stageStatus", value: "Completed" } }),
     select("kycVerified", "KYC Verified", ["Yes", "No"])
   ],
   "Training": [
@@ -86,11 +87,11 @@ export const advisorStageFields = {
     select("advisorCodeGenerated", "Advisor Code Generated", ["Yes", "No"])
   ],
   "Activation": [
-    dateField("activationDate", "Activation Date"),
+    dateField("activationDate", "Activation Date", { dependsOn: { field: "advisorActivated", value: "Yes" } }),
     select("advisorActivated", "Advisor Activated", ["Yes", "No"])
   ],
   "Business Started": [
-    dateField("businessStartDate", "Business Start Date"),
+    dateField("businessStartDate", "Business Started Date", { dependsOn: { field: "businessStarted", value: "Yes" } }),
     select("businessStarted", "Business Started", ["Yes", "No"]),
     { type: "section", name: "businessDetailsSection", label: "Business Details", dependsOn: { field: "businessStarted", value: "Yes" } },
     text("advisorCode", "Advisor Code", { dependsOn: { field: "businessStarted", value: "Yes" } }),

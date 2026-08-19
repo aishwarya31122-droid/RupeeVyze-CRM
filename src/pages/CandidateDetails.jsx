@@ -409,6 +409,14 @@ function CandidateDetails() {
                       )}
                     </>
                   )}
+                  {candidate.workflowStage === "KYC Complete" && (
+                    <>
+                      <div className="detail-item"><span>Stage Status</span><strong>{candidate.stageStatus || "Pending"}</strong></div>
+                      {candidate.stageStatus === "Completed" && (
+                        <div className="detail-item"><span>KYC Completed Date</span><strong>{formatDate(candidate.kycCompletedDate) || "Not set"}</strong></div>
+                      )}
+                    </>
+                  )}
                   {candidate.workflowStage === "Proposal Submitted" && candidate.proposalAttachment?.fileName && (
                     <div className="detail-item">
                       <span>Proposal Attachment</span>

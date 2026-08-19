@@ -193,6 +193,7 @@ function normalizeLocalRecord(record, index, existingCount) {
     kycReceived: record.kycReceived || "",
     kycVerified: record.kycVerified || "",
     kycDocument: record.kycDocument || null,
+    kycCompletedDate: record.kycCompletedDate || "",
     trainingCompleted: record.trainingCompleted || "",
     examPassed: record.examPassed || "",
     examCompletionDate: record.examCompletionDate || "",

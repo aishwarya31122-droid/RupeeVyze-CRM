@@ -109,7 +109,8 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
     remarks: candidate.remarks || "",
     medicalCompletionDate: candidate.medicalCompletionDate || "",
     underwritingCompletionDate: candidate.underwritingCompletionDate || "",
-    proposalAttachment: candidate.proposalAttachment || null
+    proposalAttachment: candidate.proposalAttachment || null,
+    kycCompletedDate: candidate.kycCompletedDate || ""
   });
   const [selectedStage, setSelectedStage] = useState(candidate.workflowStage || candidate.stage || pipelineStages[0]);
   const [successMessage, setSuccessMessage] = useState("");
@@ -132,6 +133,8 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
         next.ifscCode = "";
         next.upiId = "";
         next.remarks = "";
+        next.businessStartDate = "";
+        setValidationErrors((prevErrors) => ({ ...prevErrors, businessStartDate: "" }));
       }
       if (name === "stageStatus") {
         if (selectedStage === "Medical" && value !== "Completed") {
@@ -139,6 +142,10 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
         }
         if (selectedStage === "Underwriting" && value !== "Completed") {
           next.underwritingCompletionDate = "";
+        }
+        if (selectedStage === "KYC Complete" && value !== "Completed") {
+          next.kycCompletedDate = "";
+          setValidationErrors((prevErrors) => ({ ...prevErrors, kycCompletedDate: "" }));
         }
         if (selectedStage === "Proposal Submitted" && value !== "Yes") {
           setValidationErrors((prevErrors) => ({ ...prevErrors, proposalAttachment: "" }));
@@ -235,6 +242,16 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
         errs.advisorCode = "Advisor Code is required when Code Generation is Yes.";
       }
     }
+    if (selectedStage === "KYC Complete" && form.stageStatus === "Completed") {
+      if (!form.kycCompletedDate?.trim()) {
+        errs.kycCompletedDate = "KYC Completed Date is required when Stage Status is Completed.";
+      }
+    }
+    if (selectedStage === "Business Started" && form.businessStarted === "Yes") {
+      if (!form.businessStartDate?.trim()) {
+        errs.businessStartDate = "Business Started Date is required when Business Started is Yes.";
+      }
+    }
     if (selectedStage === "Policy Issued" && form.policyIssued === "Yes") {
       if (!form.policyNumber.trim()) errs.policyNumber = "Required";
       if (!form.policyType.trim()) errs.policyType = "Required";
@@ -305,7 +322,8 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
       transactionReference: form.transactionReference,
       receiptNumber: form.receiptNumber,
       collectedBy: form.collectedBy,
-      premiumRemarks: form.premiumRemarks
+      premiumRemarks: form.premiumRemarks,
+      kycCompletedDate: form.kycCompletedDate || ""
     };
 
     if (onSave) {
@@ -402,22 +420,32 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
 
           {isAdvisor ? (
             <>
-              {selectedStage !== "Exam" && selectedStage !== "Interested" && selectedStage !== "KYC Pending" && selectedStage !== "KYC Complete" && selectedStage !== "Training" && (
+              {selectedStage !== "Exam" && selectedStage !== "Interested" && selectedStage !== "KYC Pending" && selectedStage !== "KYC Complete" && selectedStage !== "Training" && selectedStage !== "Code Generation" && selectedStage !== "Business Started" && (
                 <Grid item xs={12} sm={6}>
                   <TextField select fullWidth label="Status" name="leadStatus" value={form.leadStatus} onChange={handleChange}>
-                    {advisorStatuses.map((status) => (
-                      <MenuItem key={status} value={status}>{status}</MenuItem>
-                    ))}
+                    {selectedStage === "Business Started" ? (
+                      <>
+                        <MenuItem value="">Select...</MenuItem>
+                        <MenuItem value="Yes">Yes</MenuItem>
+                        <MenuItem value="No">No</MenuItem>
+                      </>
+                    ) : (
+                      advisorStatuses.map((status) => (
+                        <MenuItem key={status} value={status}>{status}</MenuItem>
+                      ))
+                    )}
                   </TextField>
                 </Grid>
               )}
-              <Grid item xs={12} sm={6}>
-                <TextField select fullWidth label="Priority" name="priority" value={form.priority} onChange={handleChange}>
-                  <MenuItem value="High">High</MenuItem>
-                  <MenuItem value="Medium">Medium</MenuItem>
-                  <MenuItem value="Low">Low</MenuItem>
-                </TextField>
-              </Grid>
+              {selectedStage !== "Business Started" && (
+                <Grid item xs={12} sm={6}>
+                  <TextField select fullWidth label="Priority" name="priority" value={form.priority} onChange={handleChange}>
+                    <MenuItem value="High">High</MenuItem>
+                    <MenuItem value="Medium">Medium</MenuItem>
+                    <MenuItem value="Low">Low</MenuItem>
+                  </TextField>
+                </Grid>
+              )}
               {advisorStagesWithStageStatus.has(selectedStage) && (
                 <Grid item xs={12} sm={6}>
                   <TextField select fullWidth label="Stage Status" name="stageStatus" value={form.stageStatus} onChange={handleChange}>
@@ -427,6 +455,21 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                     <MenuItem value="Completed">Completed</MenuItem>
                     <MenuItem value="On Hold">On Hold</MenuItem>
                   </TextField>
+                </Grid>
+              )}
+              {selectedStage === "KYC Complete" && form.stageStatus === "Completed" && (
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="KYC Completed Date"
+                    name="kycCompletedDate"
+                    type="date"
+                    value={form.kycCompletedDate || ""}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                    error={Boolean(validationErrors.kycCompletedDate)}
+                    helperText={validationErrors.kycCompletedDate || ""}
+                  />
                 </Grid>
               )}
               {selectedStage === "Exam" && (
@@ -541,6 +584,19 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                   </TextField>
                 </Grid>
               )}
+              {selectedStage === "Activation" && form.advisorActivated === "Yes" && (
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Activation Date"
+                    name="activationDate"
+                    type="date"
+                    value={form.activationDate || ""}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              )}
               {selectedStage === "Code Generation" && form.advisorCodeGenerated === "Yes" && (
                 <Grid item xs={12} sm={6}>
                   <TextField
@@ -559,6 +615,19 @@ export default function CandidateModal({ candidate, onClose, onStageUpdate, onNo
                   <Grid item xs={12}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 0.5, fontSize: "0.9rem", color: "#1e293b" }}>Business Details</Typography>
                     <Divider sx={{ mb: 1 }} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Business Started Date"
+                      name="businessStartDate"
+                      type="date"
+                      value={form.businessStartDate || ""}
+                      onChange={handleChange}
+                      InputLabelProps={{ shrink: true }}
+                      error={Boolean(validationErrors.businessStartDate)}
+                      helperText={validationErrors.businessStartDate || ""}
+                    />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField fullWidth label="Advisor Code" name="advisorCode" value={form.advisorCode || ""} onChange={handleChange} />

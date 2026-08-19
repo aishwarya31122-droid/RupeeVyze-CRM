@@ -141,6 +141,7 @@ export default function CandidateForm({ open, onClose, onAdd }) {
         next.ifscCode = "";
         next.upiId = "";
         next.remarks = "";
+        next.businessStartDate = "";
       }
       if (name === "stageStatus") {
         if (prev.workflowStage === "Medical" && value !== "Completed") {
@@ -148,6 +149,9 @@ export default function CandidateForm({ open, onClose, onAdd }) {
         }
         if (prev.workflowStage === "Underwriting" && value !== "Completed") {
           next.underwritingCompletionDate = "";
+        }
+        if (prev.workflowStage === "KYC Complete" && value !== "Completed") {
+          next.kycCompletedDate = "";
         }
       }
       if (name === "examPassed") {
@@ -274,6 +278,12 @@ export default function CandidateForm({ open, onClose, onAdd }) {
     }
     if (form.workflowStage === "Code Generation" && form.advisorCodeGenerated === "Yes") {
       if (!form.advisorCode?.trim()) newErrors.advisorCode = "Advisor Code is required when Code Generation is Yes.";
+    }
+    if (form.workflowStage === "KYC Complete" && form.stageStatus === "Completed") {
+      if (!form.kycCompletedDate?.trim()) newErrors.kycCompletedDate = "KYC Completed Date is required when Stage Status is Completed.";
+    }
+    if (form.workflowStage === "Business Started" && form.businessStarted === "Yes") {
+      if (!form.businessStartDate?.trim()) newErrors.businessStartDate = "Business Started Date is required when Business Started is Yes.";
     }
     if (form.workflowStage === "Policy Issued" && form.policyIssued === "Yes") {
       if (!form.policyNumber.trim()) newErrors.policyNumber = "Required";
