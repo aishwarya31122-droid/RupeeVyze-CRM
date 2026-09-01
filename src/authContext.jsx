@@ -1,6 +1,5 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-
-const ADMIN_USER = { id: "admin-1", name: "Admin User", role: "admin", email: "admin@rupeevyze.com" };
+import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from "react";
+import { supabase } from "./supabaseClient.js";
 
 const ADVISOR_ALLOWED_PATHS = [
   "/adviser/dashboard",
@@ -11,13 +10,60 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [dynamicAdvisors, setDynamicAdvisors] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const login = useCallback((user) => {
-    if (user) setCurrentUser(user);
+  const hydrateUserFromSession = useCallback(async (session) => {
+    if (!session?.user) {
+      setCurrentUser(null);
+      return;
+    }
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("id, name, email, role, advisor_candidate_id")
+      .eq("id", session.user.id)
+      .single();
+
+    if (error || !profile) {
+      setCurrentUser(null);
+      return;
+    }
+
+    setCurrentUser({
+      id: profile.role === "advisor" ? profile.advisor_candidate_id : profile.id,
+      authId: profile.id,
+      name: profile.name,
+      role: profile.role,
+      email: profile.email,
+    });
   }, []);
 
-  const logout = useCallback(() => {
+  useEffect(() => {
+    let isMounted = true;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      hydrateUserFromSession(session).finally(() => setLoading(false));
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      hydrateUserFromSession(session);
+    });
+
+    return () => {
+      isMounted = false;
+      listener?.subscription?.unsubscribe();
+    };
+  }, [hydrateUserFromSession]);
+
+  const login = useCallback(async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await hydrateUserFromSession(data.session);
+    return data;
+  }, [hydrateUserFromSession]);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
   }, []);
 
@@ -43,20 +89,14 @@ export function AuthProvider({ children }) {
     [isAdmin, currentUser]
   );
 
-  const canDeleteClient = useCallback(() => {
-    return isAdmin;
-  }, [isAdmin]);
-
+  const canDeleteClient = useCallback(() => isAdmin, [isAdmin]);
   const canAssignClient = useCallback(() => isAdmin, [isAdmin]);
-
   const canViewDashboard = useCallback(() => true, []);
-
-  const users = useMemo(() => [ADMIN_USER, ...dynamicAdvisors], [dynamicAdvisors]);
 
   const value = useMemo(
     () => ({
       currentUser,
-      users,
+      loading,
       isAdmin,
       isAdvisor,
       login,
@@ -66,9 +106,8 @@ export function AuthProvider({ children }) {
       canDeleteClient,
       canAssignClient,
       canViewDashboard,
-      setDynamicAdvisors,
     }),
-    [currentUser, users, isAdmin, isAdvisor, login, logout, canViewModule, canEditClient, canDeleteClient, canAssignClient, canViewDashboard, setDynamicAdvisors]
+    [currentUser, loading, isAdmin, isAdvisor, login, logout, canViewModule, canEditClient, canDeleteClient, canAssignClient, canViewDashboard]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -44,38 +44,6 @@ function saveLocal(key, data) {
   try { localStorage.setItem(key, JSON.stringify(data)); } catch { /* ignore */ }
 }
 
-function loadLocalCandidates() {
-  return loadLocal(STORAGE_KEY_CANDIDATES);
-}
-
-function saveLocalCandidates(list) {
-  saveLocal(STORAGE_KEY_CANDIDATES, list);
-}
-
-function loadLocalClients() {
-  return loadLocal(STORAGE_KEY_CLIENTS);
-}
-
-function saveLocalClients(list) {
-  saveLocal(STORAGE_KEY_CLIENTS, list);
-}
-
-function loadLocalPerformance() {
-  return loadLocal(STORAGE_KEY_PERFORMANCE);
-}
-
-function saveLocalPerformance(list) {
-  saveLocal(STORAGE_KEY_PERFORMANCE, list);
-}
-
-function loadLocalOverrides() {
-  return loadLocal(STORAGE_KEY_OVERRIDES);
-}
-
-function saveLocalOverrides(list) {
-  saveLocal(STORAGE_KEY_OVERRIDES, list);
-}
-
 function loadLocalPolicies() {
   return loadLocal(STORAGE_KEY_POLICIES);
 }
@@ -90,14 +58,6 @@ function loadLocalClaims() {
 
 function saveLocalClaims(list) {
   saveLocal(STORAGE_KEY_CLAIMS, list);
-}
-
-function loadLocalTeamMembers() {
-  return loadLocal(STORAGE_KEY_TEAM_MEMBERS);
-}
-
-function saveLocalTeamMembers(list) {
-  saveLocal(STORAGE_KEY_TEAM_MEMBERS, list);
 }
 
 function loadLocalServiceRequests() {
@@ -122,17 +82,6 @@ function loadLocalPermissions() {
 
 function saveLocalPermissions(list) {
   saveLocal(STORAGE_KEY_PERMISSIONS, list);
-}
-
-function loadLocalSettings() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function saveLocalSettings(data) {
-  saveLocal(STORAGE_KEY_SETTINGS, data);
 }
 
 function loadLocalImportHistory() {
@@ -248,13 +197,16 @@ const CrmContext = createContext(null);
 
 export function CrmProvider({ children }) {
   const { currentUser, isAdmin, isAdvisor } = useAuth();
-  const [candidates, setCandidates] = useState(() => loadLocalCandidates());
-  const [clients, setClients] = useState(() => loadLocalClients());
-  const [settings, setSettingsState] = useState(() => loadLocalSettings() || defaultBusinessSettings);
-  const [selectedConfigId, setSelectedConfigId] = useState(() => (loadLocalSettings()?.selectedConfigId) || defaultBusinessSettings.selectedConfigId);
-  const [teamMembers, setTeamMembers] = useState(() => loadLocalTeamMembers());
-  const [performanceRecords, setPerformanceRecords] = useState(() => loadLocalPerformance());
-  const [overridePayoutRecords, setOverridePayoutRecords] = useState(() => loadLocalOverrides());
+  // Candidates, clients, settings, team members, performance and override
+  // records are fetched from Supabase on mount (see refreshCrmData) —
+  // start empty rather than seeding from localStorage.
+  const [candidates, setCandidates] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [settings, setSettingsState] = useState(defaultBusinessSettings);
+  const [selectedConfigId, setSelectedConfigId] = useState(defaultBusinessSettings.selectedConfigId);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [performanceRecords, setPerformanceRecords] = useState([]);
+  const [overridePayoutRecords, setOverridePayoutRecords] = useState([]);
   const [policies, setPolicies] = useState(() => loadLocalPolicies());
   const [claims, setClaims] = useState(() => loadLocalClaims());
   const [serviceRequests, setServiceRequests] = useState(() => loadLocalServiceRequests());
@@ -276,34 +228,35 @@ export function CrmProvider({ children }) {
     const [candsResult, cltsResult, setsResult, teamResult, perfResult, overridesResult] = settled;
 
     if (candsResult.status === "fulfilled") {
-      const apiData = candsResult.value;
-      setCandidates(apiData);
-      saveLocalCandidates(apiData);
+      setCandidates(candsResult.value);
+    } else {
+      console.error("Failed to load candidates from Supabase:", candsResult.reason);
     }
     if (cltsResult.status === "fulfilled") {
-      const apiData = cltsResult.value;
-      setClients(apiData);
-      saveLocalClients(apiData);
+      setClients(cltsResult.value);
+    } else {
+      console.error("Failed to load clients from Supabase:", cltsResult.reason);
     }
     if (setsResult.status === "fulfilled") {
       setSettingsState(setsResult.value);
       setSelectedConfigId(setsResult.value.selectedConfigId || "standard");
-      saveLocalSettings(setsResult.value);
+    } else {
+      console.error("Failed to load settings from Supabase:", setsResult.reason);
     }
     if (teamResult.status === "fulfilled") {
-      const apiData = teamResult.value;
-      setTeamMembers(apiData);
-      saveLocalTeamMembers(apiData);
+      setTeamMembers(teamResult.value);
+    } else {
+      console.error("Failed to load team members from Supabase:", teamResult.reason);
     }
     if (perfResult.status === "fulfilled") {
-      const apiData = perfResult.value;
-      setPerformanceRecords(apiData);
-      saveLocalPerformance(apiData);
+      setPerformanceRecords(perfResult.value);
+    } else {
+      console.error("Failed to load performance records from Supabase:", perfResult.reason);
     }
     if (overridesResult.status === "fulfilled") {
-      const apiData = overridesResult.value;
-      setOverridePayoutRecords(apiData);
-      saveLocalOverrides(apiData);
+      setOverridePayoutRecords(overridesResult.value);
+    } else {
+      console.error("Failed to load override records from Supabase:", overridesResult.reason);
     }
   }, []);
 
@@ -322,12 +275,10 @@ export function CrmProvider({ children }) {
     return () => { cancelled = true; };
   }, [refreshCrmData]);
 
-  useEffect(() => { saveLocalCandidates(candidates); }, [candidates]);
-  useEffect(() => { saveLocalClients(clients); }, [clients]);
-  useEffect(() => { saveLocalSettings(settings); }, [settings]);
-  useEffect(() => { saveLocalTeamMembers(teamMembers); }, [teamMembers]);
-  useEffect(() => { saveLocalPerformance(performanceRecords); }, [performanceRecords]);
-  useEffect(() => { saveLocalOverrides(overridePayoutRecords); }, [overridePayoutRecords]);
+  // Candidates, clients, settings, team members, performance and override
+  // records now live in Supabase (see refreshCrmData) — no localStorage
+  // mirroring for those. Policies/claims/rewards/roles/permissions/service
+  // requests below are not yet migrated and still use localStorage.
   useEffect(() => { saveLocalPolicies(policies); }, [policies]);
   useEffect(() => { saveLocalClaims(claims); }, [claims]);
   useEffect(() => { saveLocalServiceRequests(serviceRequests); }, [serviceRequests]);
@@ -387,8 +338,8 @@ export function CrmProvider({ children }) {
       await candidatesApi.updateStage(candidateId, { stage });
       setCandidates((prev) => prev.map(buildStageUpdate));
     } catch (err) {
-      console.warn("API unavailable, stage updated locally:", err.message);
-      setCandidates((prev) => prev.map(buildStageUpdate));
+      console.error("Failed to stage updated locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData, isAdvisor, currentUser, candidates]);
 
@@ -434,13 +385,8 @@ export function CrmProvider({ children }) {
         return [...prev, result];
       });
     } catch (err) {
-      console.warn("API unavailable, candidate added locally:", err.message);
-      setCandidates((prev) => {
-        const dup = findDuplicate(prev, candidate);
-        if (dup) return prev;
-        const record = normalizeLocalRecord(payload, 0, prev.length);
-        return [...prev, record];
-      });
+      console.error("Failed to candidate added locally in Supabase:", err.message);
+      throw err;
     }
   }, [selectedConfig, refreshCrmData, findDuplicate]);
 
@@ -462,21 +408,8 @@ export function CrmProvider({ children }) {
       });
       return { ...result, importId };
     } catch (err) {
-      console.warn("API unavailable, importing locally:", err.message);
-      setCandidates((prev) => {
-        const existingPhones = new Set(
-          prev.map((r) => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
-        );
-        const imported = [];
-        for (const record of records) {
-          const phone = String(record.mobile || record.phone || "").replace(/\D/g, "");
-          if (phone && existingPhones.has(phone)) continue;
-          if (phone) existingPhones.add(phone);
-          imported.push({ ...normalizeLocalRecord(record, imported.length, prev.length), _importId: importId });
-        }
-        return [...prev, ...imported];
-      });
-      return { imported: records.length, skipped: 0, importId };
+      console.error("Failed to import candidates in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData]);
 
@@ -542,8 +475,8 @@ export function CrmProvider({ children }) {
       await candidatesApi.update(candidateId, updates);
       setCandidates((prev) => applyUpdates(prev));
     } catch (err) {
-      console.warn("API unavailable, candidate updated locally:", err.message);
-      setCandidates((prev) => applyUpdates(prev));
+      console.error("Failed to candidate updated locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData, isAdvisor, currentUser, candidates]);
 
@@ -557,8 +490,8 @@ export function CrmProvider({ children }) {
       await candidatesApi.updateNote(candidateId, { note });
       setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId) ? { ...c, notes: note } : c));
     } catch (err) {
-      console.warn("API unavailable, note updated locally:", err.message);
-      setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId) ? { ...c, notes: note } : c));
+      console.error("Failed to note updated locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData]);
 
@@ -575,11 +508,8 @@ export function CrmProvider({ children }) {
         : c
       ));
     } catch (err) {
-      console.warn("API unavailable, follow-up marked done locally:", err.message);
-      setCandidates((prev) => prev.map((c) => String(c.id) === String(candidateId)
-        ? { ...c, followUp: { ...(c.followUp || {}), status: "Done" } }
-        : c
-      ));
+      console.error("Failed to follow-up marked done locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData]);
 
@@ -590,8 +520,8 @@ export function CrmProvider({ children }) {
       await candidatesApi.remove(candidateId);
       setCandidates((prev) => prev.filter((c) => String(c.id) !== String(candidateId)));
     } catch (err) {
-      console.warn("API unavailable, candidate deleted locally:", err.message);
-      setCandidates((prev) => prev.filter((c) => String(c.id) !== String(candidateId)));
+      console.error("Failed to candidate deleted locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData, isAdvisor, currentUser, candidates]);
 
@@ -600,12 +530,8 @@ export function CrmProvider({ children }) {
       const result = await clientsApi.create(client);
       setClients((prev) => [...prev, result]);
     } catch (err) {
-      console.warn("API unavailable, adding client locally:", err.message);
-      setClients((prev) => {
-        const id = prev.length + 1;
-        const record = { id, clientId: client.clientId || `CL-${1000 + id}`, ...client, dateReceived: client.dateReceived || new Date().toISOString().slice(0, 10) };
-        return [...prev, record];
-      });
+      console.error("Failed to adding client locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData]);
 
@@ -624,11 +550,8 @@ export function CrmProvider({ children }) {
         return { ...c, ...result };
       }));
     } catch (err) {
-      console.warn("API unavailable, updating client locally:", err.message);
-      setClients((prev) => prev.map((c) => {
-        if (String(c.id) !== String(clientId) && String(c.clientId) !== String(clientId)) return c;
-        return { ...c, ...updates };
-      }));
+      console.error("Failed to updating client locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData]);
 
@@ -637,8 +560,8 @@ export function CrmProvider({ children }) {
       const updated = await settingsApi.update(newSettings);
       setSettingsState(updated);
     } catch (err) {
-      console.warn("API unavailable, saving settings locally:", err.message);
-      setSettingsState(newSettings);
+      console.error("Failed to saving settings locally in Supabase:", err.message);
+      throw err;
     }
   }, []);
 
@@ -655,14 +578,8 @@ export function CrmProvider({ children }) {
         setPerformanceRecords((prev) => [...prev, result]);
       }
     } catch (err) {
-      console.warn("API unavailable, saving performance record locally:", err.message);
-      setPerformanceRecords((prev) => {
-        const existing = prev.find((r) => r.advisorCode === record.advisorCode || r.advisorName === record.advisorName);
-        if (existing) {
-          return prev.map((r) => r.id === existing.id ? { ...r, ...record } : r);
-        }
-        return [...prev, { id: Date.now(), ...record }];
-      });
+      console.error("Failed to save performance record in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData, performanceRecords]);
 
@@ -671,8 +588,8 @@ export function CrmProvider({ children }) {
       await performanceApi.update(id, data);
       setPerformanceRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...data } : r));
     } catch (err) {
-      console.warn("API unavailable, updating performance record locally:", err.message);
-      setPerformanceRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...data } : r));
+      console.error("Failed to updating performance record locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData]);
 
@@ -681,8 +598,8 @@ export function CrmProvider({ children }) {
       await overridePayoutsApi.replaceAll(records);
       setOverridePayoutRecords(records);
     } catch (err) {
-      console.warn("API unavailable, saving override records locally:", err.message);
-      setOverridePayoutRecords(records);
+      console.error("Failed to saving override records locally in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData]);
 
@@ -764,21 +681,8 @@ export function CrmProvider({ children }) {
       });
       return { imported: records.length, skipped: 0, importId };
     } catch (err) {
-      console.warn("API unavailable, importing followups locally:", err.message);
-      setCandidates((prev) => {
-        const existingPhones = new Set(
-          prev.map((r) => String(r.mobile || r.phone || "").replace(/\D/g, "")).filter(Boolean)
-        );
-        const imported = [];
-        for (const record of records) {
-          const phone = String(record.mobile || record.phone || "").replace(/\D/g, "");
-          if (phone && existingPhones.has(phone)) continue;
-          if (phone) existingPhones.add(phone);
-          imported.push({ ...normalizeLocalRecord(record, imported.length, prev.length), _importId: importId });
-        }
-        return [...prev, ...imported];
-      });
-      return { imported: records.length, skipped: 0, importId };
+      console.error("Failed to import followups in Supabase:", err.message);
+      throw err;
     }
   }, [refreshCrmData]);
 

@@ -11,7 +11,8 @@ import AdminModule from "./pages/administration/AdminModule.jsx";
 import CandidateDetails from "./pages/CandidateDetails.jsx";
 
 function ProtectedRoute({ children, modulePath }) {
-  const { currentUser, canViewModule } = useAuth();
+  const { currentUser, canViewModule, loading } = useAuth();
+  if (loading) return null; // avoid flashing to /login while session is still resolving
   if (!currentUser) return <Navigate to="/login" replace />;
   if (modulePath && !canViewModule(modulePath)) return <Navigate to="/adviser/dashboard" replace />;
   return children;
