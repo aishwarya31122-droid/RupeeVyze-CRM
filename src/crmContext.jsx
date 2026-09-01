@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from "react";
-import { candidatesApi, clientsApi, settingsApi, teamMembersApi, performanceApi, overridePayoutsApi } from "./api/endpoints.js";
+import { candidatesApi, clientsApi, settingsApi, teamMembersApi, performanceApi, overridePayoutsApi, policiesApi, claimsApi, rewardsApi, rolesApi, permissionsApi, servicesApi } from "./api/endpoints.js";
 import { useAuth } from "./authContext.jsx";
 import { pipelineStages, leadTypes, leadStatuses, advisorWorkflowStages, customerWorkflowStages, clientWorkflowStages, followUpRequiredStages, sources, stageBadge, advisorStatuses, stageStatusOptions } from "./data/dropdowns.js";
 import { businessConfigs, defaultBusinessSettings } from "./data/config.js";
@@ -44,60 +44,12 @@ function saveLocal(key, data) {
   try { localStorage.setItem(key, JSON.stringify(data)); } catch { /* ignore */ }
 }
 
-function loadLocalPolicies() {
-  return loadLocal(STORAGE_KEY_POLICIES);
-}
-
-function saveLocalPolicies(list) {
-  saveLocal(STORAGE_KEY_POLICIES, list);
-}
-
-function loadLocalClaims() {
-  return loadLocal(STORAGE_KEY_CLAIMS);
-}
-
-function saveLocalClaims(list) {
-  saveLocal(STORAGE_KEY_CLAIMS, list);
-}
-
-function loadLocalServiceRequests() {
-  return loadLocal(STORAGE_KEY_SERVICE_REQUESTS);
-}
-
-function saveLocalServiceRequests(list) {
-  saveLocal(STORAGE_KEY_SERVICE_REQUESTS, list);
-}
-
-function loadLocalRoles() {
-  return loadLocal(STORAGE_KEY_ROLES);
-}
-
-function saveLocalRoles(list) {
-  saveLocal(STORAGE_KEY_ROLES, list);
-}
-
-function loadLocalPermissions() {
-  return loadLocal(STORAGE_KEY_PERMISSIONS);
-}
-
-function saveLocalPermissions(list) {
-  saveLocal(STORAGE_KEY_PERMISSIONS, list);
-}
-
 function loadLocalImportHistory() {
   return loadLocal(STORAGE_KEY_IMPORT_HISTORY);
 }
 
 function saveLocalImportHistory(list) {
   saveLocal(STORAGE_KEY_IMPORT_HISTORY, list);
-}
-
-function loadLocalRewards() {
-  return loadLocal(STORAGE_KEY_REWARDS);
-}
-
-function saveLocalRewards(list) {
-  saveLocal(STORAGE_KEY_REWARDS, list);
 }
 
 function normalizeLocalRecord(record, index, existingCount) {
@@ -207,12 +159,12 @@ export function CrmProvider({ children }) {
   const [teamMembers, setTeamMembers] = useState([]);
   const [performanceRecords, setPerformanceRecords] = useState([]);
   const [overridePayoutRecords, setOverridePayoutRecords] = useState([]);
-  const [policies, setPolicies] = useState(() => loadLocalPolicies());
-  const [claims, setClaims] = useState(() => loadLocalClaims());
-  const [serviceRequests, setServiceRequests] = useState(() => loadLocalServiceRequests());
-  const [roles, setRoles] = useState(() => loadLocalRoles());
-  const [permissions, setPermissions] = useState(() => loadLocalPermissions());
-  const [rewards, setRewards] = useState(() => loadLocalRewards());
+  const [policies, setPolicies] = useState([]);
+  const [claims, setClaims] = useState([]);
+  const [serviceRequests, setServiceRequests] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [permissions, setPermissions] = useState([]);
+  const [rewards, setRewards] = useState([]);
   const [importHistory, setImportHistory] = useState(() => loadLocalImportHistory());
   const [loading, setLoading] = useState(true);
 
@@ -223,9 +175,16 @@ export function CrmProvider({ children }) {
       settingsApi.get(),
       teamMembersApi.list(),
       performanceApi.list(),
-      overridePayoutsApi.list()
+      overridePayoutsApi.list(),
+      policiesApi.list(),
+      claimsApi.list(),
+      rewardsApi.list(),
+      rolesApi.list(),
+      permissionsApi.list(),
+      servicesApi.list()
     ]);
-    const [candsResult, cltsResult, setsResult, teamResult, perfResult, overridesResult] = settled;
+    const [candsResult, cltsResult, setsResult, teamResult, perfResult, overridesResult,
+      policiesResult, claimsResult, rewardsResult, rolesResult, permissionsResult, servicesResult] = settled;
 
     if (candsResult.status === "fulfilled") {
       setCandidates(candsResult.value);
@@ -258,6 +217,36 @@ export function CrmProvider({ children }) {
     } else {
       console.error("Failed to load override records from Supabase:", overridesResult.reason);
     }
+    if (policiesResult.status === "fulfilled") {
+      setPolicies(policiesResult.value);
+    } else {
+      console.error("Failed to load policies from Supabase:", policiesResult.reason);
+    }
+    if (claimsResult.status === "fulfilled") {
+      setClaims(claimsResult.value);
+    } else {
+      console.error("Failed to load claims from Supabase:", claimsResult.reason);
+    }
+    if (rewardsResult.status === "fulfilled") {
+      setRewards(rewardsResult.value);
+    } else {
+      console.error("Failed to load rewards from Supabase:", rewardsResult.reason);
+    }
+    if (rolesResult.status === "fulfilled") {
+      setRoles(rolesResult.value);
+    } else {
+      console.error("Failed to load roles from Supabase:", rolesResult.reason);
+    }
+    if (permissionsResult.status === "fulfilled") {
+      setPermissions(permissionsResult.value);
+    } else {
+      console.error("Failed to load permissions from Supabase:", permissionsResult.reason);
+    }
+    if (servicesResult.status === "fulfilled") {
+      setServiceRequests(servicesResult.value);
+    } else {
+      console.error("Failed to load service requests from Supabase:", servicesResult.reason);
+    }
   }, []);
 
   useEffect(() => {
@@ -275,16 +264,10 @@ export function CrmProvider({ children }) {
     return () => { cancelled = true; };
   }, [refreshCrmData]);
 
-  // Candidates, clients, settings, team members, performance and override
-  // records now live in Supabase (see refreshCrmData) — no localStorage
-  // mirroring for those. Policies/claims/rewards/roles/permissions/service
-  // requests below are not yet migrated and still use localStorage.
-  useEffect(() => { saveLocalPolicies(policies); }, [policies]);
-  useEffect(() => { saveLocalClaims(claims); }, [claims]);
-  useEffect(() => { saveLocalServiceRequests(serviceRequests); }, [serviceRequests]);
-  useEffect(() => { saveLocalRoles(roles); }, [roles]);
-  useEffect(() => { saveLocalPermissions(permissions); }, [permissions]);
-  useEffect(() => { saveLocalRewards(rewards); }, [rewards]);
+  // Candidates, clients, settings, team members, performance, override
+  // records, policies, claims, rewards, roles, permissions and service
+  // requests all now live in Supabase (see refreshCrmData) — no localStorage
+  // mirroring for those. Import history remains local (device-specific log).
   useEffect(() => { saveLocalImportHistory(importHistory); }, [importHistory]);
 
 
@@ -604,31 +587,37 @@ export function CrmProvider({ children }) {
   }, [refreshCrmData]);
 
   const importPolicies = useCallback(async (records) => {
-    setPolicies((prev) => {
-      const existingIds = new Set(prev.map((r) => String(r.policyNumber || r.id || "").toLowerCase()));
-      const imported = records.filter((r) => {
-        const key = String(r.policyNumber || r.id || "").toLowerCase();
-        if (!key || existingIds.has(key)) return false;
-        existingIds.add(key);
-        return true;
-      });
-      return [...prev, ...imported];
+    const existing = await policiesApi.list();
+    const existingIds = new Set(existing.map((r) => String(r.policyNumber || r.id || "").toLowerCase()));
+    const toInsert = records.filter((r) => {
+      const key = String(r.policyNumber || r.id || "").toLowerCase();
+      if (!key || existingIds.has(key)) return false;
+      existingIds.add(key);
+      return true;
     });
-    return { imported: records.length, skipped: 0 };
+    for (const rec of toInsert) {
+      const { id: _drop, ...rest } = rec;
+      await policiesApi.create(rest);
+    }
+    setPolicies(await policiesApi.list());
+    return { imported: toInsert.length, skipped: records.length - toInsert.length };
   }, []);
 
   const importClaims = useCallback(async (records) => {
-    setClaims((prev) => {
-      const existingIds = new Set(prev.map((r) => String(r.claimId || r.id || "").toLowerCase()));
-      const imported = records.filter((r) => {
-        const key = String(r.claimId || r.id || "").toLowerCase();
-        if (!key || existingIds.has(key)) return false;
-        existingIds.add(key);
-        return true;
-      });
-      return [...prev, ...imported];
+    const existing = await claimsApi.list();
+    const existingIds = new Set(existing.map((r) => String(r.claimId || r.id || "").toLowerCase()));
+    const toInsert = records.filter((r) => {
+      const key = String(r.claimId || r.id || "").toLowerCase();
+      if (!key || existingIds.has(key)) return false;
+      existingIds.add(key);
+      return true;
     });
-    return { imported: records.length, skipped: 0 };
+    for (const rec of toInsert) {
+      const { id: _drop, ...rest } = rec;
+      await claimsApi.create(rest);
+    }
+    setClaims(await claimsApi.list());
+    return { imported: toInsert.length, skipped: records.length - toInsert.length };
   }, []);
 
   const importTeamMembers = useCallback(async (records) => {
@@ -649,17 +638,20 @@ export function CrmProvider({ children }) {
   }, [refreshCrmData]);
 
   const importRewards = useCallback(async (records) => {
-    setRewards((prev) => {
-      const existingIds = new Set(prev.map((r) => String(r.id || r.recordId || "").toLowerCase()));
-      const imported = records.filter((r) => {
-        const key = String(r.id || r.recordId || "").toLowerCase();
-        if (!key || existingIds.has(key)) return false;
-        existingIds.add(key);
-        return true;
-      });
-      return [...prev, ...imported];
+    const existing = await rewardsApi.list();
+    const existingIds = new Set(existing.map((r) => String(r.id || r.recordId || "").toLowerCase()));
+    const toInsert = records.filter((r) => {
+      const key = String(r.id || r.recordId || "").toLowerCase();
+      if (!key || existingIds.has(key)) return false;
+      existingIds.add(key);
+      return true;
     });
-    return { imported: records.length, skipped: 0 };
+    for (const rec of toInsert) {
+      const { id: _drop, ...rest } = rec;
+      await rewardsApi.create(rest);
+    }
+    setRewards(await rewardsApi.list());
+    return { imported: toInsert.length, skipped: records.length - toInsert.length };
   }, []);
 
   const importFollowups = useCallback(async (records) => {
@@ -687,26 +679,27 @@ export function CrmProvider({ children }) {
   }, [refreshCrmData]);
 
   const importServiceRequests = useCallback(async (records) => {
-    setServiceRequests((prev) => {
-      const existingIds = new Set(prev.map((r) => String(r.id || r.requestId || "").toLowerCase()));
-      const imported = records.filter((r) => {
-        const key = String(r.id || r.requestId || r.serviceType + r.clientName || "").toLowerCase();
-        if (!key || existingIds.has(key)) return false;
-        existingIds.add(key);
-        return true;
-      }).map((r, i) => ({
-        id: r.id || `SVC-${Date.now()}-${i}`,
-        serviceType: r.serviceType || "General",
-        clientName: r.clientName || "",
-        assignedTo: r.assignedTo || "",
-        status: r.status || "Open",
-        priority: r.priority || "Medium",
-        createdDate: r.createdDate || new Date().toISOString().slice(0, 10),
-        notes: r.notes || ""
-      }));
-      return [...prev, ...imported];
-    });
-    return { imported: records.length, skipped: 0 };
+    const existing = await servicesApi.list();
+    const existingIds = new Set(existing.map((r) => String(r.id || r.requestId || "").toLowerCase()));
+    const toInsert = records.filter((r) => {
+      const key = String(r.id || r.requestId || (r.serviceType || "") + (r.clientName || "") || "").toLowerCase();
+      if (!key || existingIds.has(key)) return false;
+      existingIds.add(key);
+      return true;
+    }).map((r) => ({
+      serviceType: r.serviceType || "General",
+      clientName: r.clientName || "",
+      assignedTo: r.assignedTo || "",
+      status: r.status || "Open",
+      priority: r.priority || "Medium",
+      createdDate: r.createdDate || new Date().toISOString().slice(0, 10),
+      notes: r.notes || ""
+    }));
+    for (const rec of toInsert) {
+      await servicesApi.create(rec);
+    }
+    setServiceRequests(await servicesApi.list());
+    return { imported: toInsert.length, skipped: records.length - toInsert.length };
   }, []);
 
   const addTeamMember = useCallback(async (member) => {
@@ -722,26 +715,32 @@ export function CrmProvider({ children }) {
   }, []);
 
   const addRole = useCallback(async (role) => {
-    setRoles((prev) => [...prev, { id: Date.now(), ...role, status: role.status || "Active" }]);
+    const created = await rolesApi.create({ ...role, status: role.status || "Active" });
+    setRoles((prev) => [...prev, created]);
   }, []);
 
   const updateRole = useCallback(async (roleId, updates) => {
-    setRoles((prev) => prev.map((r) => String(r.id) === String(roleId) ? { ...r, ...updates } : r));
+    const updated = await rolesApi.update(roleId, updates);
+    setRoles((prev) => prev.map((r) => String(r.id) === String(roleId) ? updated : r));
   }, []);
 
   const deleteRole = useCallback(async (roleId) => {
+    await rolesApi.remove(roleId);
     setRoles((prev) => prev.filter((r) => String(r.id) !== String(roleId)));
   }, []);
 
   const addPermission = useCallback(async (permission) => {
-    setPermissions((prev) => [...prev, { id: Date.now(), ...permission }]);
+    const created = await permissionsApi.create(permission);
+    setPermissions((prev) => [...prev, created]);
   }, []);
 
   const updatePermission = useCallback(async (permId, updates) => {
-    setPermissions((prev) => prev.map((p) => String(p.id) === String(permId) ? { ...p, ...updates } : p));
+    const updated = await permissionsApi.update(permId, updates);
+    setPermissions((prev) => prev.map((p) => String(p.id) === String(permId) ? updated : p));
   }, []);
 
   const deletePermission = useCallback(async (permId) => {
+    await permissionsApi.remove(permId);
     setPermissions((prev) => prev.filter((p) => String(p.id) !== String(permId)));
   }, []);
 

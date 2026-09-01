@@ -248,3 +248,45 @@ export const servicesApi = {
   update: (id, data) => serviceRequestsTable.update(id, data),
   remove: (id) => serviceRequestsTable.remove(id),
 };
+
+// ---------------------------- policies / claims / rewards / roles / permissions ----
+const policiesTable = jsonbTable("policies");
+const claimsTable = jsonbTable("claims");
+const rewardsTable = jsonbTable("rewards");
+const rolesTable = jsonbTable("roles");
+const permissionsTable = jsonbTable("permissions");
+
+export const policiesApi = {
+  list: () => policiesTable.list(),
+  create: (data) => policiesTable.create(data),
+  update: (id, data) => policiesTable.update(id, data),
+  remove: (id) => policiesTable.remove(id),
+};
+
+export const claimsApi = {
+  list: () => claimsTable.list(),
+  create: (data) => claimsTable.create(data),
+  update: (id, data) => claimsTable.update(id, data),
+  remove: (id) => claimsTable.remove(id),
+};
+
+export const rewardsApi = {
+  list: () => rewardsTable.list(),
+  create: (data) => rewardsTable.create(data),
+  update: (id, data) => rewardsTable.update(id, data),
+  remove: (id) => rewardsTable.remove(id),
+};
+
+export const rolesApi = {
+  list: () => rolesTable.list(),
+  create: (data) => rolesTable.create(data),
+  update: (id, data) => rolesTable.update(id, data),
+  remove: (id) => rolesTable.remove(id),
+};
+
+export const permissionsApi = {
+  list: () => permissionsTable.list(),
+  create: (data) => permissionsTable.create(data),
+  update: (id, data) => permissionsTable.update(id, data),
+  remove: (id) => permissionsTable.remove(id),
+};
